@@ -4,30 +4,45 @@
 
 ### Frontend
 
-Install dependencies
+1. Install dependencies:
 
-```shell
-cd frontend
-npm install
-```
+   ```shell
+   cd frontend
+   npm install
+   ```
 
-Run frontend
+2. Run the frontend development server:
 
-```shell
-npm run dev
-```
+   ```shell
+   npm run dev
+   ```
 
 ### Backend
 
-Install dependencies
+1. Install dependencies:
 
-```shell
-cd ../backend
-npm install
-```
+   ```shell
+   cd backend
+   npm install
+   ```
 
-Run backend
+2. Run the backend development server:
 
-```shell
-npm run dev
-```
+   ```shell
+   npm run dev
+   ```
+
+### Agents
+
+1. Install dependencies using `uv`:
+
+   ```shell
+   cd agents
+   uv add -r requirements.txt
+   ```
+
+2. Run the agents development server:
+
+   ```shell
+   uv run uvicorn main:app --reload
+   ```
