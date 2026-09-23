@@ -1,20 +1,31 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { verifyGoogleToken } from "./google.js";
+import { User } from "../models/User.js";
 
 const router = Router();
+
 
 router.post("/api/auth/google", async (req, res) => {
   try {
     const { idToken } = req.body;
     if (!idToken) return res.status(400).json({ error: "idToken required" });
 
-    const user = await verifyGoogleToken(idToken);
+    const googleUser = await verifyGoogleToken(idToken);
+
+    let user = await User.findOne({ googleId: googleUser.googleId });
+    if (!user) {
+      user = await User.create({
+        googleId: googleUser.googleId,
+        email: googleUser.email,
+        name: googleUser.name,
+      });
+    }
 
     const sessionToken = jwt.sign(
-      { sub: user.googleId, email: user.email, name: user.name },
+      { sub: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET!,
-      { expiresIn: "7d" },
+      { expiresIn: "7d" }
     );
 
     res.cookie("session", sessionToken, {
@@ -24,12 +35,11 @@ router.post("/api/auth/google", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({ user });
+    res.json({ user: { id: user._id, email: user.email, name: user.name } });
   } catch (err) {
     res.status(401).json({ error: "Authentication failed" });
   }
 });
-
 
 
 
