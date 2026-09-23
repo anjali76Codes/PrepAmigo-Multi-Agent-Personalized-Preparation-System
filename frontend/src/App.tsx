@@ -1,10 +1,14 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { AuthLayout } from './components/layout/AuthLayout';
 import { AppLayout } from './components/layout/AppLayout';
 import { Home } from './pages/Home';
 import { Login, Signup } from './pages/Auth';
 import { StyleGuide } from './pages/StyleGuide';
+import { AppHome } from './pages/AppHome';
+import { Chat } from './pages/Chat';
+import { Trips } from './pages/Trips';
+import { TripDetails } from './pages/TripDetails';
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -32,10 +36,10 @@ function App() {
 
         {/* App Routes */}
         <Route path="/app" element={<AppLayout />}>
-          <Route index element={<Navigate to="/app/chat" replace />} />
-          <Route path="chat" element={<Placeholder title="kaju Chat Interface" />} />
-          <Route path="trips" element={<Placeholder title="Trips Dashboard" />} />
-          <Route path="trips/:tripId" element={<Placeholder title="Trip Details" />} />
+          <Route index element={<AppHome />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="trips" element={<Trips />} />
+          <Route path="trips/:tripId" element={<TripDetails />} />
           <Route path="bookings" element={<Placeholder title="Bookings" />} />
           <Route path="budget" element={<Placeholder title="Budget Planner" />} />
           <Route path="notifications" element={<Placeholder title="Notifications" />} />
