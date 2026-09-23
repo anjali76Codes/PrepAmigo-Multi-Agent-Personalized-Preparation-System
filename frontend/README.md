@@ -1,75 +1,66 @@
-# React + TypeScript + Vite
+# TravelAmigo Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+TravelAmigo is a multi-agent journey coordination system where users tell **kaju** what changed, and the system figures out what needs to happen next.
 
-Currently, two official plugins are available:
+## Current Stack
+- **React 19**
+- **TypeScript**
+- **Vite**
+- **Tailwind CSS** (v4 alpha via `@tailwindcss/vite`)
+- **Framer Motion** (for subtle, accessible animations)
+- **React Router**
+- **Ionicons** (Web components)
+- **clsx / tailwind-merge** (for utility class merging)
+- **Poppins** font
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Design System
+The visual language uses a **dark polished green/black marble aesthetic**:
+- Theme: Black, deep forest green, emerald, muted sage.
+- Rounded UI: `rounded-full` for inputs and primary buttons, `rounded-2xl/3xl` for cards and panels.
+- Marble Background: SVG-based organic flowing veins (using `feTurbulence` and `mix-blend-mode`).
+- Motion: Subtle blurs, fades, staggers, and glows that respect `prefers-reduced-motion` (via Framer Motion).
 
-## React Compiler
+## Frontend Structure
+- `src/components/ui/` - Reusable primitives (`Button`, `Card`, `Icon`, `MarbleBackground`, etc.)
+- `src/components/layout/` - Shell structures (`AppLayout`, `PublicLayout`, `AuthLayout`)
+- `src/components/chat/` - kaju conversation UI (`ChatInput`, `Messages`, `AgentActivity`)
+- `src/components/trips/` - Trip context and listings (`TripCard`, `DependencyGraph`)
+- `src/pages/` - Routable page components (Home, Chat, Trips, Bookings, Budget)
+- `src/data/mockData.ts` - Local simulated data
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Implemented Routes
+- `/` - Landing page
+- `/style-guide` - Component library testing page
+- `/login`, `/signup` - Auth placeholder forms
+- `/app` - Workspace home screen
+- `/app/chat` - kaju conversational interface
+- `/app/trips` - Trips listing page
+- `/app/trips/:tripId` - Detailed trip workspace (itinerary, dependencies)
+- `/app/bookings` - Overview of confirmed and pending reservations
+- `/app/budget` - Trip budget tracking and spending breakdown
+- `/app/notifications` - Notifications and alerts from kaju
+- `/app/settings` - User preferences and application settings
 
-## Expanding the ESLint configuration
+## Completed Stuff
+1. **Foundation & Design System**: Setup Tailwind, routing, and core UI components.
+2. **Landing Page**: Built Bolt-inspired public landing page.
+3. **App Shell & kaju Chat**: Implemented the main conversational interface and trip context workspace.
+4. **Visual Refinement**: Shifted to a deep emerald marble aesthetic using SVG turbulence.
+5. **Trips, Bookings & Budget**: Added the trips dashboard, detailed workspace, and supporting reservation/finance pages.
+6. **Notifications, Settings & Animations**: Implemented remaining UI pages and completed a global Framer Motion pass for fluid page transitions and staggered reveals across the entire application.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Features
+The frontend now includes:
+- Conversational kaju workspace
+- Trip listing and details
+- Chronological itinerary and dependency timeline
+- Bookings list with status tracking
+- Budget tracking and category breakdown
+- Notifications and user settings
+- Reusable Trip Context
+- Responsive design
+- Dark green/black marble visual system
+- Reduced-motion-aware animations and smooth page transitions
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+## Architecture
+Currently, the frontend uses **local mock data** (`src/data/mockData.ts`) and is **NOT connected to a backend or agent infrastructure**. The UI is constructed with clean, reusable components so real API integration can be slotted in smoothly later.
