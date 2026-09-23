@@ -32,7 +32,7 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use(authRouter);
 
 
-
+// connect to db 
 connectDB();
 
 app.listen(config.PORT, () => {
