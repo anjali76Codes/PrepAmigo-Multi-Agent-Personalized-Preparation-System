@@ -1,195 +1,403 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
+
+import { ChatInput } from '../components/chat/ChatInput';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
+import { ShaderBackground } from '../components/ui/ShaderBackground';
+import { HalftoneBackground } from '../components/ui/HalftoneBackground';
+
+const AGENTS = [
+  {
+    icon: 'airplane',
+    name: 'Flight Booking',
+    description: 'Flights, availability, cancellations and rescheduling',
+  },
+  {
+    icon: 'bed',
+    name: 'Accommodation',
+    description: 'Hotels, stays, bookings and modifications',
+  },
+  {
+    icon: 'train',
+    name: 'Transportation',
+    description: 'Airport transfers and local transit',
+  },
+  {
+    icon: 'restaurant',
+    name: 'Dining & Reservations',
+    description: 'Restaurants, activities and reservations',
+  },
+  {
+    icon: 'umbrella',
+    name: 'Logistics & Weather',
+    description: 'Delays, weather, closures and disruptions',
+  },
+  {
+    icon: 'wallet',
+    name: 'Budget & Expense',
+    description: 'Trip spending and cost impact',
+  },
+];
+
+const DEPENDENCY_NODES = [
+  {
+    icon: 'airplane',
+    title: 'Flight',
+    time: '14:00',
+    state: 'changed',
+  },
+  {
+    icon: 'bus',
+    title: 'Airport Transfer',
+    time: '16:30',
+    state: 'affected',
+  },
+  {
+    icon: 'bed',
+    title: 'Hotel Check-in',
+    time: '17:15',
+    state: 'affected',
+  },
+  {
+    icon: 'restaurant',
+    title: 'Dinner',
+    time: '19:00',
+    state: 'review',
+  },
+  {
+    icon: 'restaurant',
+    title: 'Activity',
+    time: 'Tomorrow',
+    state: 'protected',
+  },
+] as const;
+
+const EXAMPLES = [
+  'My flight got cancelled. Get me to Rome tonight and keep tomorrow intact.',
+  'The weather changed. Rework today without breaking my dinner reservation.',
+  'Move my hotel booking because my arrival is now six hours later.',
+  'My plans changed. Find alternatives that stay within my remaining budget.',
+];
 
 export function Home() {
+  const [inputValue, setInputValue] = useState('');
+  const [activeExample, setActiveExample] = useState<string | null>(null);
+
+  const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
 
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (inputValue.trim()) {
+      navigate('/app/chat');
+    }
+  };
+
+  const handleStart = () => {
+    navigate('/app/chat');
+  };
+
+  const useExample = (example: string) => {
+    setInputValue(example);
+    setActiveExample(example);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  const itemVariants: Variants = {
+    hidden: {
+      opacity: 0,
+      y: shouldReduceMotion ? 0 : 30,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.8,
+        ease: [0.16, 1, 0.3, 1],
+      },
+    },
+  };
+
+  const groupVariants: Variants = {
+    hidden: {
+      opacity: 0,
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : 0.08,
+      },
+    },
+  };
+
   return (
-    <div className="flex flex-col w-full">
-      {/* 1. Hero Section */}
-      <section className="relative pt-24 pb-32 md:pt-36 md:pb-40 px-6 max-w-5xl mx-auto w-full flex flex-col items-center text-center">
-        {/* Subtle glow behind hero text */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-full bg-primary/10 blur-[100px] rounded-[100%] pointer-events-none -z-10" />
+    <div className="flex flex-col w-full bg-background overflow-hidden">
+      <section className="relative w-full pt-4 md:pt-6 px-4 md:px-6 z-10">
+        <div className="relative min-h-[80vh] md:min-h-[85vh] rounded-[2rem] border border-white/10 border-b-0 rounded-b-none overflow-hidden flex flex-col items-center justify-center text-center px-6">
+          <ShaderBackground
+            className="absolute inset-0 w-full h-full z-0"
+          />
+          <div className="absolute bottom-[-10%] left-[-10%] right-[-10%] h-[20%] bg-background blur-[80px] z-0" />
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/60 to-transparent z-0" />
 
-        <motion.div 
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-        >
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
-            Tell kaju what changed.<br className="hidden sm:block" />
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              We handle the rest.
-            </span>
-          </h1>
-          <p className="text-lg sm:text-xl text-secondary-text max-w-2xl mx-auto mb-12">
-            Meet kaju, your AI travel assistant. When life happens, just say the word. 
-            Behind the scenes, our specialized agents coordinate flights, hotels, and schedules so you don't have to.
-          </p>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="relative z-10 max-w-4xl mx-auto mb-10"
+          >
 
-        {/* Conversational Input (Visual Only) */}
-        <motion.div 
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 1 }}
-          className="w-full max-w-3xl relative group"
-        >
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-accent/30 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-          <div className="relative flex items-center bg-surface-elevated border border-border/50 rounded-full p-2 pl-6 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
-            <input 
-              type="text" 
-              placeholder="What changed with your trip?" 
-              className="flex-1 bg-transparent border-none outline-none text-base sm:text-lg text-primary-text placeholder:text-muted-text py-3"
-            />
-            <button className="flex items-center justify-center h-12 w-12 sm:w-auto sm:px-6 shrink-0 rounded-full bg-primary text-white hover:bg-primary-hover shadow-glow-primary transition-all">
-              <Icon name="arrow-up-outline" className="text-xl sm:hidden" />
-              <span className="hidden sm:inline font-semibold">Tell kaju</span>
-            </button>
-          </div>
-        </motion.div>
-      </section>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[0.95] mb-7">
+              Tell kaju what changed.
+              <br />
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                We handle the rest.
+              </span>
+            </h1>
 
-      {/* 2. Example Conversation */}
-      <section className="py-24 px-6 border-t border-white/5 relative bg-surface/30">
-        <div className="max-w-4xl mx-auto flex flex-col gap-16 md:flex-row items-center">
-          <div className="flex-1 space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Real-time change propagation.</h2>
-            <p className="text-secondary-text text-lg leading-relaxed">
-              When your flight gets cancelled, it's not just a flight problem. It's a hotel problem, a transfer problem, and a dinner reservation problem.
-              <br /><br />
-              kaju understands the impact across your entire itinerary and coordinates the solution instantly.
+            <p className="text-lg sm:text-md text-secondary-text max-w-2xl mx-auto leading-relaxed">
+              TravelAmigo coordinates your entire journey when real-world
+              changes throw your plans off track.
             </p>
-          </div>
-          
-          <div className="flex-1 w-full max-w-md">
-            <Card className="rounded-3xl p-6 bg-surface-elevated/80 backdrop-blur-md border-white/10 shadow-2xl space-y-6">
-              {/* User Message */}
-              <div className="flex gap-4 items-start">
-                <Avatar fallback="ME" size="md" className="bg-white/10 text-white" />
-                <div className="bg-surface rounded-2xl rounded-tl-sm p-4 text-sm text-primary-text border border-border/50">
-                  kaju, my flight to Rome was cancelled. Get me there tonight and keep tomorrow's plans intact.
-                </div>
-              </div>
-              
-              {/* kaju Message */}
-              <div className="flex gap-4 items-start flex-row-reverse">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-primary">
-                  <Icon name="sparkles" className="text-white text-lg" />
-                </div>
-                <div className="bg-primary/10 border border-primary/20 rounded-2xl rounded-tr-sm p-4 text-sm text-primary-text space-y-3">
-                  <p>I'm on it. Here is the updated plan:</p>
-                  <ul className="space-y-2 opacity-80">
-                    <li className="flex items-center gap-2"><Icon name="airplane" className="text-primary" /> Rebooked you on AF123 at 8:45 PM</li>
-                    <li className="flex items-center gap-2"><Icon name="car" className="text-primary" /> Shifted airport transfer to 11:30 PM</li>
-                    <li className="flex items-center gap-2"><Icon name="bed" className="text-primary" /> Notified hotel of late arrival</li>
-                  </ul>
-                  <Button variant="primary" className="w-full rounded-full mt-2" size="sm">Review & Approve</Button>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
+          </motion.div>
 
-      {/* 3 & 4. How it works & Multi-Agent Coordination */}
-      <section id="agents" className="py-32 px-6 max-w-6xl mx-auto w-full text-center">
-        <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">An entire agency in your pocket.</h2>
-        <p className="text-secondary-text text-lg max-w-2xl mx-auto mb-20">
-          Behind kaju's simple chat interface is a swarm of specialized AI agents working together around your shared trip context.
-        </p>
+          <motion.div
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.9 }}
+            className="relative z-20 w-full max-w-2xl"
+          >
+            <ChatInput
+              value={inputValue}
+              onChange={setInputValue}
+              onSubmit={handleChatSubmit}
+            />
 
-        <div className="relative">
-          {/* Center node (kaju) */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-            <div className="h-24 w-24 rounded-full bg-surface-elevated border-2 border-primary shadow-glow-primary flex flex-col items-center justify-center">
-              <Icon name="sparkles" className="text-3xl text-primary mb-1" />
-              <span className="text-xs font-bold tracking-widest text-primary">kaju</span>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm text-secondary-text">
+              <span>Try:</span>
+              <button
+                type="button"
+                onClick={() => useExample('kaju, my flight got cancelled. Get me to Rome tonight.')}
+                className="px-3 py-1.5 rounded-full border border-white/10 bg-surface/60 hover:bg-surface-elevated transition-colors"
+              >
+                Cancelled flight
+              </button>
+              <button
+                type="button"
+                onClick={() => useExample('kaju, the weather changed. Rework today without breaking my plans.')}
+                className="px-3 py-1.5 rounded-full border border-white/10 bg-surface/60 hover:bg-surface-elevated transition-colors"
+              >
+                Weather disruption
+              </button>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Agents Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-16 relative z-10 max-w-4xl mx-auto">
-            {[
-              { icon: 'airplane', name: 'Flight Agent' },
-              { icon: 'bed', name: 'Accommodation' },
-              { icon: 'train', name: 'Logistics' },
-              { icon: 'restaurant', name: 'Dining' },
-              { icon: 'wallet', name: 'Budget' },
-              { icon: 'umbrella', name: 'Weather' },
-            ].map((agent, i) => (
-              <div key={agent.name} className="flex flex-col items-center gap-4 bg-surface/50 rounded-3xl p-6 border border-border/50 backdrop-blur-sm transition-transform hover:-translate-y-1 hover:border-primary/50">
-                <div className="h-14 w-14 rounded-full bg-surface-elevated border border-white/10 flex items-center justify-center text-secondary-text">
-                  <Icon name={agent.icon} className="text-2xl" />
-                </div>
-                <span className="font-medium text-sm text-primary-text">{agent.name}</span>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.8 }}
+            className="relative z-10 flex flex-wrap items-center justify-center gap-2 mt-4"
+          >
+            {['One conversation', 'Multiple agents', 'Shared trip context', 'Real-time coordination'].map((tag) => (
+              <span key={tag} className="px-3 py-1.5 rounded-full text-xs sm:text-sm text-secondary-text bg-background/50 border border-white/10 backdrop-blur-sm">
+                {tag}
+              </span>
             ))}
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="py-28 px-6 bg-gradient-to-b from-background to-surface/30">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }}>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
+                One conversation.
+                <br />
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">An entire agent network.</span>
+              </h2>
+              <p className="mt-7 text-lg text-secondary-text leading-relaxed max-w-xl">
+                At the centre of TravelAmigo is kaju, a single conversational interface. You tell kaju what you want or what has changed. Behind the scenes, specialized agents coordinate the planning, search, evaluation and execution.
+              </p>
+            </motion.div>
+
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }} transition={{ delay: 0.15 }} className="relative">
+              <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full" />
+              <Card className="relative p-7 md:p-9 rounded-[2rem] bg-surface-elevated/80 backdrop-blur-xl border-white/10">
+                <div className="flex items-center gap-4 pb-7 border-b border-white/10">
+                  <Avatar fallback="kaju" size="lg" />
+                  <div>
+                    <div className="font-semibold text-lg">kaju</div>
+                    <div className="text-sm text-secondary-text">TravelAmigo coordinator</div>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-xs text-secondary-text">Active</span>
+                  </div>
+                </div>
+
+                <div className="py-7">
+                  <div className="rounded-2xl bg-background/70 border border-white/10 p-5">
+                    <p className="text-sm text-secondary-text mb-2">You</p>
+                    <p className="leading-relaxed">
+                      "My flight got cancelled. Get me to Rome tonight, keep it within my budget, and make sure tomorrow's plans still work."
+                    </p>
+                  </div>
+                  <div className="flex justify-center py-5">
+                    <div className="w-px h-8 bg-gradient-to-b from-primary/60 to-transparent" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {AGENTS.map((agent) => (
+                      <div key={agent.name} className="flex items-center gap-2.5 p-3 rounded-xl bg-background/50 border border-white/5">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon name={agent.icon} className="text-[14px] text-primary" />
+                        </div>
+                        <span className="text-xs truncate">{agent.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    Coordinating trip changes...
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* 5. Trip Dependency Visualization */}
-      <section id="features" className="py-24 px-6 border-t border-white/5 bg-surface/30 overflow-hidden">
-        <div className="max-w-5xl mx-auto text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Every detail connected.</h2>
-          <p className="text-secondary-text text-lg max-w-2xl mx-auto">
-            TravelAmigo maps your journey as a living graph. If one link breaks, we instantly recompute the rest.
-          </p>
-        </div>
+      <section className="relative h-[50vh] min-h-[250px] max-w-6xl w-[100%] rounded-2xl overflow-hidden mx-auto">
+        <HalftoneBackground className="absolute inset-0 w-full h-full z-0 opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-surface/30 via-transparent to-background z-10 pointer-events-none" />
+      </section>
 
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 max-w-5xl mx-auto">
-          {[
-            { icon: 'airplane', title: 'Flight', time: '14:00', state: 'delayed' },
-            { icon: 'bus', title: 'Transfer', time: '16:30', state: 'updating' },
-            { icon: 'bed', title: 'Check-in', time: '17:15', state: 'updating' },
-            { icon: 'restaurant', title: 'Dinner', time: '19:00', state: 'safe' },
-          ].map((node, i) => (
-            <div key={node.title} className="flex items-center flex-col md:flex-row gap-4 md:gap-8 w-full md:w-auto">
-              <div className={`flex flex-col items-center justify-center w-32 h-32 rounded-3xl border transition-all duration-500
-                ${node.state === 'delayed' ? 'border-warning text-warning bg-warning/5 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 
-                  node.state === 'updating' ? 'border-primary text-primary bg-primary/5 shadow-[0_0_20px_rgba(0,82,255,0.2)]' : 
-                  'border-border text-secondary-text bg-surface-elevated'}
-              `}>
-                <Icon name={node.icon} className="text-3xl mb-2" />
-                <span className="font-semibold text-sm">{node.title}</span>
-                <span className="text-xs opacity-80 mt-1">{node.time}</span>
-              </div>
-              
-              {i < 3 && (
-                <div className="hidden md:flex flex-col items-center justify-center w-8">
-                  <div className={`h-0.5 w-full ${node.state === 'delayed' || node.state === 'updating' ? 'bg-primary animate-pulse' : 'bg-border'}`} />
-                  <Icon name="chevron-forward" className={`text-xl -mt-2.5 ${node.state === 'delayed' || node.state === 'updating' ? 'text-primary' : 'text-border'}`} />
+      <section className="py-28 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }}>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
+                Your trip is a network,
+                <br />
+                <span className="text-secondary-text">not a checklist.</span>
+              </h2>
+              <p className="mt-7 text-lg text-secondary-text leading-relaxed max-w-xl">
+                TravelAmigo represents your journey as interconnected activities and dependencies. When one element changes, the system traces what could be affected instead of treating the change in isolation.
+              </p>
+            </motion.div>
+
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }} transition={{ delay: 0.15 }} className="relative">
+              <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full" />
+              <Card className="relative p-6 md:p-8 rounded-[2rem] bg-surface-elevated/80 backdrop-blur-xl border-white/10">
+                <div className="flex items-center justify-between mb-7">
+                  <div>
+                    <p className="text-sm text-secondary-text">Trip dependency map</p>
+                    <p className="font-semibold mt-1">Rome · Today</p>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                    <span className="text-xs text-primary">Recalculating</span>
+                  </div>
                 </div>
-              )}
-              {i < 3 && (
-                <div className="flex md:hidden flex-row items-center justify-center h-8">
-                  <div className={`w-0.5 h-full ${node.state === 'delayed' || node.state === 'updating' ? 'bg-primary animate-pulse' : 'bg-border'}`} />
+
+                <div className="relative">
+                  {DEPENDENCY_NODES.map((node, index) => (
+                    <div key={node.title} className="relative flex items-center gap-4">
+                      {index !== DEPENDENCY_NODES.length - 1 && (
+                        <div className="absolute left-[19px] top-12 h-12 w-px bg-gradient-to-b from-primary/40 to-white/5" />
+                      )}
+                      <div className={`relative z-10 w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${node.state === 'changed' ? 'bg-primary/15 border-primary/30' : node.state === 'protected' ? 'bg-green-500/10 border-green-500/20' : 'bg-background/70 border-white/10'}`}>
+                        <Icon name={node.icon} className={`text-[17px] ${node.state === 'changed' ? 'text-primary' : node.state === 'protected' ? 'text-green-400' : 'text-secondary-text'}`} />
+                      </div>
+                      <div className="flex-1 flex items-center justify-between py-4 border-b border-white/5 last:border-0">
+                        <div>
+                          <p className="font-medium text-sm">{node.title}</p>
+                          <p className="text-xs text-secondary-text mt-1">{node.time}</p>
+                        </div>
+                        <span className={`text-xs ${node.state === 'changed' ? 'text-primary' : node.state === 'protected' ? 'text-green-400' : 'text-secondary-text'}`}>
+                          {node.state === 'changed' ? 'Changed' : node.state === 'affected' ? 'Affected' : node.state === 'review' ? 'Reviewing' : 'Protected'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          ))}
+              </Card>
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* 6. Final CTA */}
-      <section className="py-32 px-6 text-center relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl aspect-square rounded-full bg-gradient-blob-1 pointer-events-none -z-10 blur-[100px] opacity-40" />
-        
-        <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-1000">
-          <h2 className="text-4xl md:text-6xl font-bold tracking-tight">
-            Your trip changes.<br/>
-            Your plan doesn't have to fall apart.
+      <section className="py-28 px-6 bg-gradient-to-b from-background to-surface/30">
+        <div className="max-w-6xl mx-auto">
+          <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }}>
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight">
+              Travel problems,
+              <br />
+              <span className="text-secondary-text">in your own words.</span>
+            </h2>
+          </motion.div>
+
+          <motion.div variants={groupVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }} className="grid md:grid-cols-2 gap-4 mt-14">
+            {EXAMPLES.map((example) => (
+              <motion.button
+                key={example}
+                variants={itemVariants}
+                type="button"
+                onClick={() => useExample(example)}
+                className={`group relative text-left p-6 rounded-3xl border transition-all duration-300 overflow-hidden ${activeExample === example
+                  ? 'border-primary shadow-[0_0_0_1px_rgba(47,163,107,1)] bg-primary/10'
+                  : 'border-white/10 bg-[var(--color-soft-green)]/5 hover:border-primary/80 hover:shadow-[0_0_0_1px_rgba(47,163,107,0.8)] hover:bg-surface-elevated'
+                  }`}
+              >
+                <div
+                  className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{ backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px)', backgroundSize: '14px 14px' }}
+                />
+                <div className="relative z-10 flex items-start gap-4">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-primary">→</span>
+                  </div>
+                  <div>
+                    <p className="leading-relaxed group-hover:text-white transition-colors">“{example}”</p>
+                    <p className="text-xs font-bold mt-4 group-hover:scale-1.5 transition-colors">Ask kaju →</p>
+                  </div>
+                </div>
+              </motion.button>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="relative py-32 md:py-44 px-6 overflow-hidden">
+        <ShaderBackground className="absolute inset-0 opacity-40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background pointer-events-none" />
+
+        <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }} className="relative z-10 max-w-3xl mx-auto text-center">
+          <h2 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight">
+            Tell kaju what changed.
+            <br />
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">See what happens next.</span>
           </h2>
-          <div className="pt-8">
-            <Button size="lg" className="rounded-full px-10 text-lg shadow-glow-primary">
-              Plan with kaju
+          <p className="mt-7 text-lg md:text-xl text-secondary-text max-w-xl mx-auto">
+            TravelAmigo turns unexpected changes into coordinated next steps.
+          </p>
+          <div className="mt-10 flex justify-center">
+            <Button onClick={handleStart} className="px-7 py-3.5 text-base">
+              Start with kaju <span className="ml-2">→</span>
             </Button>
           </div>
-        </div>
+        </motion.div>
       </section>
     </div>
   );

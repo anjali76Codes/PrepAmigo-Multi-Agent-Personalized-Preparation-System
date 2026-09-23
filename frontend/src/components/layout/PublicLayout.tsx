@@ -2,7 +2,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
-import { MarbleBackground } from '../ui/MarbleBackground';
+import { ShaderBackground } from '../ui/ShaderBackground';
 import { useState } from 'react';
 
 export function PublicLayout() {
@@ -11,7 +11,7 @@ export function PublicLayout() {
   return (
     <div className="min-h-screen text-primary-text relative flex flex-col font-sans selection:bg-accent/30 selection:text-text bg-transparent">
       {/* Organic Marble Background */}
-      <MarbleBackground intensity="high" />
+      <ShaderBackground className="fixed inset-0 z-[-1]" />
       
       {/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/60 backdrop-blur-xl">

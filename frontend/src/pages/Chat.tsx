@@ -22,11 +22,11 @@ export function Chat() {
     setIsStarted(true);
     setMessages([mockChatMessages[0]]);
     setIsCoordinating(true);
-    
+
     // Simulate kaju thinking and replying after a short delay
     setTimeout(() => {
       setMessages([mockChatMessages[0], mockChatMessages[1]]);
-      
+
       // Simulate coordination finishing
       setTimeout(() => {
         setIsCoordinating(false);
@@ -70,10 +70,10 @@ export function Chat() {
   return (
     <div className="flex flex-col lg:flex-row h-full w-full">
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full relative max-w-4xl mx-auto w-full">
+      <div className="flex-1 flex flex-col h-full relative mx-auto w-full">
         <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth pb-32">
           {!isStarted ? (
-            <motion.div 
+            <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="show"
@@ -88,7 +88,7 @@ export function Chat() {
                   Tell me what's changed with your trip, and I'll figure out what needs to happen next.
                 </motion.p>
               </div>
-              
+
               <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-8">
                 <SuggestedPrompt text="My flight was cancelled" onClick={() => handleSuggestedPrompt("My flight was cancelled")} />
                 <SuggestedPrompt text="Find me a hotel near the airport" onClick={() => handleSuggestedPrompt("Find me a hotel near the airport")} />
@@ -106,7 +106,7 @@ export function Chat() {
                     </motion.div>
                   );
                 }
-                
+
                 return (
                   <motion.div key={msg.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                     <KajuMessage isThinking={msg.isThinking}>
@@ -117,16 +117,16 @@ export function Chat() {
                         </div>
                       )}
                       {!msg.isThinking && !isCoordinating && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }} 
-                          animate={{ opacity: 1, y: 0 }} 
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.2 }}
                           className="mt-4 space-y-4"
                         >
                           <DependencyGraph nodes={mockTripData.nodes} />
                           <p className="pt-2 text-accent font-medium">
                             Your cancelled flight affects the airport transfer and hotel check-in.
-                            <br/><br/>
+                            <br /><br />
                             <span className="text-primary-text font-normal">I'm looking for alternatives that keep your existing plans intact.</span>
                           </p>
                         </motion.div>
@@ -140,13 +140,13 @@ export function Chat() {
         </div>
 
         {/* Input Area */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }} 
-          animate={{ y: 0, opacity: 1 }} 
-          className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-surface via-surface to-transparent pt-12"
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-surface via-surface to-transparent pt-12 w-full"
         >
           <div className="max-w-3xl mx-auto">
-            <ChatInput 
+            <ChatInput
               value={inputValue}
               onChange={setInputValue}
               onSubmit={handleSend}
@@ -158,7 +158,7 @@ export function Chat() {
 
       {/* Desktop Trip Context Panel */}
       <div className="hidden lg:block">
-        <TripContextPanel data={mockTripData} />
+        <TripContextPanel data={mockTripData} className="!bg-black/20" />
       </div>
     </div>
   );

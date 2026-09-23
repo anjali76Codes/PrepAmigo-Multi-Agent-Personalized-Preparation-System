@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '../ui/Icon';
+import { cn } from '../../lib/utils';
 
 export interface TripContextData {
   id: string;
@@ -13,9 +14,9 @@ export interface TripContextData {
   };
 }
 
-export function TripContextPanel({ data }: { data: TripContextData }) {
+export function TripContextPanel({ data, className }: { data: TripContextData, className?: string }) {
   return (
-    <div className="flex flex-col h-full bg-surface-elevated/30 border-l border-border backdrop-blur-sm p-6 w-full lg:w-80 shrink-0">
+    <div className={cn("flex flex-col h-full bg-surface-elevated/30 border-l border-border backdrop-blur-sm p-6 w-full lg:w-80 shrink-0", className)}>
       <div className="flex items-center gap-2 text-accent mb-6">
         <Icon name="compass-outline" className="text-xl" />
         <h3 className="font-semibold tracking-wide uppercase text-sm">Trip Context</h3>
