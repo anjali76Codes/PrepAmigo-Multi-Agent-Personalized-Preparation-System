@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { mockTripData } from '../data/mockData';
 import { TripOverview } from '../components/trips/TripOverview';
 import { ItineraryTimeline } from '../components/trips/ItineraryTimeline';
@@ -12,16 +13,30 @@ import { Icon } from '../components/ui/Icon';
 export function TripDetails() {
   const { tripId } = useParams();
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
 
   // In a real app we'd fetch by tripId. For now, use mockTripData directly.
   const data = mockTripData;
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: shouldReduceMotion ? 0 : 0.15 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
 
   return (
     <div className="flex-1 overflow-y-auto w-full h-full p-6 md:p-10 relative">
       <div className="max-w-6xl mx-auto w-full space-y-12">
         
         {/* Header Navigation */}
-        <div className="flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/app/trips')}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-surface border border-border hover:bg-elevated text-secondary-text hover:text-primary-text transition-colors"
@@ -29,16 +44,23 @@ export function TripDetails() {
             <Icon name="arrow-back-outline" className="text-xl" />
           </button>
           <span className="text-secondary-text font-medium text-lg">Back to Trips</span>
-        </div>
+        </motion.div>
 
         {/* Trip Overview */}
-        <TripOverview data={data} />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <TripOverview data={data} />
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-8">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-8"
+        >
           
           {/* Main Content: Itinerary */}
           <div className="lg:col-span-2 space-y-12">
-            <section>
+            <motion.section variants={itemVariants}>
               <div className="flex justify-between items-end mb-8">
                 <h2 className="text-2xl font-bold tracking-tight">Itinerary</h2>
                 <Button variant="secondary" className="rounded-full">
@@ -47,14 +69,14 @@ export function TripDetails() {
                 </Button>
               </div>
               <ItineraryTimeline itinerary={data.itinerary} />
-            </section>
+            </motion.section>
           </div>
 
           {/* Sidebar Content: Coordination & Status */}
           <div className="space-y-12">
             
             {/* Ask kaju CTA */}
-            <div className="p-6 rounded-3xl bg-surface border border-border text-center space-y-4 shadow-lg">
+            <motion.div variants={itemVariants} className="p-6 rounded-3xl bg-surface border border-border text-center space-y-4 shadow-lg">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-primary">
                 <Icon name="sparkles" className="text-2xl text-white" />
               </div>
@@ -68,27 +90,27 @@ export function TripDetails() {
               >
                 Ask kaju about this trip
               </Button>
-            </div>
+            </motion.div>
 
             {/* Affected Items */}
             {data.affectedItems && data.affectedItems.length > 0 && (
-              <section>
+              <motion.section variants={itemVariants}>
                 <AffectedItems items={data.affectedItems} />
-              </section>
+              </motion.section>
             )}
 
             {/* Dependency Timeline */}
-            <section>
+            <motion.section variants={itemVariants}>
               <DependencyGraph nodes={data.nodes} />
-            </section>
+            </motion.section>
 
             {/* Activity History */}
-            <section className="bg-surface p-6 rounded-3xl border border-border">
+            <motion.section variants={itemVariants} className="bg-surface p-6 rounded-3xl border border-border">
               <ActivityTimeline history={data.activityHistory} />
-            </section>
+            </motion.section>
 
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

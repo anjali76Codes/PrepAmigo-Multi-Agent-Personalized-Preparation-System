@@ -106,3 +106,113 @@ export const mockAgents = [
   { id: 'agent_transfer', name: 'Transportation', icon: 'car-outline', status: 'active' },
   { id: 'agent_dining', name: 'Dining', icon: 'restaurant-outline', status: 'idle' },
 ];
+
+export const mockBookings = [
+  {
+    id: 'bk_1',
+    tripId: 'trip_rome',
+    tripName: 'Rome, Italy',
+    type: 'Flight',
+    icon: 'airplane-outline',
+    name: 'Air France AF123',
+    date: '12 Sep • 14:00',
+    location: 'JFK to FCO',
+    status: 'Cancelled',
+  },
+  {
+    id: 'bk_2',
+    tripId: 'trip_rome',
+    tripName: 'Rome, Italy',
+    type: 'Accommodation',
+    icon: 'bed-outline',
+    name: 'Hotel de Russie',
+    date: '12 Sep - 17 Sep',
+    location: 'Via del Babuino, 9, Rome',
+    status: 'Confirmed',
+  },
+  {
+    id: 'bk_3',
+    tripId: 'trip_rome',
+    tripName: 'Rome, Italy',
+    type: 'Transfer',
+    icon: 'car-outline',
+    name: 'Private Airport Transfer',
+    date: '12 Sep • 16:30',
+    location: 'FCO to Hotel',
+    status: 'Pending update',
+  },
+  {
+    id: 'bk_4',
+    tripId: 'trip_rome',
+    tripName: 'Rome, Italy',
+    type: 'Dining',
+    icon: 'restaurant-outline',
+    name: 'Dinner at Trattoria',
+    date: '12 Sep • 19:00',
+    location: 'Trastevere, Rome',
+    status: 'Confirmed',
+  }
+];
+
+export const mockBudget = {
+  tripId: 'trip_rome',
+  tripName: 'Rome, Italy',
+  currency: '₹',
+  total: 120000,
+  spent: 45000,
+  categories: [
+    { name: 'Flights', icon: 'airplane-outline', allocated: 50000, spent: 25000 },
+    { name: 'Accommodation', icon: 'bed-outline', allocated: 40000, spent: 15000 },
+    { name: 'Transport', icon: 'car-outline', allocated: 5000, spent: 1000 },
+    { name: 'Food', icon: 'restaurant-outline', allocated: 15000, spent: 2000 },
+    { name: 'Activities', icon: 'compass-outline', allocated: 10000, spent: 2000 },
+  ]
+};
+
+export const mockNotifications = [
+  {
+    id: 'notif_1',
+    title: 'Flight cancellation detected',
+    description: 'Your flight AF123 to Rome has been cancelled.',
+    time: '2 hours ago',
+    read: false,
+    icon: 'airplane-outline',
+    type: 'error'
+  },
+  {
+    id: 'notif_2',
+    title: 'Hotel check-in may be affected',
+    description: 'kaju is reviewing your hotel check-in time due to the flight change.',
+    time: '2 hours ago',
+    read: false,
+    icon: 'bed-outline',
+    type: 'warning'
+  },
+  {
+    id: 'notif_3',
+    title: 'Airport transfer needs review',
+    description: 'Your private transfer at FCO needs to be rescheduled.',
+    time: '2 hours ago',
+    read: false,
+    icon: 'car-outline',
+    type: 'warning'
+  },
+  {
+    id: 'notif_4',
+    title: 'Dinner reservation timing',
+    description: 'Your reservation at Trattoria may need attention.',
+    time: '3 hours ago',
+    read: true,
+    icon: 'restaurant-outline',
+    type: 'info'
+  },
+  {
+    id: 'notif_5',
+    title: 'Trip updated by kaju',
+    description: 'Your itinerary for Paris has been finalized.',
+    time: '1 day ago',
+    read: true,
+    icon: 'sparkles-outline',
+    type: 'success'
+  }
+];

@@ -1,9 +1,12 @@
+import { motion, useReducedMotion } from 'framer-motion';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 
 export function Home() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div className="flex flex-col w-full">
       {/* 1. Hero Section */}
@@ -11,7 +14,11 @@ export function Home() {
         {/* Subtle glow behind hero text */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-full bg-primary/10 blur-[100px] rounded-[100%] pointer-events-none -z-10" />
 
-        <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <motion.div 
+          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+        >
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
             Tell kaju what changed.<br className="hidden sm:block" />
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -22,10 +29,15 @@ export function Home() {
             Meet kaju, your AI travel assistant. When life happens, just say the word. 
             Behind the scenes, our specialized agents coordinate flights, hotels, and schedules so you don't have to.
           </p>
-        </div>
+        </motion.div>
 
         {/* Conversational Input (Visual Only) */}
-        <div className="w-full max-w-3xl relative group animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200 fill-mode-both">
+        <motion.div 
+          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 1 }}
+          className="w-full max-w-3xl relative group"
+        >
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-accent/30 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
           <div className="relative flex items-center bg-surface-elevated border border-border/50 rounded-full p-2 pl-6 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
             <input 
@@ -38,7 +50,7 @@ export function Home() {
               <span className="hidden sm:inline font-semibold">Tell kaju</span>
             </button>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* 2. Example Conversation */}
