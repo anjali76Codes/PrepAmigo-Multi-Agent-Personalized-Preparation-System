@@ -17,8 +17,8 @@ TravelAmigo is a multi-agent journey coordination system where users tell **kaju
 The visual language uses a **dark polished green/black marble aesthetic**:
 - Theme: Black, deep forest green, emerald, muted sage.
 - Rounded UI: `rounded-full` for inputs and primary buttons, `rounded-2xl/3xl` for cards and panels.
-- Marble Background: SVG-based organic flowing veins (using `feTurbulence` and `mix-blend-mode`).
-- Motion: Subtle blurs, fades, staggers, and glows that respect `prefers-reduced-motion` (via Framer Motion).
+- Backgrounds: Dynamic WebGL shader-based backgrounds (mesh drift and halftone) and SVG organic marble for a premium, immersive feel.
+- Motion: Subtle blurs, fades, staggers, interactive hover effects (dotted cards, glowing borders), and glows that respect `prefers-reduced-motion` (via Framer Motion).
 
 ## Frontend Structure
 - `src/components/ui/` - Reusable primitives (`Button`, `Card`, `Icon`, `MarbleBackground`, etc.)
@@ -48,6 +48,7 @@ The visual language uses a **dark polished green/black marble aesthetic**:
 4. **Visual Refinement**: Shifted to a deep emerald marble aesthetic using SVG turbulence.
 5. **Trips, Bookings & Budget**: Added the trips dashboard, detailed workspace, and supporting reservation/finance pages.
 6. **Notifications, Settings & Animations**: Implemented remaining UI pages and completed a global Framer Motion pass for fluid page transitions and staggered reveals across the entire application.
+7. **Premium WebGL UI & Rebranding**: Integrated custom WebGL shader backgrounds (mesh drift and halftone), added bolt.new-style interactive hover cards, improved the chat input UI, and finalized the "kaju" branding across the app.
 
 ## Features
 The frontend now includes:
@@ -59,6 +60,7 @@ The frontend now includes:
 - Notifications and user settings
 - Reusable Trip Context
 - Responsive design
+- Premium WebGL shader backgrounds (mesh drift and halftone)
 - Dark green/black marble visual system
 - Reduced-motion-aware animations and smooth page transitions
 
