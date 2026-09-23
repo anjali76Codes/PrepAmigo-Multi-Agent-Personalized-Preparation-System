@@ -1,0 +1,16 @@
+# Secrets
+.env*
+
+# Bruno local environment overrides and secrets
+environments/*.yml
+environments/*.bru
+
+# Bruno local preferences and cache
+.bruno/
+
+# Dependencies
+node_modules
+
+# OS files
+.DS_Store
+Thumbs.db
