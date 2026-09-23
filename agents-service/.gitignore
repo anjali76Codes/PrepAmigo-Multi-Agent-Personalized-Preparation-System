@@ -1,0 +1,57 @@
+# --- Python Virtual Environments ---
+.venv/
+env/
+venv/
+ENV/
+
+# --- Python Compiled / Cache Files ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Tool Specific ---
+# uv lock files can be committed, but ignore local caches if needed
+.uv/
+
+# --- IDEs and Editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# --- Environment Variables & Secrets ---
+.env
+.env.local
+
+# --- OS Specific ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

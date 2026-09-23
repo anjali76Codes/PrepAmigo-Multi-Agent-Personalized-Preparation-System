@@ -1,0 +1,8 @@
+fastapi
+google-search-results
+langchain-core
+langchain-ollama
+langchain-openai
+langgraph
+python-dotenv
+uvicorn[standard]
