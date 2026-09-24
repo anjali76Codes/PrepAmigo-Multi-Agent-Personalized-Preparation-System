@@ -12,6 +12,7 @@ const envSchema = z.object({
   MONGODB_URI: z.string(),
   GOOGLE_CLIENT_ID: z.string(),
   JWT_SECRET: z.string(),
+  FRONTEND_URL: z.string().optional(),
 });
 
 const _env = envSchema.safeParse(process.env);

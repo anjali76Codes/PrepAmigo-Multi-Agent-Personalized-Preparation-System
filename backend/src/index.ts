@@ -3,9 +3,18 @@ import cookieParser from "cookie-parser";
 import { config } from "./config/env.js";
 import { logger } from "./utils/logger.js";
 import authRouter from "./auth/routes.js";
-import { connectDB } from './config/db.js';
+import { connectDB } from "./config/db.js";
+import cors from "cors";
 
 const app = express();
+
+// CORS MUST come before routes
+app.use(
+  cors({
+    origin: config.FRONTEND_URL || "http://localhost:5173",
+    credentials: true,
+  }),
+);
 
 // Standard express parsing middlewares
 app.use(express.json());
@@ -18,7 +27,7 @@ app.use((req: Request, _res: Response, next) => {
   next();
 });
 
-// Production Health Check Route
+// Health check
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     status: "UP",
@@ -31,8 +40,7 @@ app.get("/health", (_req: Request, res: Response) => {
 // Auth routes
 app.use(authRouter);
 
-
-// connect to db 
+// Connect DB
 connectDB();
 
 app.listen(config.PORT, () => {
