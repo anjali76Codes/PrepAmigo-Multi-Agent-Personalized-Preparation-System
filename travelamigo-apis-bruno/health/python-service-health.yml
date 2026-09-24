@@ -1,0 +1,43 @@
+info:
+  name: python-service-health
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{PYTHON_SERVICE}}/health"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: example
+    request:
+      url: "{{PYTHON_SERVICE}}/health"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: date
+          value: Thu, 24 Sep 2026 07:06:30 GMT
+        - name: server
+          value: uvicorn
+        - name: content-length
+          value: "117"
+        - name: content-type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": "UP",
+            "timestamp": "2026-09-24T07:06:30.937800+00:00",
+            "uptime": 572.8962638378143,
+            "environment": "development"
+          }

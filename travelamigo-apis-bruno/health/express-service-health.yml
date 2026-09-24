@@ -1,0 +1,49 @@
+info:
+  name: express-service-health
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{EXPRESS-SERVICE}}/health"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: example
+    request:
+      url: "{{EXPRESS-SERVICE}}/health"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: x-powered-by
+          value: Express
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "103"
+        - name: etag
+          value: W/"67-GzC+fWf6iJIJ1PQtl9frmdYyP0A"
+        - name: date
+          value: Thu, 24 Sep 2026 07:05:48 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "status": "UP",
+            "timestamp": "2026-09-24T07:05:48.658Z",
+            "uptime": 157.7863785,
+            "environment": "development"
+          }
