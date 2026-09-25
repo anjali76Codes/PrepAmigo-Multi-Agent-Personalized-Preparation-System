@@ -1,4 +1,4 @@
-# TravelAmigo-SerpApi-Hackathon
+# PrepAmigo-SerpApi-Hackathon
 
 ## Setup Instructions
 
