@@ -29,12 +29,12 @@ export function PublicLayout() {
               Agents
             </Link>
             <div className="flex items-center gap-4 border-l border-white/10 pl-8">
-              <Link to="/login" className="text-sm font-medium text-secondary-text hover:text-primary-text transition-colors outline-none focus-visible:text-primary">
+              {/* <Link to="/login" className="text-sm font-medium text-secondary-text hover:text-primary-text transition-colors outline-none focus-visible:text-primary">
                 Log in
-              </Link>
+              </Link> */}
               <Link to="/signup" className="outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-full">
                 <Button className="rounded-full h-10 px-6 font-semibold" variant="primary">
-                  Get Started
+                 Get Started
                 </Button>
               </Link>
             </div>
@@ -58,7 +58,7 @@ export function PublicLayout() {
             <hr className="border-border my-2" />
             <Link to="/login" className="text-base font-medium py-2" onClick={() => setIsMobileMenuOpen(false)}>Log in</Link>
             <Link to="/signup" className="mt-2" onClick={() => setIsMobileMenuOpen(false)}>
-              <Button className="w-full rounded-full h-12 text-base font-semibold">Get Started</Button>
+              <Button className="w-full rounded-full h-12 text-base font-semibold">Sign Up</Button>
             </Link>
           </div>
         )}
