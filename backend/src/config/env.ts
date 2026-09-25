@@ -13,6 +13,8 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string(),
   JWT_SECRET: z.string(),
   FRONTEND_URL: z.string().optional(),
+  REDIS_URL: z.string().default("redis://localhost:6379"),
+  AGENTS_SERVICE_URL: z.string().default("http://localhost:8000"),
 });
 
 const _env = envSchema.safeParse(process.env);

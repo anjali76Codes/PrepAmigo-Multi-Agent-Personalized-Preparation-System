@@ -1,14 +1,24 @@
 import os
+import sys
+from pathlib import Path
+
+# Ensure 'src' directory is in sys.path so modules resolve correctly under uvicorn
+_src_dir = str(Path(__file__).resolve().parent)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
 import time
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from streaming.publisher import get_event_publisher
+from streaming.runner import execute_agent_stream
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +31,12 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     thread_id: str
     message: str
+
+
+class ExecuteAgentRequest(BaseModel):
+    runId: str = Field(min_length=1, max_length=128)
+    query: str = Field(min_length=1, max_length=4000)
+    thread_id: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 def _message_text(message: Any) -> str:
@@ -41,7 +57,10 @@ async def lifespan(app: FastAPI):
     from graph.builder import build_graph
 
     app.state.graph = build_graph()
+    app.state.publisher = get_event_publisher()
     yield
+    if hasattr(app.state, "publisher"):
+        await app.state.publisher.close()
 
 
 app = FastAPI(title="TravelAmigo Agents", lifespan=lifespan)
@@ -71,6 +90,27 @@ def health_check():
         "uptime": time.time() - START_TIME,
         "environment": os.getenv("ENVIRONMENT", "development"),
     }
+
+
+@app.post("/internal/agent/execute")
+async def execute_agent_async(
+    request: ExecuteAgentRequest,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Decoupled trigger endpoint: initiates LangGraph workflow in a background task
+    and immediately returns acceptance. Execution lifecycle is completely independent
+    of client connection state.
+    """
+    background_tasks.add_task(
+        execute_agent_stream,
+        run_id=request.runId,
+        query=request.query,
+        graph=app.state.graph,
+        publisher=app.state.publisher,
+        thread_id=request.thread_id,
+    )
+    return {"status": "accepted", "runId": request.runId}
 
 
 @app.post("/api/chat", response_model=ChatResponse)

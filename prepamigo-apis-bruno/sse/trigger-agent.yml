@@ -1,0 +1,70 @@
+info:
+  name: trigger-agent
+  type: http
+  seq: 2
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Find flights from NYC to Paris"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: example
+    request:
+      url: "{{EXPRESS-SERVICE}}/api/agent/run"
+      method: post
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "query": "Find flights from NYC to Paris"
+          }
+    response:
+      status: 202
+      statusText: Accepted
+      headers:
+        - name: x-powered-by
+          value: Express
+        - name: access-control-allow-origin
+          value: http://localhost:5173
+        - name: vary
+          value: Origin
+        - name: access-control-allow-credentials
+          value: "true"
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: content-length
+          value: "48"
+        - name: etag
+          value: W/"30-dJssETD1zAoMc2X5e9pUJcmZnSc"
+        - name: date
+          value: Fri, 25 Sep 2026 19:32:40 GMT
+        - name: connection
+          value: keep-alive
+        - name: keep-alive
+          value: timeout=5
+      body:
+        type: json
+        data: |-
+          {
+            "runId": "4ec8a988-7a6a-4332-946b-2ac60a3a0ff0"
+          }

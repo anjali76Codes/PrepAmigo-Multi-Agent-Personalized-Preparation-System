@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import { config } from "./config/env.js";
 import { logger } from "./utils/logger.js";
 import authRouter from "./auth/routes.js";
+import agentRouter from "./agent/routes.js";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
 
@@ -39,6 +40,9 @@ app.get("/health", (_req: Request, res: Response) => {
 
 // Auth routes
 app.use(authRouter);
+
+// Agent SSE & Execution routes
+app.use("/api/agent", agentRouter);
 
 // Connect DB
 connectDB();
