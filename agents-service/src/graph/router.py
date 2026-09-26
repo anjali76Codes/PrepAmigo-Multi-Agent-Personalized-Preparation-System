@@ -6,6 +6,7 @@ from langgraph.graph import END
 
 
 def route_from_supervisor(state: dict) -> str:
+    """Read next_agent set by the supervisor and return the node name to run."""
     return state.get("next_agent", "flight_booking")
 
 

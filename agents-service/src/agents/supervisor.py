@@ -7,13 +7,16 @@ from config import get_llm
 from prompts.system_prompts import SUPERVISOR_PROMPT
 from langchain_core.messages import SystemMessage
 
-VALID_AGENTS = {"flight_booking"}
+VALID_AGENTS = {"flight_booking", "company_research"}
 
 
 def supervisor_node(state: dict) -> dict:
     llm = get_llm(temperature=0)
     messages = [SystemMessage(content=SUPERVISOR_PROMPT), *state["messages"]]
-    decision = llm.invoke(messages).content.strip().lower()
+    raw = llm.invoke(messages).content.strip().lower()
+
+    # Extract the first token in case the LLM adds extra verbiage
+    decision = raw.split()[0] if raw else ""
 
     if decision not in VALID_AGENTS:
         raise ValueError(f"Supervisor returned unsupported agent: {decision!r}")

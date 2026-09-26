@@ -155,17 +155,50 @@ async def execute_agent_stream(
                         event_type=EventType.CALLING_AGENT,
                         payload={"agent": "flight_booking", "message": "Analyzing flight options..."},
                     )
+                elif node_name == "company_research":
+                    await pub.emit_event(
+                        run_id=run_id,
+                        event_type=EventType.CALLING_AGENT,
+                        payload={
+                            "agent": "company_research",
+                            "message": "Company Research Agent activated — building company dossier...",
+                        },
+                    )
                 elif node_name == "tools":
                     await pub.emit_event(
                         run_id=run_id,
                         event_type=EventType.RESEARCHING,
                         payload={"node": "tools", "message": "Executing flight search tools..."},
                     )
+                elif node_name == "cr_tools":
+                    # Extract which tool(s) were called from the last message
+                    messages = node_output.get("messages", []) if isinstance(node_output, dict) else []
+                    tool_names = []
+                    for msg in messages:
+                        tool_name = getattr(msg, "name", None)
+                        if tool_name:
+                            tool_names.append(tool_name)
+                    tool_label = ", ".join(tool_names) if tool_names else "SerpApi search engine"
+                    await pub.emit_event(
+                        run_id=run_id,
+                        event_type=EventType.RESEARCHING,
+                        payload={
+                            "node": "cr_tools",
+                            "tools": tool_names,
+                            "message": f"Querying {tool_label}...",
+                        },
+                    )
                 elif node_name == "guardrails":
                     await pub.emit_event(
                         run_id=run_id,
                         event_type=EventType.PROCESSING,
                         payload={"node": "guardrails", "message": "Running guardrails..."},
+                    )
+                elif node_name == "cr_guardrails":
+                    await pub.emit_event(
+                        run_id=run_id,
+                        event_type=EventType.PROCESSING,
+                        payload={"node": "cr_guardrails", "message": "Validating company research results..."},
                     )
                 last_state = node_output
 
