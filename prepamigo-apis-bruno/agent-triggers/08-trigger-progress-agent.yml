@@ -1,0 +1,30 @@
+info:
+  name: 08-trigger-progress-agent
+  type: http
+  seq: 8
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Calculate my current interview readiness index (IRI), gamification level, study streak, and burn-down pace"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Progress Agent
+  
+  Triggers Interview Readiness Index (IRI) calculation, gamification XP breakdown, streak tracking, and burn-down diagnostics.

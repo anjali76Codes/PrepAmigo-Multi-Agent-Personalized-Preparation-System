@@ -1,0 +1,54 @@
+info:
+  name: 03-google-videos-long-lectures
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_videos
+      type: query
+    - name: q
+      value: "MIT 6.824 distributed systems Raft"
+      type: query
+    - name: tbs
+      value: "dur:l"
+      type: query
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: num
+      value: "5"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Videos API — Long Educational Lectures
+  
+  Used by: Research Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Lecture topic or university course name
+  - `tbs`: Duration filter: `dur:l` (long, >20 mins), `dur:m` (medium, 4-20 mins), `dur:s` (short, <4 mins)
+  - `gl` / `hl`: Country and language
+  - `no_cache` (Optional): Bypass SerpApi cache

@@ -1,0 +1,7 @@
+info:
+  name: assessment
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit

@@ -1,0 +1,30 @@
+info:
+  name: 05-trigger-research-agent
+  type: http
+  seq: 5
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Find high-yield study resources, textbooks, and video lectures for Kafka event streaming, Raft consensus, and distributed transactions"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Research Agent
+  
+  Triggers multi-source study resource discovery: Google Search, Google Play Books, Google Videos, and YouTube.

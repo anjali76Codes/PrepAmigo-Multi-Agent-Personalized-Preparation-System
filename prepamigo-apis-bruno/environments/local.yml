@@ -1,0 +1,14 @@
+name: local
+variables:
+  - name: EXPRESS-SERVICE
+    value: http://localhost:3000
+    enabled: true
+  - name: PYTHON-SERVICE
+    value: http://localhost:8000
+    enabled: true
+  - name: SERPAPI_BASE
+    value: https://serpapi.com
+    enabled: true
+  - name: SERPAPI_KEY
+    value: d712ec037c4841274069484188bae383c93553e3f0bae9ce6af4518ec5a12bed
+    enabled: true

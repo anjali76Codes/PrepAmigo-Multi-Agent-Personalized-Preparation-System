@@ -1,0 +1,122 @@
+info:
+  name: 07-google-images
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_images
+      type: query
+    - name: q
+      value: "Datadog product architecture engineering"
+      type: query
+    - name: location
+      value: "United States"
+      type: query
+      disabled: true
+    - name: uule
+      value: ""
+      type: query
+      disabled: true
+    - name: google_domain
+      value: google.com
+      type: query
+      disabled: true
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: period_unit
+      value: m
+      type: query
+      disabled: true
+    - name: period_value
+      value: "6"
+      type: query
+      disabled: true
+    - name: start_date
+      value: ""
+      type: query
+      disabled: true
+    - name: end_date
+      value: ""
+      type: query
+      disabled: true
+    - name: chips
+      value: ""
+      type: query
+      disabled: true
+    - name: tbs
+      value: ""
+      type: query
+      disabled: true
+    - name: imgar
+      value: w
+      type: query
+      disabled: true
+    - name: imgsz
+      value: l
+      type: query
+      disabled: true
+    - name: image_color
+      value: ""
+      type: query
+      disabled: true
+    - name: image_type
+      value: photo
+      type: query
+      disabled: true
+    - name: safe
+      value: active
+      type: query
+      disabled: true
+    - name: num
+      value: "5"
+      type: query
+    - name: ijn
+      value: "0"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Images API — Product / Architecture Visuals
+  
+  Used by: Company Research Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Query (supports `site:`, `inurl:`, `intitle:`)
+  - `location` / `uule` (Optional): Location
+  - `google_domain` (Optional): Default `google.com`
+  - `gl` / `hl` (Optional): Country / Language
+  - `period_unit` + `period_value` (Optional): Recency filter (s/n/h/d/w/m/y + count)
+  - `start_date` / `end_date` (Optional): `YYYYMMDD` date range
+  - `chips` (Optional): Suggested search chips from prior response
+  - `tbs` (Optional): Advanced filters (e.g. `sur:cl` for Creative Commons)
+  - `imgar` (Optional): Aspect ratio: `s` square, `t` tall, `w` wide, `xw` panoramic
+  - `imgsz` (Optional): Size filter (`l` large, `m` medium, `i` icon)
+  - `image_color` (Optional): Color filter (`bw`, `red`, `blue`, etc.)
+  - `image_type` (Optional): `photo`, `clipart`, `lineart`, `animated`, `face`
+  - `safe` (Optional): `active` or `off`
+  - `num` (Optional): Number of images (max 100)
+  - `ijn` (Optional): Page number (0-99)
+  - `no_cache` (Optional): Bypass SerpApi cache

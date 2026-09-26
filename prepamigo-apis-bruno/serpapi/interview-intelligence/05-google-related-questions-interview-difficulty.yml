@@ -1,0 +1,46 @@
+info:
+  name: 05-google-related-questions-interview-difficulty
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_related_questions
+      type: query
+    - name: q
+      value: "What kind of questions does Stripe ask in technical interviews?"
+      type: query
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Related Questions API — Interview Difficulty Calibration
+  
+  Used by: Interview Intelligence Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Interview-focused question query
+  - `gl` / `hl`: Country and language
+  - `no_cache` (Optional): Bypass SerpApi cache

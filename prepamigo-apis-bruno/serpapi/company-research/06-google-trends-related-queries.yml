@@ -1,0 +1,71 @@
+info:
+  name: 06-google-trends-related-queries
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_trends
+      type: query
+    - name: q
+      value: "Datadog"
+      type: query
+    - name: data_type
+      value: RELATED_QUERIES
+      type: query
+    - name: geo
+      value: "US"
+      type: query
+      disabled: true
+    - name: date
+      value: "today 12-m"
+      type: query
+    - name: tz
+      value: "420"
+      type: query
+      disabled: true
+    - name: cat
+      value: ""
+      type: query
+      disabled: true
+    - name: gprop
+      value: "web"
+      type: query
+      disabled: true
+    - name: hl
+      value: en
+      type: query
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Trends API — Related Queries
+  
+  Used by: Company Research Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Single search term (max 1 for RELATED_QUERIES)
+  - `data_type` (Required): `RELATED_QUERIES`
+  - `geo` (Optional): Country code (`US`, `GB`, etc.)
+  - `date` (Optional): `today 12-m`, `today 5-y`, `all`, etc.
+  - `tz` (Optional): UTC offset in minutes
+  - `cat` (Optional): Category filter ID
+  - `gprop` (Optional): `images`, `news`, `youtube`, or empty for Web
+  - `hl` (Optional): Language code
+  - `no_cache` (Optional): Bypass SerpApi cache

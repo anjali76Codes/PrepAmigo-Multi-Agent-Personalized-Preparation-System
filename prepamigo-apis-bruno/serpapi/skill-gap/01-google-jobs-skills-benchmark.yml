@@ -1,0 +1,59 @@
+info:
+  name: 01-google-jobs-skills-benchmark
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_jobs
+      type: query
+    - name: q
+      value: "Senior Backend Engineer distributed systems"
+      type: query
+    - name: location
+      value: "United States"
+      type: query
+      disabled: true
+    - name: chips
+      value: "employment_type:FULLTIME"
+      disabled: true
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: start
+      value: "0"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Jobs API — Skills Benchmark Matrix
+  
+  Used by: Skill Gap Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Standardized role query
+  - `location` (Optional): Location
+  - `chips` (Optional): Filter (e.g. `requirements:degree`, `employment_type:FULLTIME`)
+  - `start` (Optional): Pagination offset
+  - `no_cache` (Optional): Bypass SerpApi cache

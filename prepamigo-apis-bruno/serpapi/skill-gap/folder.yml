@@ -1,0 +1,7 @@
+info:
+  name: skill-gap
+  type: folder
+  seq: 4
+
+request:
+  auth: inherit

@@ -1,0 +1,30 @@
+info:
+  name: 02-trigger-job-intelligence
+  type: http
+  seq: 2
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Find and analyze backend software engineer role requirements and qualifications at Stripe"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Job Intelligence Agent
+  
+  Triggers job posting extraction, qualification categorization (minimum vs. preferred), and role benchmark analysis.

@@ -1,0 +1,47 @@
+info:
+  name: 04-google-finance-markets
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_finance_markets
+      type: query
+    - name: trend
+      value: indexes
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: gl
+      value: us
+      type: query
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Finance Markets API — Broad Market Context
+  
+  Used by: Company Research Agent (PUBLIC companies ONLY)
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `trend` (Required): Market trend to fetch. Currently only `indexes` is supported by Google Finance.
+  - `hl` (Optional): Language code
+  - `gl` (Optional): Country code
+  - `no_cache` (Optional): Bypass SerpApi 1h cache

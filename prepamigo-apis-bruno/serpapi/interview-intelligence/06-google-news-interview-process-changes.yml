@@ -1,0 +1,59 @@
+info:
+  name: 06-google-news-interview-process-changes
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_news
+      type: query
+    - name: q
+      value: "Stripe interview process changes"
+      type: query
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: so
+      value: "1"
+      type: query
+    - name: topic_token
+      value: ""
+      type: query
+      disabled: true
+    - name: story_token
+      value: ""
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google News API — Interview Process Changes
+  
+  Used by: Interview Intelligence Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Query for hiring process updates
+  - `gl` / `hl`: Country and language
+  - `so`: Sort order (`1` = date/newest first, `0` = relevance)
+  - `topic_token` / `story_token` (Optional)
+  - `no_cache` (Optional): Bypass SerpApi cache

@@ -1,0 +1,46 @@
+info:
+  name: 02-google-jobs-listing
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_jobs_listing
+      type: query
+    - name: q
+      value: "PASTE_JOB_ID_FROM_STEP1_HERE"
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Jobs Listing API — Full Job Description (Step 2 of 2)
+  
+  Used by: Job Intelligence Agent
+  
+  **Documented Parameters:**
+  - `engine` (Required): `google_jobs_listing`
+  - `q` (Required): Unique `job_id` string from a prior `google_jobs` response
+  - `hl` (Optional): Language code (default `en`)
+  - `no_cache` (Optional): Bypass SerpApi cache
+  
+  **Before running:** Run `01-google-jobs-search.yml` first and copy a `job_id` from `jobs_results[]`.

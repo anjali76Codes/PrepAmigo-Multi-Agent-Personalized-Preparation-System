@@ -1,0 +1,34 @@
+info:
+  name: 09-direct-python-chat
+  type: http
+  seq: 9
+
+http:
+  method: post
+  url: "{{PYTHON-SERVICE}}/api/chat"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "message": "Research Datadog for a backend engineer interview",
+        "thread_id": "test-thread-bruno-1"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 60000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Direct Python Chat API (Synchronous)
+  
+  Hits the FastAPI agent service directly (`POST {{PYTHON-SERVICE}}/api/chat`), bypassing the Express gateway and SSE pipeline.
+  
+  Returns the final agent response message directly in the HTTP response JSON.
+  Useful for quick end-to-end testing of the Python LangGraph engine locally.

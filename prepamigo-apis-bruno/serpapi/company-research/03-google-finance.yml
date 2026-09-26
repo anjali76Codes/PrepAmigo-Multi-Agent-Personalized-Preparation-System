@@ -1,0 +1,48 @@
+info:
+  name: 03-google-finance
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_finance
+      type: query
+    - name: q
+      value: "DDOG:NASDAQ"
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: window
+      value: "1Y"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Finance API — Company Financials
+  
+  Used by: Company Research Agent (PUBLIC companies ONLY)
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Ticker in `TICKER:EXCHANGE` format (e.g. `DDOG:NASDAQ`, `GOOGL:NASDAQ`, `MSFT:NASDAQ`)
+  - `hl` (Optional): Language code (default `en`)
+  - `window` (Optional): Chart time range: `1D`, `5D`, `1M`, `6M`, `YTD`, `1Y`, `5Y`, `MAX` (when set, returns summary + graph)
+  - `no_cache` (Optional): Bypass SerpApi 1h cache
