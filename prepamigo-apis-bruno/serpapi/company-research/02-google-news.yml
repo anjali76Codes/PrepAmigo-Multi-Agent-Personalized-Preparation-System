@@ -52,6 +52,22 @@ http:
       type: query
   auth: none
 
+assert:
+  - expr: res.status
+    operator: eq
+    value: "200"
+  - expr: res.body.news_results
+    operator: isDefined
+    value: ""
+
+tests: |
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("presence of news_results array", function() {
+    expect(res.getBody().news_results).to.be.an("array");
+  });
+
 settings:
   encodeUrl: true
   timeout: 30000
