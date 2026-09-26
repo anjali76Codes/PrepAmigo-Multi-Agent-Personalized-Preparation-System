@@ -15,6 +15,13 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   AGENTS_SERVICE_URL: z.string().default("http://localhost:8000"),
+  SERPAPI_API_KEY: z.string().optional().default(""),
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  OPENAI_API_KEY: z.string().optional().default(""),
+  OPENAI_MODEL: z.string().default("gpt-4o-mini"),
+  OPENAI_BASE_URL: z.string().optional(),
+  LLM_PROVIDER: z.string().default("gemini"),
 });
 
 const _env = envSchema.safeParse(process.env);

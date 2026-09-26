@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test:job-intel": "tsx src/scripts/test-job-intelligence.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google/genai": "^2.24.0",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -23,6 +25,8 @@
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.2",
+    "openai": "^7.23.0",
+    "serpapi": "^2.2.1",
     "uuid": "^14.0.2",
     "winston": "^3.19.0",
     "zod": "^4.6.5"

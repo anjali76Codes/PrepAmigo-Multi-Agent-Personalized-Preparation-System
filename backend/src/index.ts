@@ -4,6 +4,7 @@ import { config } from "./config/env.js";
 import { logger } from "./utils/logger.js";
 import authRouter from "./auth/routes.js";
 import agentRouter from "./agent/routes.js";
+import jobIntelligenceRouter from "./agent/jobIntelligence/routes.js";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
 
@@ -43,6 +44,9 @@ app.use(authRouter);
 
 // Agent SSE & Execution routes
 app.use("/api/agent", agentRouter);
+
+// Job Intelligence Agent routes
+app.use(jobIntelligenceRouter);
 
 // Connect DB
 connectDB();
