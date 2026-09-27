@@ -11,9 +11,11 @@ dependencies = [
     "langchain-ollama>=0.2.0",
     "langchain-openai>=0.2.0",
     "langgraph>=0.2.0",
+    "mem0ai>=2.0.0",
     "python-dotenv>=1.0.1",
     "redis>=5.0.0",
     "uvicorn[standard]>=0.30.0",
+    "youtube-transcript-api>=1.0.0",
 ]
 
 [dependency-groups]

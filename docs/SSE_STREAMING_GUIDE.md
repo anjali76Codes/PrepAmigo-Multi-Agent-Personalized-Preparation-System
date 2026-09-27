@@ -22,6 +22,10 @@ Python FastAPI Worker (LangGraph / Agents)
 
 ---
 
+## 2.5. The Python Side Is Agent-Agnostic
+
+`execute_agent_stream` (agents-service/src/streaming/runner.py) does not special-case any agent by name. The real (`USE_DUMMY_STREAM=false`) path runs the actual LangGraph multi-agent graph and translates its generic step events through `streaming/langgraph_bridge.py`, so whichever specialist the supervisor routes to — chat, content research, or a new one registered in `agents/registry.py` — shows up correctly here with no change to this package. See `agents-service/README.md` ("Streaming internals") for how an agent's steps get mapped to `thinking`/`researching`/`structuring`/etc.
+
 ## 3. How Agents Can Directly Emit Events
 
 Any agent, tool, or node in Python can import `get_event_publisher` to publish domain events directly to the client:
