@@ -3,7 +3,9 @@
 
 # Bruno local environment overrides and secrets
 environments/*.bru
+environments/*.yml
 !environments/*.example.bru
+!environments/*.example.yml
 
 # Bruno local preferences and cache
 .bruno/
