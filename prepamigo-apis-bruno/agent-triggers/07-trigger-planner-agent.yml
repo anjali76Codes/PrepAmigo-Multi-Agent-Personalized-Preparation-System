@@ -1,0 +1,30 @@
+info:
+  name: 07-trigger-planner-agent
+  type: http
+  seq: 7
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Create a 45-day personalized preparation plan for Stripe Backend Engineer interview with 15 hours per week study commitment"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Planner Agent
+  
+  Triggers sprint roadmap synthesis, daily study task allocation, and spaced repetition review queue setup.

@@ -1,0 +1,42 @@
+info:
+  name: 10-google-ai-overview-step2-fetch
+  type: http
+  seq: 10
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_ai_overview
+      type: query
+    - name: page_token
+      value: "PASTE_PAGE_TOKEN_FROM_STEP1_HERE"
+      type: query
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google AI Overview API — Step 2: Fetch Synthesized Summary
+  
+  Used by: Company Research Agent
+  
+  **Documented Parameters:**
+  - `engine` (Required): `google_ai_overview`
+  - `page_token` (Required): Token copied from `09-google-ai-overview-step1-search.yml` response
+  - `no_cache` (Optional): Bypass SerpApi cache
+  
+  ⚠️ This endpoint does NOT accept `q`. Only `page_token` and `api_key` are valid.

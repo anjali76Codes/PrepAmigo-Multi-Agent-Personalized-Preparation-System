@@ -1,0 +1,61 @@
+info:
+  name: 01-google-search-study-resources
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google
+      type: query
+    - name: q
+      value: "Raft consensus algorithm visual guide site:github.io"
+      type: query
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: tbs
+      value: ""
+      type: query
+      disabled: true
+    - name: num
+      value: "10"
+      type: query
+      disabled: true
+    - name: start
+      value: "0"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Search API — Study Resource Discovery
+  
+  Used by: Research Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Targeted resource query
+  - `gl` / `hl`: Country and language
+  - `tbs` (Optional): Advanced filter
+  - `num` (Optional): Number of results
+  - `start` (Optional): Pagination offset
+  - `no_cache` (Optional): Bypass SerpApi cache

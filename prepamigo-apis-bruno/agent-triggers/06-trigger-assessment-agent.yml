@@ -1,0 +1,30 @@
+info:
+  name: 06-trigger-assessment-agent
+  type: http
+  seq: 6
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Generate a diagnostic quiz and a practical coding challenge for sliding window rate limiter in Stripe interview style"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Assessment Agent
+  
+  Triggers diagnostic quiz generation, practical coding challenge definition with test cases, and mock interview rubric evaluation.

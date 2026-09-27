@@ -1,0 +1,90 @@
+info:
+  name: 01-google-forums-interview-experiences
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google_forums
+      type: query
+    - name: q
+      value: "Stripe backend interview experience site:reddit.com"
+      type: query
+    - name: location
+      value: "United States"
+      type: query
+      disabled: true
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: period_unit
+      value: m
+      type: query
+    - name: period_value
+      value: "6"
+      type: query
+    - name: start_date
+      value: ""
+      type: query
+      disabled: true
+    - name: end_date
+      value: ""
+      type: query
+      disabled: true
+    - name: start
+      value: "0"
+      type: query
+      disabled: true
+    - name: nfpr
+      value: "1"
+      type: query
+      disabled: true
+    - name: filter
+      value: "1"
+      type: query
+      disabled: true
+    - name: tbs
+      value: ""
+      type: query
+      disabled: true
+    - name: device
+      value: desktop
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Forums API — Interview Experiences (Recent)
+  
+  Used by: Interview Intelligence Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Search query (e.g. "Stripe backend interview experience site:reddit.com")
+  - `location` (Optional): Location
+  - `gl` / `hl`: Country and language
+  - `period_unit` + `period_value` (Optional): Recency filter (m + 6 = past 6 months)
+  - `start_date` / `end_date` (Optional): `YYYYMMDD` date filter
+  - `start` (Optional): Pagination offset
+  - `nfpr` (Optional): `1` to exclude auto-corrected query results
+  - `filter` (Optional): `1` to toggle similar results filtering
+  - `no_cache` (Optional): Bypass SerpApi cache

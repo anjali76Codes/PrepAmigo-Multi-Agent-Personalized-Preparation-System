@@ -1,0 +1,30 @@
+info:
+  name: 04-trigger-skill-gap
+  type: http
+  seq: 4
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Evaluate my skill gaps for Stripe Backend Engineer L4: I have 3 years of Node.js, Express, and PostgreSQL experience, but I need to know what distributed systems and DSA gaps I have."
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Skill Gap Agent
+  
+  Triggers skill diffing against the target role benchmark, DAG prerequisite mapping, and categorized deficit matrix output.

@@ -1,0 +1,64 @@
+info:
+  name: 03-google-search-career-portal-fallback
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google
+      type: query
+    - name: q
+      value: "site:careers.stripe.com \"Backend Engineer\""
+      type: query
+    - name: location
+      value: "United States"
+      type: query
+      disabled: true
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: tbs
+      value: "qdr:m"
+      type: query
+    - name: num
+      value: "10"
+      type: query
+      disabled: true
+    - name: start
+      value: "0"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Search API — Career Portal Fallback
+  
+  Used by: Job Intelligence Agent (fallback when google_jobs returns 0 results)
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Targeted ATS search (e.g. `site:careers.stripe.com "Backend Engineer"`, `site:boards.greenhouse.io/datadog`)
+  - `gl` / `hl`: Country and language
+  - `tbs` (Optional): Recency filter (`qdr:m` past month, `qdr:w` past week)
+  - `num` (Optional): Number of results
+  - `start` (Optional): Pagination offset
+  - `no_cache` (Optional): Bypass SerpApi cache

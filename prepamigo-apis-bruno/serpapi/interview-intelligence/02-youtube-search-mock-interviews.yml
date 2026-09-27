@@ -1,0 +1,51 @@
+info:
+  name: 02-youtube-search-mock-interviews
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: youtube
+      type: query
+    - name: search_query
+      value: "Datadog software engineer mock interview"
+      type: query
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: sp
+      value: ""
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## YouTube Search API — Mock Interviews & Walkthroughs
+  
+  Used by: Interview Intelligence Agent, Research Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `search_query` (Required): Query (e.g. "Google mock interview system design")
+  - `gl` / `hl`: Country and language
+  - `sp` (Optional): YouTube filter byte string (filter by Video, Duration, Upload date, Sort by views)
+  - `no_cache` (Optional): Bypass SerpApi cache

@@ -1,0 +1,55 @@
+info:
+  name: 01-google-search-task-validation
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{SERPAPI_BASE}}/search"
+  params:
+    - name: engine
+      value: google
+      type: query
+    - name: q
+      value: "Design In-Memory Key Value Store with TTL leetcode discussion"
+      type: query
+    - name: location
+      value: "United States"
+      type: query
+      disabled: true
+    - name: gl
+      value: us
+      type: query
+    - name: hl
+      value: en
+      type: query
+    - name: num
+      value: "10"
+      type: query
+      disabled: true
+    - name: no_cache
+      value: "false"
+      type: query
+      disabled: true
+    - name: api_key
+      value: "{{SERPAPI_KEY}}"
+      type: query
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 30000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Google Search API — Coding Task Ground-Truth Validation
+  
+  Used by: Assessment Agent
+  
+  **Documented Parameters (check box to enable in Params tab):**
+  - `q` (Required): Coding task problem discussion query
+  - `gl` / `hl`: Country and language
+  - `num` (Optional): Number of results
+  - `no_cache` (Optional): Bypass SerpApi cache

@@ -1,0 +1,34 @@
+info:
+  name: 10-internal-execute-async
+  type: http
+  seq: 10
+
+http:
+  method: post
+  url: "{{PYTHON-SERVICE}}/internal/agent/execute"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "runId": "bruno-manual-run-1",
+        "query": "Research Datadog for a backend engineer interview",
+        "thread_id": "thread-1"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 10000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Internal Agent Execution (Python Service Direct)
+  
+  Hits the FastAPI internal execution endpoint (`POST {{PYTHON-SERVICE}}/internal/agent/execute`).
+  
+  Initiates the LangGraph multi-agent execution in a background task and streams events directly into Redis channel `agent:events:{runId}`.

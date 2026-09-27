@@ -1,0 +1,36 @@
+info:
+  name: 01-trigger-company-research
+  type: http
+  seq: 1
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Research Datadog for a backend engineer interview"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Company Research Agent
+  
+  Sends a job preparation company research query through the Express Gateway (`POST /api/agent/run`).
+  
+  **Expected Flow:**
+  1. Express accepts request, generates `runId`, and passes to Python agent service via Redis.
+  2. Python supervisor routes to `company_research` specialist.
+  3. Events stream on Redis channel `agent:events:{runId}`.
+  4. Listen to events via `sse/listen-events` using the returned `runId`.
