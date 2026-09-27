@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import traceback
 from typing import Any, Dict, Optional
 
 from .models import EventType
@@ -109,113 +108,54 @@ async def execute_agent_stream(
     graph: Any = None,
     publisher: Optional[EventPublisher] = None,
     thread_id: Optional[str] = None,
+    user_id: Optional[str] = None,
     use_dummy: Optional[bool] = None,
 ) -> None:
-    """Executes the agent workflow. Uses dummy simulation if configured or if LLM is unavailable."""
+    """Executes the agent workflow. Uses dummy simulation if configured or
+    if LLM is unavailable. The real path is agent-agnostic: whichever
+    specialist the supervisor routes to (chat, research, ...) streams
+    through streaming/langgraph_bridge.py without this function knowing
+    about it by name. `user_id` enables long-term memory for agents that
+    use it (e.g. content research)."""
     pub = publisher or get_event_publisher()
     tid = thread_id or f"run-{run_id}"
 
     if use_dummy is None:
         use_dummy = os.getenv("USE_DUMMY_STREAM", "true").strip().lower() in {"true", "1", "yes"}
 
+    if use_dummy or graph is None:
+        await run_dummy_agent_stream(run_id=run_id, query=query, publisher=pub, thread_id=tid)
+        return
+
+    from langchain_core.messages import HumanMessage
+
+    from graph.errors import friendly_error_detail
+    from streaming.langgraph_bridge import bridge_graph_turn
+
+    logger.info("Starting LangGraph streaming run %s (thread: %s, user: %s)", run_id, tid, user_id or "anonymous")
+    inputs: Dict[str, Any] = {"messages": [HumanMessage(content=query)]}
+    if user_id:
+        inputs["user_id"] = user_id
+    config = {"configurable": {"thread_id": tid}}
+
+    await pub.emit_event(
+        run_id=run_id,
+        event_type=EventType.THINKING,
+        payload={"message": "Received request. Determining which agent should handle it...", "query": query},
+    )
+
     try:
-        if use_dummy or graph is None:
-            await run_dummy_agent_stream(run_id=run_id, query=query, publisher=pub, thread_id=tid)
-            return
-
-        # Real LangGraph path
-        logger.info("Starting LangGraph streaming run %s (thread: %s)", run_id, tid)
-        from langchain_core.messages import HumanMessage
-
-        await pub.emit_event(
-            run_id=run_id,
-            event_type=EventType.THINKING,
-            payload={
-                "message": "Received request. Initializing multi-agent orchestration...",
-                "query": query,
-            },
-        )
-
-        initial_input = {"messages": [HumanMessage(content=query)]}
-        config = {"configurable": {"thread_id": tid}}
-
-        last_state = None
-        async for chunk in graph.astream(initial_input, config=config, stream_mode="updates"):
-            for node_name, node_output in chunk.items():
-                if node_name == "supervisor":
-                    next_agent = node_output.get("next_agent", "unknown") if isinstance(node_output, dict) else "unknown"
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.THINKING,
-                        payload={"node": "supervisor", "next_agent": next_agent},
-                    )
-                elif node_name == "flight_booking":
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.CALLING_AGENT,
-                        payload={"agent": "flight_booking", "message": "Analyzing flight options..."},
-                    )
-                elif node_name == "company_research":
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.CALLING_AGENT,
-                        payload={
-                            "agent": "company_research",
-                            "message": "Company Research Agent activated — building company dossier...",
-                        },
-                    )
-                elif node_name == "tools":
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.RESEARCHING,
-                        payload={"node": "tools", "message": "Executing flight search tools..."},
-                    )
-                elif node_name == "cr_tools":
-                    # Extract which tool(s) were called from the last message
-                    messages = node_output.get("messages", []) if isinstance(node_output, dict) else []
-                    tool_names = []
-                    for msg in messages:
-                        tool_name = getattr(msg, "name", None)
-                        if tool_name:
-                            tool_names.append(tool_name)
-                    tool_label = ", ".join(tool_names) if tool_names else "SerpApi search engine"
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.RESEARCHING,
-                        payload={
-                            "node": "cr_tools",
-                            "tools": tool_names,
-                            "message": f"Querying {tool_label}...",
-                        },
-                    )
-                elif node_name == "guardrails":
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.PROCESSING,
-                        payload={"node": "guardrails", "message": "Running guardrails..."},
-                    )
-                elif node_name == "cr_guardrails":
-                    await pub.emit_event(
-                        run_id=run_id,
-                        event_type=EventType.PROCESSING,
-                        payload={"node": "cr_guardrails", "message": "Validating company research results..."},
-                    )
-                last_state = node_output
-
-        await pub.emit_event(
-            run_id=run_id,
-            event_type=EventType.COMPLETED,
-            payload={"status": "success", "threadId": tid, "result": last_state},
-        )
-
+        async for event_type, payload in bridge_graph_turn(graph, inputs, config):
+            await pub.emit_event(run_id=run_id, event_type=event_type, payload=payload)
     except Exception as exc:
+        # the traceback goes to the server log only; a client-facing
+        # payload should never carry raw internals (see graph/errors.py)
         logger.exception("Agent streaming run %s encountered error: %s", run_id, exc)
         await pub.emit_event(
             run_id=run_id,
             event_type=EventType.FAILED,
-            payload={
-                "error": str(exc),
-                "trace": traceback.format_exc(),
-                "status": "error",
-            },
+            # "error" keeps the raw exception text (existing contract, for
+            # logs/debugging on the client side); "detail" is the
+            # user-facing message main.py's /api/chat also uses
+            payload={"error": str(exc), "detail": friendly_error_detail(exc), "status": "error"},
         )

@@ -90,3 +90,28 @@ async def test_execute_agent_stream_handles_exceptions():
     last_call = publisher.emit_event.call_args_list[-1]
     assert last_call.kwargs["event_type"] == EventType.FAILED
     assert "Graph execution failed" in last_call.kwargs["payload"]["error"]
+
+
+@pytest.mark.anyio
+async def test_execute_agent_stream_passes_user_id_into_the_graph_input(monkeypatch):
+    seen_inputs = {}
+
+    async def fake_bridge(graph, inputs, config):
+        seen_inputs.update(inputs)
+        return
+        yield  # pragma: no cover - makes this an async generator
+
+    monkeypatch.setattr("streaming.langgraph_bridge.bridge_graph_turn", fake_bridge)
+    publisher = EventPublisher()
+    publisher.emit_event = AsyncMock()
+
+    await execute_agent_stream(
+        run_id="run-uid",
+        query="find me resources on DP",
+        graph=MagicMock(),
+        publisher=publisher,
+        user_id="subhaan",
+        use_dummy=False,
+    )
+
+    assert seen_inputs.get("user_id") == "subhaan"
