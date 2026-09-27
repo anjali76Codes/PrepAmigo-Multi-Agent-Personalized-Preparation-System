@@ -32,6 +32,32 @@ def test_final_becomes_completed_with_the_full_reply():
     assert payload == {"agent": "chat", "status": "success", "message": "Start with recursion then memoization."}
 
 
+def test_interview_intelligence_completion_contains_only_the_markdown_message():
+    from langchain_core.messages import AIMessage
+    from langgraph.graph import END, START, StateGraph
+
+    from graph.state import AgentState
+
+    content = "## Summary\nInterview report in Markdown."
+
+    async def supervisor(state):
+        return {"next_agent": "interview_intelligence"}
+
+    async def specialist(state):
+        return {"messages": [AIMessage(content=content)]}
+
+    builder = StateGraph(AgentState)
+    builder.add_node("supervisor", supervisor)
+    builder.add_node("interview_intelligence", specialist)
+    builder.add_edge(START, "supervisor")
+    builder.add_edge("supervisor", "interview_intelligence")
+    builder.add_edge("interview_intelligence", END)
+
+    events = collect(builder.compile())
+
+    assert events[-1] == (EventType.COMPLETED, {"message": content})
+
+
 def test_tokens_are_never_forwarded():
     events = collect(build_test_graph("chat"))
 

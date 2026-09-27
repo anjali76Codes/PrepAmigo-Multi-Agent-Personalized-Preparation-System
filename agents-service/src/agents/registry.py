@@ -36,7 +36,21 @@ def _research():
     return ResearchNode()
 
 
+def _interview_intelligence():
+    from agents.interview_intelligence_node import InterviewIntelligenceNode
+
+    return InterviewIntelligenceNode()
+
+
 SPECIALISTS: tuple[Specialist, ...] = (
+    Specialist(
+        name="interview_intelligence",
+        description=(
+            "the user asks for a specific company's interview rounds, role-specific question patterns, "
+            "candidate-reported interview experiences, or recent interview-process changes"
+        ),
+        factory=_interview_intelligence,
+    ),
     Specialist(
         name="research",
         description=(
@@ -48,8 +62,8 @@ SPECIALISTS: tuple[Specialist, ...] = (
     Specialist(
         name="company_research",
         description=(
-            "the user wants a specific company researched for interview prep — its "
-            "products, tech stack, engineering culture, recent news, or financials"
+            "the user wants a general company dossier for interview prep - products, "
+            "tech stack, engineering culture, company facts, or financials, rather than interview-round reports"
         ),
         factory=None,  # tool-calling loop wired in graph/builder.py
     ),

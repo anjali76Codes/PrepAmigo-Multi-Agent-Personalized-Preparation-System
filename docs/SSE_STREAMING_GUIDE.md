@@ -79,6 +79,8 @@ await publisher.emit_event(
 | `failed` | Terminal event indicating error, timeout, or failure. |
 | `ping` | 15s keep-alive heartbeat (ignored by UI business logic). |
 
+For `interview_intelligence`, the final `completed` event's payload is `{ "message": "<final Markdown report>" }`. The full report is sent once, after synthesis; progress events contain status/count metadata only.
+
 ---
 
 ## 5. Testing Quick Reference

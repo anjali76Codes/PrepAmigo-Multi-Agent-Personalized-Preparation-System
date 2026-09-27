@@ -13,7 +13,7 @@ http:
     type: json
     data: |-
       {
-        "query": "What are the interview rounds, questions, and grading rubrics for Google L5 software engineer?"
+        "query": "Research the interview rounds, reported topics, question patterns, and candidate experiences for a Google SWE. Include recent publicly reported interview-process changes."
       }
   auth: inherit
 
@@ -26,5 +26,5 @@ settings:
 
 docs: |
   ## Trigger: Interview Intelligence Agent
-  
-  Triggers community forum analysis (Reddit/Blind), YouTube mock interview synthesis, and round-by-round rubric extraction.
+
+  Searches Google discussion/forum results, related questions, YouTube interview walkthroughs, and Google News for a company and role. Candidate reports are treated as anecdotal, with source links included in the brief.

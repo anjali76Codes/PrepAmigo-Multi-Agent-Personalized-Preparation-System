@@ -94,6 +94,20 @@ def test_router_falls_back_for_unknown_agents():
     assert route_from_supervisor({}) == "chat"
 
 
+def test_interview_intelligence_is_registered_in_the_graph():
+    import graph.builder as builder
+    from graph.router import route_from_supervisor
+
+    graph = builder.build_graph().get_graph()
+    nodes = set(graph.nodes)
+    edges = {(edge.source, edge.target) for edge in graph.edges}
+
+    assert route_from_supervisor({"next_agent": "interview_intelligence"}) == "interview_intelligence"
+    assert "interview_intelligence" in nodes
+    assert ("dispatch", "interview_intelligence") in edges
+    assert ("interview_intelligence", "save_memory") in edges
+
+
 def test_graph_runs_recall_in_parallel_with_routing(monkeypatch):
     import graph.builder as builder
     from agents.registry import Specialist

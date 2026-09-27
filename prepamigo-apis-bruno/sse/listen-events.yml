@@ -5,7 +5,7 @@ info:
 
 http:
   method: get
-  url: http://localhost:3000/api/agent/stream/{{RUN_ID}}
+  url: http://localhost:3000/api/agent/stream/7036e588-d75b-4a9c-ab93-22c475e6bf1c
   auth: inherit
 
 settings:

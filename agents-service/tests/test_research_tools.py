@@ -137,6 +137,50 @@ def test_search_youtube_extracts_video_ids(fake_serpapi):
     assert video["resource_type"] == "video"
 
 
+def test_interview_search_and_ai_overview_use_expected_serpapi_engines(monkeypatch):
+    calls = []
+    cache_modes = []
+
+    def fake_search(params, **kwargs):
+        calls.append(params)
+        cache_modes.append(kwargs.get("use_cache", True))
+        if params["engine"] == "google_news":
+            return {"news_results": [{"title": "Hiring update", "link": "https://news.example/update",
+                                       "source": {"name": "Example News"}, "iso_date": "2026-01-02T00:00:00Z"}]}
+        if params["engine"] == "google_ai_overview":
+            return {"ai_overview": {
+                "text_blocks": [{"type": "paragraph", "snippet": "Candidates report four rounds."}],
+                "references": [{"title": "Interview report", "link": "https://report.example/rounds",
+                                "snippet": "Four stages.", "source": "Report"}],
+            }}
+        if params.get("no_cache"):
+            return {"organic_results": [{"title": "Interview experience", "link": "https://forum.example/post",
+                                          "snippet": "Candidate reports two coding rounds.", "source": "Forum"}],
+                    "ai_overview": {"page_token": "fresh-overview-token"}}
+        if "common questions" in params["q"]:
+            return {"related_questions": [{"question": "What are the interview rounds?", "snippet": "Candidate question"}]}
+        return {}
+
+    monkeypatch.setattr(research_tools, "settings", Settings(serpapi_api_key="test-key"))
+    monkeypatch.setattr(research_tools, "_serpapi", fake_search)
+
+    search = research_tools.search_google_interview_sources.invoke({"query": "Acme SWE interview experience"})
+    questions = research_tools.search_google_related_questions.invoke({"query": "Acme SWE common questions"})
+    news = research_tools.search_google_news.invoke({"query": "Acme hiring changes"})
+    overview = research_tools.search_google_ai_overview.invoke({"page_token": search["ai_overview"]["page_token"]})
+
+    assert [call["engine"] for call in calls] == ["google", "google", "google_news", "google_ai_overview"]
+    assert calls[0]["no_cache"] is True
+    assert cache_modes[0] is False
+    assert search["results"][0]["resource_type"] == "search_result"
+    assert search["ai_overview"]["page_token"] == "fresh-overview-token"
+    assert questions["results"][0]["title"] == "What are the interview rounds?"
+    assert "google.com/search" in questions["results"][0]["url"]
+    assert news["results"][0]["date"] == "2026-01-02T00:00:00Z"
+    assert overview["text"] == "Candidates report four rounds."
+    assert overview["results"][0]["url"] == "https://report.example/rounds"
+
+
 @pytest.mark.parametrize(
     ("url", "expected"),
     [

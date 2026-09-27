@@ -63,7 +63,12 @@ async def bridge_graph_turn(graph: Any, inputs: dict, config: dict) -> AsyncIter
             payload = {"agent": event["agent"], "step": event["step"], **event["payload"]}
             yield (EventType.FAILED if event["status"] == "failed" else _event_type_for_step(event["step"])), payload
         elif item["type"] == "final":
-            yield EventType.COMPLETED, {"agent": item["agent"], "status": "success", "message": item["content"]}
+            if item["agent"] == "interview_intelligence":
+                yield EventType.COMPLETED, {"message": item["content"]}
+            else:
+                yield EventType.COMPLETED, {
+                    "agent": item["agent"], "status": "success", "message": item["content"]
+                }
         # "token" items: stream_turn(tokens=False) still emits the reply as
         # one token item ahead of "final" (see graph/streaming.py); the
         # "final" item above already carries that same text, so it's skipped

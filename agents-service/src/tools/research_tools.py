@@ -95,6 +95,13 @@ def _clamp_limit(limit: int) -> int:
     return max(1, min(int(limit), MAX_RESULTS))
 
 
+def _valid_http_url(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
 def _use_mock() -> bool:
     if not settings.serpapi_api_key:
         logger.warning("SERPAPI_API_KEY not configured; research tools returning mock results")
@@ -102,10 +109,10 @@ def _use_mock() -> bool:
     return False
 
 
-def _serpapi(params: dict[str, Any]) -> dict[str, Any]:
+def _serpapi(params: dict[str, Any], *, use_cache: bool = True) -> dict[str, Any]:
     """One SerpApi call, transparently cached by its exact params."""
     cache = get_response_cache()
-    if cache is not None:
+    if use_cache and cache is not None:
         cached = cache.get("serpapi", params)
         if cached is not None:
             logger.info("serpapi cache hit engine=%s", params.get("engine"))
@@ -120,7 +127,7 @@ def _serpapi(params: dict[str, Any]) -> dict[str, Any]:
     if results.get("error"):
         raise RuntimeError(f"Research search provider returned an error: {results['error']}")
 
-    if cache is not None:
+    if use_cache and cache is not None:
         cache.set("serpapi", params, results)
     return results
 
@@ -246,6 +253,166 @@ def search_youtube_tutorials(query: str, limit: int = 4) -> dict:
 
 
 @tool
+def search_google_interview_sources(query: str, limit: int = 5) -> dict:
+    """Search the web for company/role interview experiences and return
+    organic results plus Google's AI Overview token or inline overview.
+
+    This request deliberately bypasses the local cache because a separate
+    AI Overview page_token expires shortly after the search response."""
+    query = _clean_query(query)
+    if _use_mock():
+        mock = _mock(query, "web", f"https://www.google.com/search?q={quote_plus(query)}")
+        mock["ai_overview"] = {"page_token": None, "text": "", "references": []}
+        return mock
+    raw = _serpapi(
+        {"engine": "google", "q": query, "num": 10, "hl": "en", "gl": "us", "no_cache": True},
+        use_cache=False,
+    )
+    results = []
+    for item in raw.get("organic_results", [])[: _clamp_limit(limit)]:
+        link = item.get("link")
+        if not _valid_http_url(link):
+            continue
+        source = item.get("source") or urlparse(link).netloc
+        results.append({
+            "title": item.get("title", ""),
+            "url": link,
+            "snippet": item.get("snippet", ""),
+            "source": source,
+            "date": item.get("date", ""),
+            "resource_type": "search_result",
+        })
+    overview = _normalize_ai_overview(raw.get("ai_overview") or {})
+    return {
+        "query": query,
+        "source": "serpapi",
+        "results": results,
+        "ai_overview": overview,
+    }
+
+
+@tool
+def search_google_ai_overview(page_token: str) -> dict:
+    """Fetch the Google AI Overview for a fresh page_token returned by
+    search_google_interview_sources. Use the token immediately."""
+    if not isinstance(page_token, str) or not page_token.strip() or len(page_token) > 8192:
+        raise ValueError("page_token must be a non-empty Google AI Overview token")
+    raw = _serpapi(
+        {"engine": "google_ai_overview", "page_token": page_token.strip(), "no_cache": True},
+        use_cache=False,
+    )
+    overview = _normalize_ai_overview(raw.get("ai_overview") or {})
+    if raw.get("error") or overview.get("error"):
+        raise RuntimeError(str(raw.get("error") or overview["error"]))
+    if not overview["text"] and not overview["references"]:
+        raise RuntimeError("Google AI Overview returned no usable summary or references")
+    return {
+        "source": "serpapi",
+        "text": overview["text"],
+        "results": overview["references"],
+    }
+
+
+def _normalize_ai_overview(overview: dict[str, Any]) -> dict[str, Any]:
+    references = []
+    for item in overview.get("references", [])[:10]:
+        link = item.get("link")
+        if not _valid_http_url(link):
+            continue
+        references.append({
+            "title": item.get("title", ""),
+            "url": link,
+            "snippet": item.get("snippet", ""),
+            "source": item.get("source", "Google AI Overview reference"),
+            "resource_type": "ai_overview_reference",
+        })
+    return {
+        "page_token": overview.get("page_token"),
+        "text": _ai_overview_text(overview.get("text_blocks", []))[:8000],
+        "references": references,
+        "error": overview.get("error"),
+    }
+
+
+def _ai_overview_text(blocks: Any) -> str:
+    """Flatten the supported AI Overview block shapes into bounded plain text."""
+    snippets: list[str] = []
+
+    def visit(value: Any) -> None:
+        if isinstance(value, list):
+            for entry in value:
+                visit(entry)
+        elif isinstance(value, dict):
+            title = value.get("title")
+            snippet = value.get("snippet")
+            if title and snippet:
+                snippets.append(f"{title}: {snippet}")
+            elif snippet:
+                snippets.append(str(snippet))
+            if value.get("list"):
+                visit(value["list"])
+            if value.get("text_blocks"):
+                visit(value["text_blocks"])
+            if value.get("table"):
+                visit(value["table"])
+        elif isinstance(value, str):
+            snippets.append(value)
+
+    visit(blocks)
+    return "\n".join(" ".join(text.split()) for text in snippets if text)
+
+
+@tool
+def search_google_related_questions(query: str, limit: int = 5) -> dict:
+    """Search Google's related questions for common interview questions
+    and themes around a company and role."""
+    query = _clean_query(query)
+    if _use_mock():
+        return _mock(query, "question", f"https://www.google.com/search?q={quote_plus(query)}")
+    raw = _serpapi({"engine": "google", "q": query, "num": 10, "hl": "en", "gl": "us"})
+    fallback_url = f"https://www.google.com/search?q={quote_plus(query)}"
+    results = [
+        {
+            "title": item.get("question", ""),
+            "url": item.get("link") or fallback_url,
+            "snippet": item.get("snippet", ""),
+            "source": item.get("source", "Google related questions"),
+            "resource_type": "question",
+        }
+        for item in raw.get("related_questions", [])[: _clamp_limit(limit)]
+        if item.get("question")
+    ]
+    return {"query": query, "source": "serpapi", "results": results}
+
+
+@tool
+def search_google_news(query: str, limit: int = 5) -> dict:
+    """Search Google News for recent, publicly reported changes to a
+    company's hiring or interview process."""
+    query = _clean_query(query)
+    if _use_mock():
+        return _mock(query, "news", f"https://news.google.com/search?q={quote_plus(query)}")
+    raw = _serpapi({"engine": "google_news", "q": query, "gl": "us", "hl": "en"})
+    results = []
+    for item in raw.get("news_results", [])[: _clamp_limit(limit)]:
+        link = item.get("link")
+        if not link:
+            continue
+        source = item.get("source")
+        if isinstance(source, dict):
+            source = source.get("name", "")
+        results.append({
+            "title": item.get("title", ""),
+            "url": link,
+            "snippet": item.get("snippet", ""),
+            "source": source or "Google News",
+            "date": item.get("iso_date") or item.get("date", ""),
+            "resource_type": "news",
+        })
+    return {"query": query, "source": "serpapi", "results": results}
+
+
+@tool
 def fetch_youtube_transcript(video_id: str) -> dict:
     """Fetch a YouTube video's transcript (English preferred) and return an
     excerpt suitable for summarisation."""
@@ -301,5 +468,9 @@ RESEARCH_TOOLS = [
     search_books,
     search_academic_papers,
     search_youtube_tutorials,
+    search_google_interview_sources,
+    search_google_ai_overview,
+    search_google_related_questions,
+    search_google_news,
     fetch_youtube_transcript,
 ]
