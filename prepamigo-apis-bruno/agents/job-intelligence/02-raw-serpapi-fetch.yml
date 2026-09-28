@@ -1,0 +1,32 @@
+info:
+  name: 02-raw-serpapi-fetch
+  type: http
+  seq: 2
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agents/job-intelligence/raw-search"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "company": "Google",
+        "role": "Software Engineer",
+        "location": "New York, NY"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Fetch Raw SerpAPI Data
+  
+  This endpoint bypasses the LLM and directly fetches the raw Google Jobs data from SerpAPI based on company name, role, and location.

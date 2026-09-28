@@ -1,0 +1,31 @@
+info:
+  name: 01-trigger-job-intelligence-agent
+  type: http
+  seq: 1
+
+http:
+  method: post
+  url: "{{EXPRESS-SERVICE}}/api/agent/run"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "query": "Find software engineering roles at Google requiring Python and React, and assess how my current skills match up.",
+        "agentType": "job-intelligence"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Trigger: Job Intelligence Agent
+  
+  Triggers the Job Intelligence agent to process queries related to job searches, skill matching, and career portals.

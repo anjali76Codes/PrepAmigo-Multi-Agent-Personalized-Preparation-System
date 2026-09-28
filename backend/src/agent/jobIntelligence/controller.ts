@@ -72,3 +72,69 @@ export async function getJobIntelligenceHandler(
     });
   }
 }
+
+/**
+ * Controller handler for POST /api/agents/job-intelligence/raw-search
+ * Bypasses LLM processing and returns raw SerpApi data
+ */
+export async function getRawJobSearchHandler(
+  req: AuthenticatedRequest,
+  res: Response
+) {
+  try {
+    const { company, role, location } = req.body || {};
+
+    if (!role || typeof role !== "string" || !role.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required field: 'role' must be a non-empty string.",
+      });
+    }
+
+    if (!location || typeof location !== "string" || !location.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required field: 'location' must be a non-empty string.",
+      });
+    }
+
+    const query = company ? `${role} ${company}` : role;
+
+    const { fetchSerpApiGoogleJobs } = await import("./serpApiClient.js");
+
+    const response = await fetchSerpApiGoogleJobs({
+      query,
+      company: company || "",
+      role,
+      location,
+      isFallback: false,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: response.rawResponse,
+    });
+  } catch (err: any) {
+    if (err instanceof SerpApiError) {
+      return res.status(err.statusCode || 500).json({
+        success: false,
+        error: err.message,
+      });
+    }
+    if (err instanceof RateLimitError) {
+      return res.status(429).json({
+        success: false,
+        error: err.message,
+      });
+    }
+    logger.error("Unhandled error in raw job search controller", {
+      error: err.message,
+      stack: err.stack,
+    });
+    return res.status(500).json({
+      success: false,
+      error: "An unexpected error occurred while processing raw job search request.",
+    });
+  }
+}
+
