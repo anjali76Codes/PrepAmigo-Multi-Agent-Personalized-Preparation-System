@@ -1,0 +1,41 @@
+info:
+  name: 13-direct-python-skill-gap
+  type: http
+  seq: 13
+
+http:
+  method: post
+  url: "http://localhost:8000/api/agents/skill-gap"
+  headers:
+    - name: Content-Type
+      value: multipart/form-data
+  body:
+    type: multipartForm
+    form:
+      - name: resume
+        type: file
+        value: 
+      - name: job_intelligence_data
+        type: text
+        value: |-
+          {
+            "skills": [
+              { "name": "Python", "frequency": 10 },
+              { "name": "FastAPI", "frequency": 5 },
+              { "name": "MongoDB", "frequency": 3 }
+            ],
+            "coverage": "medium"
+          }
+  auth: none
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Direct Python Skill Gap Agent
+  
+  Upload a resume (PDF/DOCX) and pass the `job_intelligence_data` JSON.

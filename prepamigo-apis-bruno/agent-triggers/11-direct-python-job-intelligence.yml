@@ -1,0 +1,32 @@
+info:
+  name: 11-direct-python-job-intelligence
+  type: http
+  seq: 11
+
+http:
+  method: post
+  url: "http://localhost:8000/api/agents/job-intelligence"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "company": "Google",
+        "role": "Software Engineer",
+        "location": "San Francisco, CA"
+      }
+  auth: none
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |
+  ## Direct Python Job Intelligence
+  
+  Hits the new Python-based endpoint directly on the agents-service.

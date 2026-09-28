@@ -12,7 +12,7 @@ _src_dir = str(Path(__file__).resolve().parent)
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,9 @@ from graph.errors import friendly_error_detail
 from observability import configure_logging
 from streaming.publisher import get_event_publisher
 from streaming.runner import execute_agent_stream
+from auth import verify_token
+from job_intelligence_router import router as job_intelligence_router
+from skill_gap_router import router as skill_gap_router
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -87,6 +90,9 @@ if cors_origins:
         allow_headers=["*"],
     )
 
+app.include_router(job_intelligence_router)
+app.include_router(skill_gap_router)
+
 START_TIME = time.time()
 
 
@@ -100,7 +106,7 @@ def health_check():
     }
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(verify_token)])
 async def chat(request: ChatRequest):
     """Synchronous turn: waits for the full reply. For step-by-step
     progress use /internal/agent/execute, which streams over the
@@ -127,7 +133,7 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=503, detail=friendly_error_detail(exc)) from exc
 
 
-@app.post("/internal/agent/execute")
+@app.post("/internal/agent/execute", dependencies=[Depends(verify_token)])
 async def execute_agent_async(
     request: ExecuteAgentRequest,
     background_tasks: BackgroundTasks,
