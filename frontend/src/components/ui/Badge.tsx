@@ -1,25 +1,35 @@
-import { cn } from '../../lib/utils';
+import { forwardRef, type HTMLAttributes } from "react";
+import { cn } from "./Button";
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'primary' | 'secondary' | 'outline';
+export interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: "neutral" | "navy" | "forest" | "amber" | "danger";
+  styleType?: "solid" | "soft";
 }
 
-export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
-  const variants = {
-    default: 'bg-surface-elevated text-primary-text',
-    primary: 'bg-primary/20 text-accent border border-primary/30',
-    secondary: 'bg-border text-secondary-text',
-    outline: 'text-secondary-text border border-border',
-  };
+export const Badge = forwardRef<HTMLDivElement, BadgeProps>(
+  ({ className, variant = "neutral", styleType = "soft", ...props }, ref) => {
+    const base = "inline-flex items-center rounded-[var(--radius-badge)] px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
+    
+    const variants = {
+      solid: {
+        neutral: "bg-[var(--color-surface-muted)] text-[var(--color-navy-700)]",
+        navy: "bg-[var(--color-navy-900)] text-white",
+        forest: "bg-[var(--color-forest-700)] text-white",
+        amber: "bg-[var(--color-amber-600)] text-white",
+        danger: "bg-[var(--color-danger-600)] text-white",
+      },
+      soft: {
+        neutral: "bg-[var(--color-surface-muted)] text-[var(--color-navy-500)]",
+        navy: "bg-[var(--color-navy-100)] text-[var(--color-navy-900)]",
+        forest: "bg-[var(--color-forest-100)] text-[var(--color-forest-800)]",
+        amber: "bg-[var(--color-amber-100)] text-[var(--color-amber-600)]",
+        danger: "bg-[var(--color-danger-100)] text-[var(--color-danger-600)]",
+      }
+    };
 
-  return (
-    <div
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent',
-        variants[variant],
-        className
-      )}
-      {...props}
-    />
-  );
-}
+    return (
+      <div ref={ref} className={cn(base, variants[styleType][variant], className)} {...props} />
+    );
+  }
+);
+Badge.displayName = "Badge";

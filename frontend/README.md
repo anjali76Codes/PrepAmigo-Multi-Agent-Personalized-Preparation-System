@@ -13,10 +13,10 @@ Note: The app runs on mock data and isn't connected to a backend.
 - **Poppins** font
 
 ## Design System
-The visual language uses a **light navy, forest, beige, and white aesthetic**:
-- Theme: Navy, forest green, beige, white.
-- Rounded UI: `rounded-full` for inputs and primary buttons, `rounded-2xl/3xl` for cards and panels.
-- Backgrounds: Subtle beige to white gradient with a faint navy dot grid (`PageBackground`), fully respecting `prefers-reduced-motion`.
+The visual language uses a **muted and calm aesthetic** across all presets:
+- Theme: Off-white page background (`#F7F5F0`), surface whites, navy and forest elements.
+- Components ONLY: Pages use `ui/` components exclusively. No ad-hoc styling.
+- Style Presets: `default`, `soft`, `outlined`, and `crisp`. User preferences are persisted via `data-style`.
 - Motion: Subtle blurs, fades, staggers, and interactive hover effects that respect `prefers-reduced-motion` (via Framer Motion).
 
 ## Frontend Structure
@@ -48,6 +48,7 @@ The visual language uses a **light navy, forest, beige, and white aesthetic**:
 - Layer 4: PrepAmigo chat interface, agent pipeline animation, and mock scenario matching.
 - Layer 5: Home (landing), AppHome (dashboard), and Auth pages.
 - Layer 6: final cleanup, shared state, and leftover removal.
+- Layer 7: UI design system, tokens, global preset toggles, and mass component standardization.
 
 ## Features
 - Conversational PrepAmigo workspace with suggested prompts and mock scenario matching

@@ -14,19 +14,19 @@ export function RescheduleDialog({ onClose, onConfirm }: RescheduleDialogProps) 
   const suggestedDate = tomorrow.toISOString().split('T')[0];
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-6 bg-surface shadow-xl">
-        <h3 className="text-lg font-bold text-primary-text mb-4">Reschedule Task</h3>
-        <p className="text-secondary-text mb-6">
+    <div className="fixed inset-0 bg-[var(--color-bg)]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md p-6 bg-[var(--color-surface)] shadow-[var(--shadow-pop)]">
+        <h3 className="text-lg font-bold text-[var(--color-forest-700)]-text mb-4">Reschedule Task</h3>
+        <p className="text-[var(--color-navy-500)] mb-6">
           The Planner agent suggests moving this task to tomorrow. This will push your subsequent tasks back by one day to maintain your workload balance.
         </p>
         
-        <div className="bg-background rounded-lg p-4 border border-border mb-6">
-          <label className="text-sm font-medium text-primary-text block mb-2">New Date</label>
+        <div className="bg-[var(--color-bg)] rounded-[var(--radius-control)] p-4 border border-[var(--color-border)] mb-6">
+          <label className="text-sm font-medium text-[var(--color-forest-700)]-text block mb-2">New Date</label>
           <input 
             type="date" 
             defaultValue={suggestedDate}
-            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-primary-text"
+            className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-control)] px-3 py-2 text-[var(--color-forest-700)]-text"
           />
         </div>
 

@@ -18,12 +18,12 @@ export function Calendar() {
     : allEntries.filter(e => mockPreps.find(p => p.id === selectedPrepId)?.calendarEntries.some(ce => ce.id === e.id));
 
   return (
-    <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg)] h-full overflow-hidden">
+      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-primary-text mb-2">Global Calendar</h1>
-            <p className="text-secondary-text">All your upcoming tasks and deadlines across all preps.</p>
+            <h1 className="text-3xl font-bold text-[var(--color-forest-700)]-text mb-2">Global Calendar</h1>
+            <p className="text-[var(--color-navy-500)]">All your upcoming tasks and deadlines across all preps.</p>
           </div>
           <Select 
             value={selectedPrepId} 

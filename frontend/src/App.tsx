@@ -5,6 +5,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { Home } from './pages/Home';
 import { Auth } from './pages/Auth';
 import { AppProvider } from './context/AppContext';
+import { StyleProvider } from './components/ui/StyleProvider';
 import { StyleGuide } from './pages/StyleGuide';
 import { AppHome } from './pages/AppHome';
 import { Chat } from './pages/Chat';
@@ -70,11 +71,13 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <AnimatedRoutes />
-      </BrowserRouter>
-    </AppProvider>
+    <StyleProvider>
+      <AppProvider>
+        <BrowserRouter>
+          <AnimatedRoutes />
+        </BrowserRouter>
+      </AppProvider>
+    </StyleProvider>
   );
 }
 

@@ -8,8 +8,8 @@ interface RoadmapViewProps {
 export function RoadmapView({ roadmap }: RoadmapViewProps) {
   if (!roadmap || roadmap.sprints.length === 0) {
     return (
-      <div className="p-8 text-center bg-surface border border-border rounded-2xl">
-        <p className="text-secondary-text">No roadmap available for this prep.</p>
+      <div className="p-8 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-card)]">
+        <p className="text-[var(--color-navy-500)]">No roadmap available for this prep.</p>
       </div>
     );
   }

@@ -14,12 +14,12 @@ export function Progress() {
   const progress = prep.learningContext.progress;
 
   return (
-    <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <h1 className="text-3xl font-bold text-primary-text mb-2">Progress Dashboard</h1>
-        <p className="text-secondary-text">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg)] h-full overflow-hidden">
+      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
+        <h1 className="text-3xl font-bold text-[var(--color-forest-700)]-text mb-2">Progress Dashboard</h1>
+        <p className="text-[var(--color-navy-500)]">
           Track your learning velocity and skill levels. 
-          <span className="text-primary ml-1 block mt-1 md:inline md:mt-0">
+          <span className="text-[var(--color-forest-700)] ml-1 block mt-1 md:inline md:mt-0">
             * XP is earned only from completed tasks and assessment scores.
           </span>
         </p>

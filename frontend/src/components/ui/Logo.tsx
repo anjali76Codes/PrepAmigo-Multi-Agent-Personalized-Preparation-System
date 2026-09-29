@@ -7,7 +7,7 @@ export interface LogoProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Logo({ className, compact = false, ...props }: LogoProps) {
   return (
     <div className={cn('flex items-center gap-2 select-none', className)} {...props}>
-      <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-soft-primary">
+      <div className="relative flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] bg-gradient-to-br from-primary to-accent shadow-[var(--shadow-pop)]">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"

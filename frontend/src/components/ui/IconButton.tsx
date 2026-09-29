@@ -11,13 +11,13 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ className, icon, variant = 'ghost', size = 'md', isLoading, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50';
+    const baseStyles = 'inline-flex items-center justify-center rounded-[var(--radius-control)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50';
     
     const variants = {
-      primary: 'bg-primary text-primary-text hover:bg-primary-hover shadow-soft-primary hover:shadow-soft-accent',
-      secondary: 'bg-surface-elevated text-primary-text hover:bg-border border border-border',
-      ghost: 'hover:bg-surface-elevated text-secondary-text hover:text-primary-text',
-      danger: 'bg-error/10 text-error hover:bg-error/20 border border-error/20',
+      primary: 'bg-[var(--color-navy-900)] text-[var(--color-forest-700)]-text hover:bg-[var(--color-navy-900)]-hover shadow-[var(--shadow-pop)] hover:shadow-soft-accent',
+      secondary: 'bg-[var(--color-surface)]-elevated text-[var(--color-forest-700)]-text hover:bg-border border border-[var(--color-border)]',
+      ghost: 'hover:bg-[var(--color-surface)]-elevated text-[var(--color-navy-500)] hover:text-[var(--color-forest-700)]-text',
+      danger: 'bg-[var(--color-danger-600)]/10 text-[var(--color-danger-600)] hover:bg-[var(--color-danger-600)]/20 border border-error/20',
     };
     
     const sizes = {

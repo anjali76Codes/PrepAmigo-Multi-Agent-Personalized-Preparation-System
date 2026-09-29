@@ -35,12 +35,12 @@ export function AppLayout() {
   ];
 
   return (
-    <div className="flex h-screen bg-background text-primary-text overflow-hidden font-sans selection:bg-accent/30 selection:text-text relative z-0">
+    <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-forest-700)]-text overflow-hidden font-sans selection:bg-[var(--color-forest-700)]/30 selection:text-text relative z-0">
       <PageBackground />
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-background/50 backdrop-blur-md">
-        <div className="h-16 flex items-center px-6 border-b border-border">
+      <aside className="hidden md:flex flex-col w-64 border-r border-[var(--color-border)] bg-[var(--color-bg)]/50 backdrop-blur-md">
+        <div className="h-16 flex items-center px-6 border-b border-[var(--color-border)]">
           <Logo />
         </div>
 
@@ -51,10 +51,10 @@ export function AppLayout() {
               to={item.to}
               end={item.exact}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)] transition-colors ${
                   isActive
-                    ? "bg-elevated/80 text-accent font-medium shadow-sm"
-                    : "text-secondary-text hover:text-primary-text hover:bg-elevated/40"
+                    ? "bg-elevated/80 text-[var(--color-forest-700)] font-medium shadow-[var(--shadow-card)]"
+                    : "text-[var(--color-navy-500)] hover:text-[var(--color-forest-700)]-text hover:bg-elevated/40"
                 }`
               }
             >
@@ -64,10 +64,10 @@ export function AppLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-[var(--color-border)]">
           <NavLink
             to="/app/settings"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary-text hover:text-primary-text hover:bg-elevated/40 transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)] text-[var(--color-navy-500)] hover:text-[var(--color-forest-700)]-text hover:bg-elevated/40 transition-colors"
           >
             <Avatar size="sm" />
             <span className="font-medium text-sm">My Account</span>
@@ -76,7 +76,7 @@ export function AppLayout() {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary-text hover:text-primary-text hover:bg-elevated/40 transition-colors"
+            className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-card)] text-[var(--color-navy-500)] hover:text-[var(--color-forest-700)]-text hover:bg-elevated/40 transition-colors"
           >
             <Icon name="log-out-outline" className="text-xl" />
             <span className="font-medium text-sm">Logout</span>
@@ -86,7 +86,7 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative bg-transparent">
-        <header className="md:hidden h-16 border-b border-border bg-background flex items-center justify-between px-4 z-10">
+        <header className="md:hidden h-16 border-b border-[var(--color-border)] bg-[var(--color-bg)] flex items-center justify-between px-4 z-10">
           <div className="flex items-center">
             <Logo compact />
           </div>
@@ -111,7 +111,7 @@ export function AppLayout() {
       </div>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background flex items-center justify-around px-2 z-50 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-[var(--color-border)] bg-[var(--color-bg)] flex items-center justify-around px-2 z-50 safe-area-bottom">
         {[
           { to: "/app", icon: "home-outline", label: "Home", exact: true },
           { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
@@ -123,8 +123,8 @@ export function AppLayout() {
             to={item.to}
             end={item.exact}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${
-                isActive ? "text-accent" : "text-secondary-text"
+              `flex flex-col items-center justify-center gap-1 p-2 rounded-[var(--radius-card)] transition-colors min-w-[64px] ${
+                isActive ? "text-[var(--color-forest-700)]" : "text-[var(--color-navy-500)]"
               }`
             }
           >

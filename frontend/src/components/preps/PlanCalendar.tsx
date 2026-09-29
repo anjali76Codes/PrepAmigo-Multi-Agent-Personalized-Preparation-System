@@ -33,19 +33,19 @@ export function PlanCalendar({ entries: initialEntries }: PlanCalendarProps) {
         <MissedTaskBanner count={missedTasks.length} />
       )}
       
-      <Card className="p-6 bg-surface border-border">
+      <Card className="p-6 bg-[var(--color-surface)] border-[var(--color-border)]">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-primary-text flex items-center gap-2">
-            <Icon name="calendar-outline" className="text-primary" />
+          <h3 className="text-lg font-semibold text-[var(--color-forest-700)]-text flex items-center gap-2">
+            <Icon name="calendar-outline" className="text-[var(--color-forest-700)]" />
             Schedule
           </h3>
-          <div className="flex bg-background border border-border rounded-lg overflow-hidden">
+          <div className="flex bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-control)] overflow-hidden">
             <button 
-              className={`px-4 py-1.5 text-sm ${view === 'day' ? 'bg-primary/10 text-primary font-medium' : 'text-secondary-text'}`}
+              className={`px-4 py-1.5 text-sm ${view === 'day' ? 'bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] font-medium' : 'text-[var(--color-navy-500)]'}`}
               onClick={() => setView('day')}
             >Day</button>
             <button 
-              className={`px-4 py-1.5 text-sm ${view === 'week' ? 'bg-primary/10 text-primary font-medium' : 'text-secondary-text'}`}
+              className={`px-4 py-1.5 text-sm ${view === 'week' ? 'bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] font-medium' : 'text-[var(--color-navy-500)]'}`}
               onClick={() => setView('week')}
             >Week</button>
           </div>
@@ -53,29 +53,29 @@ export function PlanCalendar({ entries: initialEntries }: PlanCalendarProps) {
 
         <div className="space-y-4">
           {entries.map(entry => (
-            <div key={entry.id} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-background">
-              <div className="shrink-0 w-12 text-center text-secondary-text">
+            <div key={entry.id} className="flex items-center gap-4 p-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)]">
+              <div className="shrink-0 w-12 text-center text-[var(--color-navy-500)]">
                 <div className="text-xs uppercase">{new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                <div className="font-bold text-primary-text">{new Date(entry.date).getDate()}</div>
+                <div className="font-bold text-[var(--color-forest-700)]-text">{new Date(entry.date).getDate()}</div>
               </div>
               <div className="w-px h-10 bg-border" />
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <h4 className="font-medium text-primary-text">{entry.title}</h4>
-                  <span className={`text-xs px-2 py-1 rounded-md border ${
-                    entry.type === 'due' ? 'bg-primary/10 text-primary border-primary/20' :
-                    entry.type === 'missed' ? 'bg-warning/10 text-warning border-warning/20' :
-                    entry.type === 'rescheduled' ? 'bg-accent/10 text-accent border-accent/20' :
-                    'bg-border/50 text-secondary-text border-border'
+                  <h4 className="font-medium text-[var(--color-forest-700)]-text">{entry.title}</h4>
+                  <span className={`text-xs px-2 py-1 rounded-[var(--radius-control)] border ${
+                    entry.type === 'due' ? 'bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] border-primary/20' :
+                    entry.type === 'missed' ? 'bg-[var(--color-amber-600)]/10 text-[var(--color-amber-600)] border-warning/20' :
+                    entry.type === 'rescheduled' ? 'bg-[var(--color-forest-700)]/10 text-[var(--color-forest-700)] border-accent/20' :
+                    'bg-border/50 text-[var(--color-navy-500)] border-[var(--color-border)]'
                   }`}>
                     {entry.type}
                   </span>
                 </div>
-                {entry.reason && <p className="text-xs text-secondary-text mt-1">Reason: {entry.reason}</p>}
-                {entry.originalDate && <p className="text-xs text-secondary-text">Originally: {new Date(entry.originalDate).toLocaleDateString()}</p>}
+                {entry.reason && <p className="text-xs text-[var(--color-navy-500)] mt-1">Reason: {entry.reason}</p>}
+                {entry.originalDate && <p className="text-xs text-[var(--color-navy-500)]">Originally: {new Date(entry.originalDate).toLocaleDateString()}</p>}
               </div>
               {entry.type === 'missed' && (
-                <Button variant="secondary" size="sm" onClick={() => setSelectedTaskToReschedule(entry.id)}>
+                <Button variant="outline" size="sm" onClick={() => setSelectedTaskToReschedule(entry.id)}>
                   Reschedule
                 </Button>
               )}

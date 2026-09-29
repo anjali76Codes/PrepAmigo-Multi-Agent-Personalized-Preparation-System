@@ -13,7 +13,7 @@ export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
   const allAgents: AgentName[] = AGENTS.map(a => a.name);
 
   return (
-    <div className="bg-surface border-b border-border p-4 overflow-hidden shrink-0">
+    <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)] p-4 overflow-hidden shrink-0">
       <div className="flex items-center gap-3 mb-4 overflow-x-auto hide-scrollbar pb-2">
         {allAgents.map((agent, i) => {
           const isActive = activeAgent === agent;
@@ -22,9 +22,9 @@ export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
           return (
             <div key={agent} className="flex items-center gap-2 shrink-0">
               <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
-                isActive ? 'bg-primary/10 border-primary/20 text-primary' : 
-                isDone ? 'bg-accent/10 border-accent/20 text-accent' : 
-                'bg-background border-border text-secondary-text'
+                isActive ? 'bg-[var(--color-navy-900)]/10 border-primary/20 text-[var(--color-forest-700)]' : 
+                isDone ? 'bg-[var(--color-forest-700)]/10 border-accent/20 text-[var(--color-forest-700)]' : 
+                'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-navy-500)]'
               }`}>
                 {isActive && (
                   <motion.div 
@@ -44,9 +44,9 @@ export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
         })}
       </div>
       
-      <div className="flex items-center gap-2 text-sm text-secondary-text bg-background p-3 rounded-lg border border-border">
-        <Icon name="information-circle-outline" className="text-primary" />
-        <span className="font-medium text-primary-text">{activeAgent || 'Idle'}:</span> {statusText || 'Waiting for input...'}
+      <div className="flex items-center gap-2 text-sm text-[var(--color-navy-500)] bg-[var(--color-bg)] p-3 rounded-[var(--radius-control)] border border-[var(--color-border)]">
+        <Icon name="information-circle-outline" className="text-[var(--color-forest-700)]" />
+        <span className="font-medium text-[var(--color-forest-700)]-text">{activeAgent || 'Idle'}:</span> {statusText || 'Waiting for input...'}
       </div>
     </div>
   );

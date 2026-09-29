@@ -29,7 +29,7 @@ export function Tooltip({ className, content, children, position = 'top', ...pro
       {isVisible && (
         <div
           className={cn(
-            'absolute z-50 whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 text-xs text-primary-text shadow-md border border-border animate-in fade-in zoom-in-95 duration-200',
+            'absolute z-50 whitespace-nowrap rounded-[var(--radius-control)] bg-[var(--color-surface)]-elevated px-3 py-1.5 text-xs text-[var(--color-forest-700)]-text shadow-[var(--shadow-card)] border border-[var(--color-border)] animate-in fade-in zoom-in-95 duration-200',
             positionClasses[position],
             className
           )}

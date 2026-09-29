@@ -18,7 +18,7 @@ export function Avatar({ className, src, fallback, size = 'md', ...props }: Avat
   return (
     <div
       className={cn(
-        'relative flex shrink-0 overflow-hidden rounded-full bg-surface-elevated',
+        'relative flex shrink-0 overflow-hidden rounded-full bg-[var(--color-surface)]-elevated',
         sizes[size],
         className
       )}
@@ -31,7 +31,7 @@ export function Avatar({ className, src, fallback, size = 'md', ...props }: Avat
           alt={fallback || 'Avatar'}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center font-medium text-secondary-text">
+        <div className="flex h-full w-full items-center justify-center font-medium text-[var(--color-navy-500)]">
           {fallback ? (
             fallback.substring(0, 2).toUpperCase()
           ) : (

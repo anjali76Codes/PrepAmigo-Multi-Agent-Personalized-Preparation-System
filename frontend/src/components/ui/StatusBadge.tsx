@@ -7,16 +7,16 @@ export interface StatusBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 export function StatusBadge({ className, status, children, ...props }: StatusBadgeProps) {
   const variants = {
     success: 'bg-success/10 text-success border-success/20',
-    warning: 'bg-warning/10 text-warning border-warning/20',
-    error: 'bg-error/10 text-error border-error/20',
+    warning: 'bg-[var(--color-amber-600)]/10 text-[var(--color-amber-600)] border-warning/20',
+    error: 'bg-[var(--color-danger-600)]/10 text-[var(--color-danger-600)] border-error/20',
     info: 'bg-info/10 text-info border-info/20',
-    default: 'bg-surface-elevated text-secondary-text border-border',
+    default: 'bg-[var(--color-surface)]-elevated text-[var(--color-navy-500)] border-[var(--color-border)]',
   };
   
   const dotColors = {
     success: 'bg-success',
-    warning: 'bg-warning',
-    error: 'bg-error',
+    warning: 'bg-[var(--color-amber-600)]',
+    error: 'bg-[var(--color-danger-600)]',
     info: 'bg-info',
     default: 'bg-secondary-text',
   };
