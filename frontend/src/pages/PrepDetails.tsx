@@ -55,23 +55,26 @@ export function PrepDetails() {
           <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
               <PrepOverview context={prep.learningContext} />
-              <Card variant="default" className="p-6">
-                <h3 className="text-lg font-semibold mb-4 text-carbon-900">What the Agents Found</h3>
+              <div className="bg-white rounded-[2rem] p-8 border border-border">
+                <h3 className="text-2xl font-bold mb-6 text-carbon-900 flex items-center gap-3">
+                  <Icon name="search" className="text-chrome-accent" />
+                  What the Agents Found
+                </h3>
                 <div className="space-y-4">
                   {mockAgentEvents.map(event => (
-                    <div key={event.id} className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-forest-100 text-forest-700 flex items-center justify-center shrink-0">
-                        <Icon name="scan-outline" />
+                    <div key={event.id} className="flex gap-4 items-start bg-bg rounded-xl p-4 border border-border/50">
+                      <div className="w-10 h-10 rounded-full bg-chrome-accent/10 text-chrome-accent flex items-center justify-center shrink-0 shadow-sm">
+                        <Icon name="scan" className="text-lg" />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-carbon-900">{event.agent}</div>
-                        <div className="text-sm text-carbon-500 mt-1">{event.action}</div>
-                        <div className="text-xs text-carbon-500/60 mt-1">{new Date(event.timestamp).toLocaleTimeString()}</div>
+                        <div className="text-lg font-bold text-carbon-900 leading-tight mb-1">{event.agent}</div>
+                        <div className="text-sm font-medium text-carbon-500">{event.action}</div>
+                        <div className="text-xs text-carbon-500/60 mt-2 uppercase tracking-widest font-bold">{new Date(event.timestamp).toLocaleTimeString()}</div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </Card>
+              </div>
             </div>
             <div className="space-y-6">
               <LearningContextPanel context={prep.learningContext} />
@@ -128,29 +131,31 @@ export function PrepDetails() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0">
-        <div className="px-4 md:px-8 py-4 flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/app/preps')} className="hidden md:flex p-2 -ml-2 rounded-full">
-            <Icon name="arrow-back-outline" className="text-xl" />
+      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 pt-8 md:pt-12 border-b border-border">
+        <div className="flex items-center gap-6 mb-8">
+          <Button variant="ghost" onClick={() => navigate('/app/preps')} className="hidden md:flex p-3 -ml-3 rounded-full hover:bg-surface border border-transparent hover:border-border transition-all">
+            <Icon name="arrow-back" className="text-2xl" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-carbon-900">{prep.title}</h1>
-            <p className="text-sm text-carbon-500">{prep.durationDays} Days • {prep.learningContext.targetRole}</p>
+            <h1 className="text-4xl font-extrabold text-carbon-900 tracking-tight mb-2">{prep.title}</h1>
+            <p className="text-lg text-carbon-500 font-medium">
+              <span className="text-chrome-accent">{prep.durationDays} Days</span> • {prep.learningContext.targetRole}
+            </p>
           </div>
         </div>
         
-        <div className="flex overflow-x-auto hide-scrollbar px-4 md:px-8 gap-6 border-t border-border mt-2">
+        <div className="flex overflow-x-auto hide-scrollbar gap-8">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setTab(tab.id)}
-              className={`flex items-center gap-2 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 py-4 border-b-4 font-bold text-sm whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-forest-700 text-forest-700'
+                  ? 'border-chrome-accent text-chrome-accent'
                   : 'border-transparent text-carbon-500 hover:text-carbon-900'
               }`}
             >
-              <Icon name={tab.icon} />
+              <Icon name={tab.icon.replace('-outline', '')} className="text-lg" />
               {tab.label}
             </button>
           ))}

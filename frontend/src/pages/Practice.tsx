@@ -28,25 +28,27 @@ export function Practice() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <h1 className="text-3xl font-bold text-carbon-900 mb-2">Practice Hub</h1>
-        <p className="text-carbon-500 mb-6">Test your knowledge and strengthen your weak areas.</p>
-        
-        <div className="flex overflow-x-auto hide-scrollbar gap-6 border-t border-border mt-2 pt-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? 'border-forest-700 text-forest-700'
-                  : 'border-transparent text-carbon-500 hover:text-carbon-900'
-              }`}
-            >
-              <Icon name={tab.icon} />
-              {tab.label}
-            </button>
-          ))}
+      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 py-8 md:py-12 border-b border-border">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-extrabold text-carbon-900 mb-2 tracking-tight">Practice Hub</h1>
+          <p className="text-lg text-carbon-500 mb-8">Test your knowledge and strengthen your weak areas.</p>
+          
+          <div className="flex overflow-x-auto hide-scrollbar gap-8">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 py-4 border-b-4 font-bold text-sm whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-chrome-accent text-chrome-accent'
+                    : 'border-transparent text-carbon-500 hover:text-carbon-900'
+                }`}
+              >
+                <Icon name={tab.icon.replace('-outline', '')} className="text-lg" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

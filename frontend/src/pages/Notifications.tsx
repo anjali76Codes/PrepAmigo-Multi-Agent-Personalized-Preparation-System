@@ -53,23 +53,24 @@ export function Notifications() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 py-8 md:py-12 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 max-w-4xl mx-auto">
           <div>
-            <h1 className="text-3xl font-bold text-carbon-900 mb-2">Notifications</h1>
-            <p className="text-carbon-500">Stay updated on your learning journey.</p>
+            <h1 className="text-4xl font-extrabold text-carbon-900 mb-2 tracking-tight">Notifications</h1>
+            <p className="text-lg text-carbon-500">Stay updated on your learning journey.</p>
           </div>
           <div className="flex gap-4">
             <Select 
               value={filter} 
               onChange={(e) => setFilter(e.target.value)}
+              className="bg-white border-border rounded-xl"
             >
               <option value="all">All notifications</option>
               <option value="missed-task">Missed tasks</option>
               <option value="plan-update">Plan updates</option>
               <option value="reminder">Reminders</option>
             </Select>
-            <Button variant="outline" onClick={markAllRead}>Mark all read</Button>
+            <Button variant="outline" onClick={markAllRead} className="rounded-xl border-border hover:bg-surface-muted bg-white">Mark all read</Button>
           </div>
         </div>
       </div>
@@ -81,10 +82,9 @@ export function Notifications() {
           className="max-w-4xl mx-auto space-y-4 pb-12"
         >
           {filteredNotifs.length > 0 ? filteredNotifs.map(notif => (
-            <Card 
+            <div 
               key={notif.id} 
-              variant="default"
-              className={`p-6 transition-all duration-300 cursor-pointer ${notif.read ? 'bg-bg border-border/50 opacity-75' : 'bg-surface border-forest-700/20 shadow-card'}`}
+              className={`p-6 rounded-[2rem] border transition-all duration-300 cursor-pointer hover:-translate-y-1 ${notif.read ? 'bg-white/50 border-border opacity-75' : 'bg-white border-border shadow-pop'}`}
               onClick={() => markRead(notif.id)}
             >
               <div className="flex gap-4">
@@ -111,7 +111,7 @@ export function Notifications() {
                   )}
                 </div>
               </div>
-            </Card>
+            </div>
           )) : (
             <div className="text-center py-12 text-carbon-500">
               <Icon name="notifications-off-outline" className="text-4xl mb-4 opacity-50" />

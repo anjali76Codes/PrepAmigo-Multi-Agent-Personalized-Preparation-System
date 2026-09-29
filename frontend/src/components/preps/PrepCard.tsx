@@ -13,37 +13,36 @@ export function PrepCard({ prep, onClick }: PrepCardProps) {
   const topGap = learningContext.knowledgeGaps.sort((a, b) => b.impactScore - a.impactScore)[0]?.skill || 'None';
 
   return (
-    <Card 
-      variant="default"
-      className="p-6 cursor-pointer hover:-translate-y-1 hover:shadow-pop transition-all group"
+    <div 
+      className="bg-white rounded-[2rem] p-8 cursor-pointer hover:-translate-y-1 hover:shadow-pop transition-all group border border-border"
       onClick={() => onClick(prep.id)}
     >
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-xl font-bold text-carbon-900 group-hover:text-forest-700 transition-colors">{learningContext.companyInfo.name}</h3>
-          <p className="text-carbon-500">{learningContext.targetRole}</p>
+          <h3 className="text-2xl font-bold text-carbon-900 group-hover:text-chrome-accent transition-colors">{learningContext.companyInfo.name}</h3>
+          <p className="text-carbon-500 font-medium">{learningContext.targetRole}</p>
         </div>
-        <div className="bg-navy-100 text-forest-700 px-3 py-1 rounded-full text-sm font-medium">
+        <div className="bg-chrome-accent/10 text-chrome-accent px-4 py-1.5 rounded-full text-sm font-bold">
           {durationDays} Days Left
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mt-6">
-        <div className="bg-bg rounded-card p-3 border border-border">
-          <div className="text-xs text-carbon-500 mb-1">Readiness</div>
-          <div className="font-semibold text-carbon-900 flex items-center gap-2">
-            <Icon name="bar-chart-outline" className="text-forest-700" />
+      <div className="grid grid-cols-2 gap-4 mt-8">
+        <div className="bg-surface rounded-2xl p-4 border border-border">
+          <div className="text-xs font-semibold text-carbon-500 mb-2 uppercase tracking-wider">Readiness</div>
+          <div className="font-extrabold text-2xl text-carbon-900 flex items-center gap-2">
+            <Icon name="bar-chart" className="text-forest-500 text-xl" />
             {Math.min(readiness, 100)}%
           </div>
         </div>
-        <div className="bg-bg rounded-card p-3 border border-border">
-          <div className="text-xs text-carbon-500 mb-1">Top Gap</div>
-          <div className="font-semibold text-carbon-900 flex items-center gap-2">
-            <Icon name="warning-outline" className="text-amber-600" />
+        <div className="bg-surface rounded-2xl p-4 border border-border">
+          <div className="text-xs font-semibold text-carbon-500 mb-2 uppercase tracking-wider">Top Gap</div>
+          <div className="font-extrabold text-lg text-carbon-900 flex items-center gap-2">
+            <Icon name="warning" className="text-amber-500 text-xl" />
             <span className="truncate">{topGap}</span>
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

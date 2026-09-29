@@ -8,9 +8,11 @@ export function Settings() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <h1 className="text-3xl font-bold text-carbon-900 mb-2">Settings</h1>
-        <p className="text-carbon-500">Manage your account and preferences.</p>
+      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 py-8 md:py-12 border-b border-border">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-4xl font-extrabold text-carbon-900 mb-2 tracking-tight">Settings</h1>
+          <p className="text-lg text-carbon-500">Manage your account and preferences.</p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative safe-area-bottom">
@@ -19,9 +21,9 @@ export function Settings() {
           animate={{ opacity: 1, y: 0 }}
           className="max-w-3xl mx-auto space-y-8 pb-12"
         >
-          <Card variant="default" className="p-6">
-            <h3 className="text-lg font-bold text-carbon-900 mb-6 flex items-center gap-2">
-              <Icon name="person-outline" className="text-forest-700" />
+          <div className="bg-white rounded-[2rem] p-8 border border-border shadow-sm">
+            <h3 className="text-2xl font-bold text-carbon-900 mb-8 flex items-center gap-3">
+              <Icon name="person" className="text-chrome-accent" />
               Account Info
             </h3>
             
@@ -65,11 +67,10 @@ export function Settings() {
                 </div>
               </div>
             </div>
-          </Card>
-
-          <Card variant="default" className="p-6">
-            <h3 className="text-lg font-bold text-carbon-900 mb-6 flex items-center gap-2">
-              <Icon name="cog-outline" className="text-forest-700" />
+          </div>
+          <div className="bg-white rounded-[2rem] p-8 border border-border shadow-sm">
+            <h3 className="text-2xl font-bold text-carbon-900 mb-8 flex items-center gap-3">
+              <Icon name="cog" className="text-chrome-accent" />
               Agent Preferences
             </h3>
             
@@ -94,11 +95,10 @@ export function Settings() {
                 <input type="time" defaultValue="09:00" className="bg-bg border border-border rounded-control px-4 py-2 text-carbon-900 text-sm" />
               </div>
             </div>
-          </Card>
-
-          <Card variant="default" className="p-6">
-            <h3 className="text-lg font-bold text-carbon-900 mb-6 flex items-center gap-2">
-              <Icon name="document-text-outline" className="text-forest-700" />
+          </div>
+          <div className="bg-white rounded-[2rem] p-8 border border-border shadow-sm">
+            <h3 className="text-2xl font-bold text-carbon-900 mb-8 flex items-center gap-3">
+              <Icon name="document-text" className="text-chrome-accent" />
               Context & Baseline
             </h3>
             
@@ -122,8 +122,7 @@ export function Settings() {
               
               <Button variant="primary" className="w-full">Save Changes & Recalibrate</Button>
             </div>
-          </Card>
-        </motion.div>
+          </div>        </motion.div>
       </div>
     </div>
   );

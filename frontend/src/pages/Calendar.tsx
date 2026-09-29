@@ -19,11 +19,11 @@ export function Calendar() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 py-8 md:py-12 border-b border-border">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 max-w-4xl mx-auto">
           <div>
-            <h1 className="text-3xl font-bold text-carbon-900 mb-2">Global Calendar</h1>
-            <p className="text-carbon-500">All your upcoming tasks and deadlines across all preps.</p>
+            <h1 className="text-4xl font-extrabold text-carbon-900 mb-2 tracking-tight">Global Calendar</h1>
+            <p className="text-lg text-carbon-500">All your upcoming tasks and deadlines across all preps.</p>
           </div>
           <Select 
             value={selectedPrepId} 
@@ -42,7 +42,7 @@ export function Calendar() {
         <motion.div
           initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-4xl mx-auto pb-12"
+          className="max-w-4xl mx-auto pb-12 bg-white rounded-[2rem] p-6 shadow-pop border border-border"
         >
           <PlanCalendar entries={filteredEntries} />
         </motion.div>

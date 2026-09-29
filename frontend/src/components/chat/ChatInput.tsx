@@ -47,9 +47,9 @@ export function ChatInput({ onSend, disabled, placeholder = "Message PrepAmigo..
       <form 
         onSubmit={handleSubmit} 
         className={cn(
-          "relative flex flex-col bg-surface rounded-card border shadow-card transition-colors",
-          text.length === 0 ? "p-3" : "p-2", // empty state padding
-          disabled ? "border-border/50 opacity-80" : "border-border focus-within:border-violet-500/50 focus-within:ring-1 focus-within:ring-violet-500/50"
+          "relative flex flex-col bg-white rounded-[2rem] border shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all",
+          text.length === 0 ? "p-4" : "p-3",
+          disabled ? "border-border/50 opacity-80" : "border-border hover:border-chrome-accent/30 focus-within:border-chrome-accent focus-within:ring-4 focus-within:ring-chrome-accent/10"
         )}
       >
         <textarea
@@ -60,21 +60,21 @@ export function ChatInput({ onSend, disabled, placeholder = "Message PrepAmigo..
           disabled={disabled}
           placeholder={placeholder}
           rows={1}
-          className="w-full bg-transparent px-2 py-2 text-carbon-900 placeholder:text-carbon-500 outline-none resize-none overflow-y-auto min-h-[40px] max-h-[150px]"
+          className="w-full bg-transparent px-3 py-2 text-carbon-900 placeholder:text-carbon-500/70 text-base leading-relaxed outline-none resize-none overflow-y-auto min-h-[40px] max-h-[150px] scrollbar-thin"
         />
-        <div className="flex justify-end mt-1">
+        <div className="flex justify-end mt-2 px-1">
           <IconButton
             type="submit"
-            icon="send"
+            icon="arrow-up"
             variant="primary"
             disabled={!text.trim() || disabled}
             isLoading={disabled}
-            className="w-10 h-10 rounded-card shrink-0"
+            className="w-10 h-10 rounded-full bg-chrome-accent hover:bg-chrome-accent/90 disabled:bg-surface-muted disabled:text-carbon-400 text-white shadow-sm transition-all"
           />
         </div>
       </form>
-      <div className="text-center mt-1">
-        <span className="text-xs text-carbon-500 opacity-80">PrepAmigo uses mock data in this demo.</span>
+      <div className="text-center mt-2">
+        <span className="text-xs font-medium text-carbon-500 opacity-80">PrepAmigo uses mock data in this demo.</span>
       </div>
     </div>
   );

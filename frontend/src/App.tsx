@@ -20,14 +20,12 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
 function PageTransition({ children }: { children: React.ReactNode }) {
-  const shouldReduceMotion = useReducedMotion();
-  
   return (
     <motion.div
-      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: shouldReduceMotion ? 0 : -10 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
       className="w-full h-full flex flex-col relative"
     >
       {children}
@@ -39,7 +37,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+      <Routes location={location} key={location.pathname.split('/')[1] || 'root'}>
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<PageTransition><Home /></PageTransition>} />

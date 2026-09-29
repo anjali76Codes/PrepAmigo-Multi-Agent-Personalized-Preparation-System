@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { FlashcardDeck } from '../practice/FlashcardDeck';
+import { AgentJourney, type JourneyStep } from './AgentJourney'; // NEW
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
 import { Link } from 'react-router-dom';
 
@@ -11,15 +12,16 @@ export interface Message {
   id: string;
   sender: 'user' | 'agent';
   content: string;
-  scenario?: 'setup' | 'plan-update' | 'missed-task' | 'flashcards';
+  scenario?: 'setup' | 'plan-update' | 'missed-task' | 'flashcards' | 'agent-journey'; // NEW
   data?: any;
 }
 
 interface MessagesProps {
   messages: Message[];
+  onJourneyComplete?: (messageId: string) => void; // NEW
 }
 
-export function Messages({ messages }: MessagesProps) {
+export function Messages({ messages, onJourneyComplete }: MessagesProps) {
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-6">
       {messages.map((msg) => (
@@ -27,20 +29,31 @@ export function Messages({ messages }: MessagesProps) {
           key={msg.id}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`flex gap-4 max-w-3xl mx-auto ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
+          className={`flex gap-4 max-w-5xl mx-auto ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
         >
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-            msg.sender === 'user' ? 'bg-forest-100 text-forest-700' : 'bg-carbon-900 text-white'
-          }`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user' ? 'bg-forest-100 text-forest-700' : 'bg-carbon-900 text-white'
+            }`}>
             <Icon name={msg.sender === 'user' ? 'person' : 'chatbubbles-outline'} />
           </div>
-          
+
           <div className={`space-y-4 ${msg.sender === 'user' ? 'items-end flex flex-col' : 'flex-1'}`}>
-            <div className={`px-4 py-3 rounded-card ${
-              msg.sender === 'user' ? 'bg-forest-700 text-white rounded-tr-sm' : 'bg-surface border border-border rounded-tl-sm text-carbon-900'
-            }`}>
-              {msg.content}
-            </div>
+            {msg.content && (
+              <div className={`px-4 py-3 rounded-card ${msg.sender === 'user' ? 'bg-forest-700 text-white rounded-tr-sm' : 'bg-surface border border-border rounded-tl-sm text-carbon-900'
+                }`}>
+                {msg.content}
+              </div>
+            )}
+
+            {/* NEW: agent journey shown as the response while agents work */}
+            {msg.scenario === 'agent-journey' && msg.data && (
+              <AgentJourney
+                steps={msg.data.steps as JourneyStep[]}
+                activeIndex={msg.data.activeIndex}          // controlled (optional)
+                autoPlay={msg.data.activeIndex === undefined} // demo mode if not controlled
+                finalAction={msg.data.finalAction}
+                onComplete={() => onJourneyComplete?.(msg.id)}
+              />
+            )}
 
             {msg.scenario === 'setup' && msg.data && (
               <Card variant="default" className="p-6 space-y-4">
@@ -61,11 +74,11 @@ export function Messages({ messages }: MessagesProps) {
                     </ul>
                   </div>
                 </div>
-                <Link to="/app/preps/prep-1">
+                {/* <Link to="/app/preps/prep-1">
                   <Button variant="primary">
                     View Roadmap <Icon name="arrow-forward-outline" />
                   </Button>
-                </Link>
+                </Link> */}
               </Card>
             )}
 

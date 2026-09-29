@@ -1,28 +1,74 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatInput } from '../components/chat/ChatInput';
-import { AgentActivity } from '../components/chat/AgentActivity';
 import { Messages } from '../components/chat/Messages';
 import type { Message } from '../components/chat/Messages';
+import type { JourneyStep, JourneyAction } from '../components/chat/AgentJourney';
 import { LearningContextPanel } from '../components/preps/LearningContextPanel';
 import { useAppContext } from '../context/AppContext';
-import type { AgentName } from '../data/mockData';
 import { Icon } from '../components/ui/Icon';
-import { Mascot } from '../components/ui/Mascot';
 import { cn } from '../lib/utils';
-import { Button } from '../components/ui/Button';
+
+// 6 nodes per scenario. Rename agents to match your AGENTS list if you like.
+const JOURNEYS: Record<'setup' | 'plan-update' | 'missed-task' | 'flashcards' | 'fallback', JourneyStep[]> = {
+  setup: [
+    { agent: 'Intake Agent', text: 'Reading your goal…' },
+    { agent: 'Company Research', text: 'Analyzing Company X…' },
+    { agent: 'Job Intelligence', text: 'Extracting role expectations…' },
+    { agent: 'Research Agent', text: 'Collecting prep resources…' },
+    { agent: 'Skill Gap Agent', text: 'Comparing against your skills…' },
+    { agent: 'Planner Agent', text: 'Building your 45-day roadmap…' },
+  ],
+  'plan-update': [
+    { agent: 'Intake Agent', text: 'Understanding what went wrong…' },
+    { agent: 'Assessment Agent', text: 'Analyzing your quiz results…' },
+    { agent: 'Skill Gap Agent', text: 'Finding weak topics…' },
+    { agent: 'Research Agent', text: 'Picking better resources…' },
+    { agent: 'Planner Agent', text: 'Reprioritizing upcoming sprints…' },
+    { agent: 'Reviewer Agent', text: 'Double-checking the new plan…' },
+  ],
+  'missed-task': [
+    { agent: 'Intake Agent', text: 'Checking what you missed…' },
+    { agent: 'Progress Agent', text: 'Reviewing your streak…' },
+    { agent: 'Research Agent', text: 'Checking topic priorities…' },
+    { agent: 'Skill Gap Agent', text: 'Estimating the impact…' },
+    { agent: 'Planner Agent', text: 'Redistributing workload…' },
+    { agent: 'Reviewer Agent', text: 'Making sure it stays balanced…' },
+  ],
+  flashcards: [
+    { agent: 'Intake Agent', text: 'Reading your request…' },
+    { agent: 'Planner Agent', text: 'Fetching relevant topics…' },
+    { agent: 'Research Agent', text: 'Pulling key concepts…' },
+    { agent: 'Assessment Agent', text: 'Generating flashcards…' },
+    { agent: 'Difficulty Agent', text: 'Tuning difficulty levels…' },
+    { agent: 'Reviewer Agent', text: 'Polishing the deck…' },
+  ],
+  fallback: [
+    { agent: 'Intake Agent', text: 'Reading your message…' },
+    { agent: 'Planner Agent', text: 'Thinking…' },
+    { agent: 'Research Agent', text: 'Looking for context…' },
+    { agent: 'Skill Gap Agent', text: 'Checking your profile…' },
+    { agent: 'Assessment Agent', text: 'Weighing options…' },
+    { agent: 'Reviewer Agent', text: 'Wrapping up…' },
+  ],
+};
+
+const STEP_MS = 1500;   // time the mascot spends at each node
+const FINISH_MS = 1000; // time to show the "cheer" state before the answer appears
+
+let idCounter = 0;
+const uid = () => `${Date.now()}-${idCounter++}`;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [activeAgent, setActiveAgent] = useState<AgentName | null>(null);
-  const [statusText, setStatusText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [highlightField, setHighlightField] = useState<'role' | 'summary' | 'gaps' | 'all' | null>(null);
   const [highlightSource, setHighlightSource] = useState<string>('');
 
   const { preps: mockPreps } = useAppContext();
   const mockContext = mockPreps[0].learningContext;
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,80 +80,107 @@ export function Chat() {
   }, [messages]);
 
   const suggestions = [
-    "I have 45 days to prepare for SDE at Company X",
-    "I scored badly on my DSA quiz, adjust my plan",
-    "I missed the last two days",
-    "Give me revision cards for system design"
+    'I have 45 days to prepare for SDE at Company X',
+    'I scored badly on my DSA quiz, adjust my plan',
+    'I missed the last two days',
+    'Give me revision cards for system design',
   ];
 
+  // Shows the journey as the agent's "response", advances it, then removes it.
+  const runJourney = async (
+    steps: JourneyStep[],
+    opts: { finalAction?: JourneyAction; keep?: boolean } = {}
+  ) => {
+    const journeyId = uid();
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: journeyId,
+        sender: 'agent',
+        content: '',
+        scenario: 'agent-journey',
+        data: { steps, activeIndex: 0, finalAction: opts.finalAction },
+      },
+    ]);
+
+    const setIndex = (index: number) =>
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === journeyId ? { ...m, data: { ...m.data, activeIndex: index } } : m
+        )
+      );
+
+    for (let i = 0; i < steps.length; i++) {
+      if (i > 0) setIndex(i);
+      await sleep(STEP_MS);
+    }
+
+    setIndex(steps.length);
+    await sleep(FINISH_MS);
+
+    // Only remove the journey when it has no button to keep alive
+    if (!opts.keep) {
+      setMessages((prev) => prev.filter((m) => m.id !== journeyId));
+    }
+  };
+
+  const addAgentMessage = (msg: Omit<Message, 'id' | 'sender'>) =>
+    setMessages((prev) => [...prev, { id: uid(), sender: 'agent', ...msg }]);
+
   const handleSend = async (text: string) => {
-    const newMsg: Message = { id: Date.now().toString(), sender: 'user', content: text };
-    setMessages(prev => [...prev, newMsg]);
+    setMessages((prev) => [...prev, { id: uid(), sender: 'user', content: text }]);
     setIsProcessing(true);
 
     const lower = text.toLowerCase();
-    
-    if (lower.includes('45 days') && lower.includes('company x')) {
-      await runPipeline(['Company Research', 'Job Intelligence', 'Research', 'Skill Gap', 'Planner'], 
-        "Analyzing Company X...",
-        "Building your 45-day roadmap..."
-      );
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(), sender: 'agent', 
-        content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
-        scenario: 'setup',
-        data: { role: 'SDE', company: 'Company X' }
-      }]);
-      setHighlightField('all');
-      setHighlightSource('Planner');
-    } else if (lower.includes('scored badly') || lower.includes('adjust my plan')) {
-      await runPipeline(['Assessment', 'Planner'], "Analyzing recent assessment results...", "Reprioritizing upcoming sprints...");
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(), sender: 'agent', 
-        content: "I've adjusted your roadmap to spend more time on your weak areas.",
-        scenario: 'plan-update'
-      }]);
-      setHighlightField('gaps');
-      setHighlightSource('Assessment');
-    } else if (lower.includes('missed')) {
-      await runPipeline(['Research', 'Planner'], "Checking missed days...", "Redistributing workload...");
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(), sender: 'agent', 
-        content: "No worries! I've shifted your tasks to maintain a balanced workload.",
-        scenario: 'missed-task'
-      }]);
-      setHighlightField('summary');
-      setHighlightSource('Progress');
-    } else if (lower.includes('revision cards')) {
-      await runPipeline(['Planner', 'Assessment'], "Fetching relevant topics...", "Generating flashcards...");
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(), sender: 'agent', 
-        content: "Here's a quick revision deck for System Design:",
-        scenario: 'flashcards',
-        data: mockPreps[0].assessments.flashcardDecks[0]
-      }]);
-      setHighlightField('gaps');
-      setHighlightSource('Planner');
-    } else {
-      setActiveAgent('Planner');
-      setStatusText('Thinking...');
-      await new Promise(r => setTimeout(r, 1000));
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(), sender: 'agent', 
-        content: "I can help with interview preparation, roadmap adjustments, and study materials. Try one of the suggested prompts!"
-      }]);
-    }
-    
-    setActiveAgent(null);
-    setStatusText('');
-    setIsProcessing(false);
-  };
 
-  const runPipeline = async (agents: AgentName[], startMsg: string, endMsg: string) => {
-    for (let i = 0; i < agents.length; i++) {
-      setActiveAgent(agents[i]);
-      setStatusText(i === 0 ? startMsg : i === agents.length - 1 ? endMsg : `Processing step ${i + 1}...`);
-      await new Promise(r => setTimeout(r, 1200));
+    try {
+      if (lower.includes('45 days') && lower.includes('company x')) {
+        await runJourney(JOURNEYS.setup, {
+          keep: true,
+          finalAction: { label: 'View Roadmap', to: '/app/preps/prep-1' },
+        });
+        addAgentMessage({
+          content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
+          scenario: 'setup',
+          data: { role: 'SDE', company: 'Company X' },
+        });
+        setHighlightField('all');
+        setHighlightSource('Planner');
+      } else if (lower.includes('scored badly') || lower.includes('adjust my plan')) {
+        await runJourney(JOURNEYS['plan-update']);
+        addAgentMessage({
+          content: "I've adjusted your roadmap to spend more time on your weak areas.",
+          scenario: 'plan-update',
+        });
+        setHighlightField('gaps');
+        setHighlightSource('Assessment');
+      } else if (lower.includes('missed')) {
+        await runJourney(JOURNEYS['missed-task']);
+        addAgentMessage({
+          content: "No worries! I've shifted your tasks to maintain a balanced workload.",
+          scenario: 'missed-task',
+        });
+        setHighlightField('summary');
+        setHighlightSource('Progress');
+      } else if (lower.includes('revision cards')) {
+        await runJourney(JOURNEYS.flashcards);
+        addAgentMessage({
+          content: "Here's a quick revision deck for System Design:",
+          scenario: 'flashcards',
+          data: mockPreps[0].assessments.flashcardDecks[0],
+        });
+        setHighlightField('gaps');
+        setHighlightSource('Planner');
+      } else {
+        await runJourney(JOURNEYS.fallback);
+        addAgentMessage({
+          content:
+            'I can help with interview preparation, roadmap adjustments, and study materials. Try one of the suggested prompts!',
+        });
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -116,68 +189,74 @@ export function Chat() {
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-bg h-full overflow-hidden">
       <div className="flex-1 flex flex-col h-full relative overflow-hidden">
-        <AgentActivity activeAgent={activeAgent} statusText={statusText} />
-        
+        {/* AgentActivity removed: the journey now lives inside the conversation */}
+
         {hasStarted && (
           <div className="flex-1 overflow-y-auto">
             <Messages messages={messages} />
             <div ref={messagesEndRef} className="h-4" />
           </div>
         )}
-        
-        <div className={cn(
-          "flex flex-col w-full z-10 relative",
-          hasStarted ? "mt-auto pt-6 pb-4 px-4 bg-bg border-t border-border safe-area-bottom" : "flex-1 justify-center items-center px-4 sm:px-8 overflow-y-auto"
-        )}>
+
+        <div
+          className={cn(
+            'flex flex-col w-full z-10 relative',
+            hasStarted
+              ? 'mt-auto pt-6 pb-4 px-4 bg-bg border-t border-border safe-area-bottom'
+              : 'flex-1 justify-center items-center px-4 sm:px-8 overflow-y-auto'
+          )}
+        >
           {hasStarted && (
             <div className="absolute top-0 left-0 w-full h-12 -translate-y-full bg-gradient-to-t from-bg to-transparent pointer-events-none" />
           )}
 
           <AnimatePresence mode="popLayout">
             {!hasStarted && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                className="flex flex-col items-center w-full mb-8"
+                className="flex flex-col items-center w-full mb-12 mt-10"
               >
-                <Mascot size="lg" mood="idle" className="mb-6 bg-surface shadow-card border border-border" />
-                <h2 className="text-2xl font-bold text-carbon-900 mb-2 text-center">How can PrepAmigo help?</h2>
+                <h2 className="text-4xl font-extrabold text-carbon-900 tracking-tight">How can PrepAmigo help?</h2>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <motion.div 
+          <motion.div
             layout
             layoutId="chat-input-morph"
-            transition={{ type: "spring", stiffness: 260, damping: 30 }}
-            className={cn("w-full relative z-20", hasStarted ? "max-w-3xl mx-auto" : "max-w-2xl mx-auto")}
+            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+            className={cn('w-full relative z-20', hasStarted ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto')}
           >
-            <ChatInput 
-              onSend={handleSend} 
-              disabled={isProcessing} 
-              placeholder={hasStarted ? "Message PrepAmigo..." : "Tell PrepAmigo what you're preparing for..."}
+            <ChatInput
+              onSend={handleSend}
+              disabled={isProcessing}
+              placeholder={hasStarted ? 'Message PrepAmigo...' : "Tell PrepAmigo what you're preparing for..."}
             />
           </motion.div>
 
           <AnimatePresence mode="popLayout">
             {!hasStarted && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl mt-8"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mt-12"
               >
                 {suggestions.map((s, i) => (
-                  <Button 
+                  <button
                     key={i}
-                    variant="outline"
                     onClick={() => handleSend(s)}
                     disabled={isProcessing}
-                    className="h-auto p-4 justify-start text-left text-carbon-900 text-sm bg-surface hover:bg-surface-muted hover:border-forest-700/50 whitespace-normal font-normal"
+                    className="flex flex-col gap-2 items-start justify-center p-5 text-left bg-white border border-border rounded-[1.5rem] hover:-translate-y-1 hover:shadow-pop hover:border-chrome-accent/30 transition-all text-carbon-900 disabled:opacity-50 group"
                   >
-                    {s}
-                  </Button>
+                    <Icon
+                      name={i === 0 ? 'rocket' : i === 1 ? 'bar-chart' : i === 2 ? 'time' : 'albums'}
+                      className="text-xl text-carbon-500 group-hover:text-chrome-accent transition-colors"
+                    />
+                    <span className="text-sm font-medium leading-relaxed">{s}</span>
+                  </button>
                 ))}
               </motion.div>
             )}
@@ -185,24 +264,24 @@ export function Chat() {
         </div>
       </div>
 
-      <div className="w-full md:w-80 border-l border-border bg-surface flex flex-col h-full overflow-hidden">
-        <div className="p-4 border-b border-border bg-bg shrink-0">
-          <h3 className="font-bold text-carbon-900 flex items-center gap-2">
-            <Icon name="person-outline" className="text-forest-700" /> Live Context
+      <div className="w-full md:w-96 border-l border-border bg-surface flex flex-col h-full overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)]">
+        <div className="p-6 border-b border-border bg-bg shrink-0">
+          <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-3">
+            <Icon name="person" className="text-chrome-accent text-xl" /> Live Context
           </h3>
         </div>
         <div className="flex-1 overflow-y-auto p-4 relative">
           <motion.div
-            animate={{ 
-              boxShadow: highlightField ? '0 0 0 2px var(--color-violet-500)' : '0 0 0 0px transparent'
+            animate={{
+              boxShadow: highlightField ? '0 0 0 2px var(--color-violet-500)' : '0 0 0 0px transparent',
             }}
             transition={{ duration: 0.5 }}
             className="rounded-card overflow-hidden"
           >
-            <LearningContextPanel 
-              context={mockContext} 
-              highlightField={highlightField} 
-              highlightSource={highlightSource} 
+            <LearningContextPanel
+              context={mockContext}
+              highlightField={highlightField}
+              highlightSource={highlightSource}
             />
           </motion.div>
         </div>
