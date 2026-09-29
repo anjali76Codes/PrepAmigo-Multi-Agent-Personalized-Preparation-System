@@ -55,3 +55,4 @@ The agents service requires a working LLM provider. With the default Ollama setu
 
 - Layer 8: UI v2
 - Layer 9: chat input morph
+- Layer 10: dark chrome

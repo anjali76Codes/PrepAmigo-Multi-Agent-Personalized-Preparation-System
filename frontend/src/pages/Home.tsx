@@ -82,29 +82,60 @@ export function Home() {
       </section>
 
       {/* 3. How it works */}
-      <section className="py-20 px-6 max-w-6xl mx-auto relative z-10">
-        <Reveal>
-          <h2 className="text-3xl font-bold text-center mb-16 text-carbon-900">How PrepAmigo Works</h2>
-          <RevealStagger className="flex flex-col md:flex-row gap-8 text-center items-center justify-between relative">
-            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-border -translate-y-1/2 -z-10" />
-            {[
-              { step: '1', title: 'Input', desc: 'Tell us your target role and upload your resume.', variant: 'forest' },
-              { step: '2', title: 'Analyze', desc: 'Our agents find company expectations and your skill gaps.', variant: 'sunny' },
-              { step: '3', title: 'Plan', desc: 'We generate a day-by-day study roadmap.', variant: 'coral' },
-              { step: '4', title: 'Adapt', desc: 'The plan shifts based on your quiz scores and missed days.', variant: 'sky' }
-            ].map((s, i) => (
-              <RevealStaggerItem key={i} className="w-full md:w-64">
-                <Card variant={s.variant as any} className="p-6 relative group hover:-translate-y-1 transition-transform">
-                  <div className="w-10 h-10 bg-carbon-900 text-white rounded-full flex items-center justify-center font-bold text-lg absolute -top-5 left-1/2 -translate-x-1/2 shadow-card">
+      <section className="py-24 px-6 max-w-6xl mx-auto relative z-10 overflow-hidden">
+        <h2 className="text-3xl font-bold text-center mb-16 text-carbon-900">How PrepAmigo Works</h2>
+        
+        <div className="relative w-full max-w-[850px] mx-auto md:h-[650px] flex flex-col md:flex-row items-center justify-center gap-12 md:gap-0 mt-10 md:mt-12">
+          
+          {/* Center Mascot */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5, filter: 'blur(10px)' }}
+            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: [0, 0.71, 0.2, 1.01] }}
+            className="md:absolute z-20 order-first md:order-none mb-8 md:mb-0"
+          >
+            <Mascot size="2xl" mood="happy" className="shadow-pop bg-forest-100 ring-[12px] ring-bg" />
+          </motion.div>
+
+          {/* Optional dashed circle in background */}
+          <motion.div 
+             initial={{ opacity: 0, scale: 0.8 }}
+             whileInView={{ opacity: 1, scale: 1 }}
+             viewport={{ once: true }}
+             transition={{ duration: 1, delay: 0.2 }}
+             className="hidden md:block absolute w-[450px] h-[450px] rounded-full border-2 border-dashed border-carbon-200 -z-10" 
+          />
+
+          {/* Orbiting items */}
+          {[
+            { step: '1', title: 'Input', desc: 'Tell us your target role and upload your resume.', variant: 'forest', position: 'md:top-0 md:left-0' },
+            { step: '2', title: 'Analyze', desc: 'Our agents find company expectations and your skill gaps.', variant: 'sunny', position: 'md:top-0 md:right-0' },
+            { step: '3', title: 'Plan', desc: 'We generate a day-by-day study roadmap.', variant: 'coral', position: 'md:bottom-0 md:right-0' },
+            { step: '4', title: 'Adapt', desc: 'The plan shifts based on your quiz scores and missed days.', variant: 'sky', position: 'md:bottom-0 md:left-0' }
+          ].map((s, i) => (
+             <motion.div
+                key={i}
+                className={`w-full max-w-sm md:absolute md:w-64 z-10 ${s.position}`}
+                initial={{ opacity: 0, scale: 0.5, filter: 'blur(10px)' }}
+                whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{
+                    duration: 0.8,
+                    delay: 0.3 + (i * 0.15),
+                    ease: [0, 0.71, 0.2, 1.01],
+                }}
+             >
+                <Card variant={s.variant as any} className="p-6 relative group hover:-translate-y-2 transition-transform text-center shadow-lg h-full">
+                  <div className="w-10 h-10 bg-carbon-900 text-white rounded-full flex items-center justify-center font-bold text-lg absolute -top-5 left-1/2 -translate-x-1/2 shadow-card ring-4 ring-bg">
                     {s.step}
                   </div>
                   <h3 className="font-bold text-lg mt-4 mb-2">{s.title}</h3>
                   <p className="text-sm opacity-80">{s.desc}</p>
                 </Card>
-              </RevealStaggerItem>
-            ))}
-          </RevealStagger>
-        </Reveal>
+             </motion.div>
+          ))}
+        </div>
       </section>
 
       {/* 4. Agent grid */}
