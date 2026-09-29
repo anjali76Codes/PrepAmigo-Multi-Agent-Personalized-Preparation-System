@@ -7,3 +7,4 @@ langgraph
 python-dotenv
 redis>=5.0.0
 uvicorn[standard]
+PyJWT
