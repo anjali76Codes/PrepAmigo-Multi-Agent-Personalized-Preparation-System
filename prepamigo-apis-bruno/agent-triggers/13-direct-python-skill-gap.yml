@@ -5,28 +5,21 @@ info:
 
 http:
   method: post
-  url: "http://localhost:8000/api/agents/skill-gap"
+  url: http://localhost:8000/api/agents/skill-gap
   headers:
     - name: Content-Type
       value: multipart/form-data
   body:
-    type: multipartForm
-    form:
+    type: multipart-form
+    data:
       - name: resume
         type: file
-        value: 
+        value:
+          - C:\Users\Anjali Gupta\Downloads\test_resume_software_engineer.pdf
+        contentType: application/pdf
       - name: job_intelligence_data
         type: text
-        value: |-
-          {
-            "skills": [
-              { "name": "Python", "frequency": 10 },
-              { "name": "FastAPI", "frequency": 5 },
-              { "name": "MongoDB", "frequency": 3 }
-            ],
-            "coverage": "medium"
-          }
-  auth: none
+        value: "{\"company\":\"Google\",\"role\":\"Software engineer\",\"location\":\"India\",\"isFallback\":false,\"fallbackReason\":null,\"coverage\":\"high\",\"postingsCount\":10,\"analyzedPostingsCount\":10,\"skills\":[{\"name\":\"C++\",\"category\":\"Programming Language\",\"priority\":\"must-have\"},{\"name\":\"Python\",\"category\":\"Programming Language\",\"priority\":\"must-have\"},{\"name\":\"Java\",\"category\":\"Programming Language\",\"priority\":\"must-have\"},{\"name\":\"Go\",\"category\":\"Programming Language\",\"priority\":\"must-have\"},{\"name\":\"Data Structures & Algorithms\",\"category\":\"Core Engineering\",\"priority\":\"must-have\"},{\"name\":\"Machine Learning\",\"category\":\"Domain Knowledge\",\"priority\":\"must-have\"},{\"name\":\"ML Compiler Internals\",\"category\":\"ML Infrastructure\",\"priority\":\"nice-to-have\"},{\"name\":\"TensorFlow / JAX / PyTorch / Keras\",\"category\":\"ML Frameworks\",\"priority\":\"nice-to-have\"},{\"name\":\"Google Workspace Administration\",\"category\":\"Collaboration Tools\",\"priority\":\"must-have\"},{\"name\":\"Unix/Linux Environment\",\"category\":\"Systems\",\"priority\":\"must-have\"},{\"name\":\"Cloud Infrastructure\",\"category\":\"Cloud\",\"priority\":\"must-have\"},{\"name\":\"Build & Deployment Pipelines\",\"category\":\"DevOps\",\"priority\":\"must-have\"},{\"name\":\"Site Reliability Engineering (SRE)\",\"category\":\"Reliability\",\"priority\":\"must-have\"},{\"name\":\"Data Platform Engineering\",\"category\":\"Data Engineering\",\"priority\":\"must-have\"},{\"name\":\"Full-Stack Development\",\"category\":\"Development\",\"priority\":\"must-have\"}],\"commonResponsibilities\":[\"Develop and maintain software systems\",\"Design and implement technical solutions\",\"Collaborate with cross-functional teams\",\"Translate business requirements into technical specifications\",\"Ensure code quality and reliability\",\"Operate and scale production platforms\",\"Write clean, maintainable code\",\"Participate in code reviews\"],\"commonQualifications\":[\"Bachelor's degree or equivalent practical experience\",\"Experience with programming languages\",\"Experience with data structures and algorithms\",\"Experience with software design\",\"Experience in collaborative team environments\"]}"
 
 settings:
   encodeUrl: false
@@ -37,5 +30,5 @@ settings:
 
 docs: |
   ## Direct Python Skill Gap Agent
-  
+
   Upload a resume (PDF/DOCX) and pass the `job_intelligence_data` JSON.
