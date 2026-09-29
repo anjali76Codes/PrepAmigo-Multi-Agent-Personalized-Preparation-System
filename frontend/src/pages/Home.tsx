@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -6,55 +6,69 @@ import { Reveal, RevealStagger, RevealStaggerItem } from '../components/ui/Revea
 import { Mascot } from '../components/ui/Mascot';
 import { PageBackground } from '../components/ui/PageBackground';
 import { AGENTS } from '../data/mockData';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { ChatInput } from '../components/chat/ChatInput';
 
 export function Home() {
+  const navigate = useNavigate();
+
+  const { scrollY } = useScroll();
+  const scale = useTransform(scrollY, [0, 500], [1, 0.9]);
+  const filter = useTransform(scrollY, [0, 500], ["blur(0px)", "blur(8px)"]);
+
+  const handleChatSubmit = (message: string) => {
+    if (message.trim()) {
+      navigate('/app/chat');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-bg relative overflow-hidden text-carbon-700">
       <PageBackground />
-      
+
       {/* 1. Hero */}
-      <section className="relative pt-32 pb-20 px-6 max-w-6xl mx-auto text-center z-10">
+      <motion.section
+        style={{ scale, filter }}
+        className="relative pt-32 pb-12 px-6 mx-4 rounded-b-[2.5rem] h-[98vh] bg-carbon-900 text-white text-center z-10 shadow-lg"
+      >
         <RevealStagger className="max-w-4xl mx-auto space-y-8">
           <RevealStaggerItem>
-            <Mascot size="xl" mood="cheer" className="mb-6 shadow-pop bg-forest-100" />
+            <Mascot size="xl" mood="cheer" className="mb-6 shadow-pop bg-forest-100 mx-auto" />
           </RevealStaggerItem>
           <RevealStaggerItem>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-carbon-900">
-              Stop figuring out <span className="text-forest-700 italic">what</span> to prepare. <br/> Just start preparing.
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
+              Ace your interview.<br /> Without the <span className="text-forest-400 italic">guesswork</span>.
             </h1>
           </RevealStaggerItem>
           <RevealStaggerItem>
-            <p className="text-xl text-carbon-500 max-w-2xl mx-auto leading-relaxed">
-              Candidates spend more time researching what to study than actually studying. PrepAmigo is a multi-agent AI system that builds and adapts your personalized interview roadmap.
+            <p className="text-xl text-carbon-300 max-w-2xl mx-auto leading-relaxed">
+              PrepAmigo creates your personalized, adaptive study plan in seconds.
             </p>
           </RevealStaggerItem>
-          <RevealStaggerItem className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-            <Link to="/signup">
-              <Button variant="primary" size="lg" className="w-full sm:w-auto shadow-pop">
-                Start Free Trial
-              </Button>
-            </Link>
-            <Link to="/app/chat">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto bg-surface">
-                Try the Chat Demo
-              </Button>
-            </Link>
+          <RevealStaggerItem>
+            <div className="max-w-xl mx-auto mt-8">
+              <ChatInput
+                onSend={handleChatSubmit}
+                placeholder="E.g. I have a frontend interview at Google in 2 weeks..."
+                className="text-left"
+              />
+            </div>
           </RevealStaggerItem>
         </RevealStagger>
-      </section>
+      </motion.section>
 
       {/* 2. Problem */}
       <section className="py-20 px-6 bg-surface-muted/50 border-y border-border relative z-10">
         <Reveal className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-carbon-900">The Interview Prep Trap</h2>
-          <RevealStagger className="grid md:grid-cols-3 gap-8">
+          <RevealStagger className="grid md:grid-cols-3 gap-8 items-start">
             {[
-              { icon: 'search', title: 'Fragmented Research', desc: 'Scouring Reddit, Blind, and Glassdoor for days just to find what a company actually asks.' },
-              { icon: 'help-circle', title: 'Unclear Priorities', desc: 'Not knowing if you should study System Design, LeetCode Hard, or behavioral questions today.' },
-              { icon: 'time', title: 'Limited Time', desc: 'Wasting precious hours planning when you only have 3 weeks until the onsite.' }
+              { icon: 'search', title: 'Fragmented Research', desc: 'Scouring Reddit, Blind, and Glassdoor for days just to find what a company actually asks.', translate: 'md:translate-y-0' },
+              { icon: 'help-circle', title: 'Unclear Priorities', desc: 'Not knowing if you should study System Design, LeetCode Hard, or behavioral questions today.', translate: 'md:translate-y-8' },
+              { icon: 'time', title: 'Limited Time', desc: 'Wasting precious hours planning when you only have 3 weeks until the onsite.', translate: 'md:translate-y-16' }
             ].map((p, i) => (
-              <RevealStaggerItem key={i}>
-                <Card variant="outlined" className="p-8 text-center hover:-translate-y-1 transition-transform">
+              <RevealStaggerItem key={i} className={`${p.translate} transition-transform`}>
+                <Card variant="outlined" className="p-8 text-center hover:-translate-y-2 transition-transform h-full">
                   <div className="w-16 h-16 bg-navy-100 text-navy-900 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Icon name={p.icon} className="text-3xl" />
                   </div>
@@ -97,13 +111,14 @@ export function Home() {
       <section className="py-20 px-6 bg-surface border-y border-border relative z-10">
         <Reveal className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-16 text-carbon-900">The Intelligence Engine</h2>
-          <RevealStagger className="grid md:grid-cols-3 gap-4">
+          <RevealStagger className="grid md:grid-cols-3 gap-4 items-start pb-12">
             {AGENTS.map((a, i) => {
               const tints = ['forest', 'sunny', 'coral', 'sky', 'navy', 'default'];
               const tint = tints[i % tints.length] as any;
+              const yOffset = i % 2 === 0 ? 'md:translate-y-0' : 'md:translate-y-12';
               return (
-                <RevealStaggerItem key={i}>
-                  <Card variant={tint} className="p-5 hover:-translate-y-1 transition-all group h-full flex flex-col">
+                <RevealStaggerItem key={i} className={`${yOffset} h-full`}>
+                  <Card variant={tint} className="p-5 hover:-translate-y-2 transition-all group h-full flex flex-col shadow-sm">
                     <h4 className="font-bold mb-1">{a.name}</h4>
                     <p className="text-xs opacity-70 mb-3">{a.role}</p>
                     <div className="text-xs p-2 bg-white/50 rounded font-medium mt-auto">"{a.out}"</div>
@@ -126,21 +141,21 @@ export function Home() {
                 <p className="opacity-80 mb-6 text-sm">Day-by-day task lists tailored to your timeframe.</p>
                 <div className="mt-auto bg-white/60 p-4 rounded-card">
                   <div className="h-12 bg-white/50 rounded-control flex items-center px-4">
-                    <div className="w-4 h-4 rounded-full border-2 border-navy-900 mr-3"/>
+                    <div className="w-4 h-4 rounded-full border-2 border-navy-900 mr-3" />
                     <div className="h-2 w-32 bg-navy-900/40 rounded-full" />
                   </div>
                 </div>
               </Card>
             </RevealStaggerItem>
-            
+
             <RevealStaggerItem>
               <Card variant="coral" className="p-6 flex flex-col h-full hover:-translate-y-1 transition-transform">
                 <h3 className="font-bold text-xl mb-2">Calendar</h3>
                 <p className="opacity-80 mb-6 text-sm">A global view of deadlines and missed tasks.</p>
                 <div className="mt-auto bg-white/60 p-4 rounded-card">
                   <div className="grid grid-cols-7 gap-1">
-                    {Array.from({length:14}).map((_,i) => (
-                      <div key={i} className={`h-6 rounded ${i===5 ? 'bg-amber-600/20 border border-amber-600' : 'bg-white'}`} />
+                    {Array.from({ length: 14 }).map((_, i) => (
+                      <div key={i} className={`h-6 rounded ${i === 5 ? 'bg-amber-600/20 border border-amber-600' : 'bg-white'}`} />
                     ))}
                   </div>
                 </div>
@@ -154,7 +169,7 @@ export function Home() {
                 <div className="mt-auto bg-white/60 p-4 rounded-card">
                   <div className="space-y-2">
                     <div className="h-8 bg-white rounded flex items-center px-3">
-                      <Icon name="link" className="mr-2 text-sm opacity-50"/>
+                      <Icon name="link" className="mr-2 text-sm opacity-50" />
                       <div className="h-1.5 w-24 bg-black/10 rounded-full" />
                     </div>
                   </div>
@@ -197,7 +212,7 @@ export function Home() {
             <Card variant="navy" className="p-4 mb-8 font-medium">
               "I have 45 days. Target: SDE at Company X. Strong in React/Node. Weak in DSA and System Design."
             </Card>
-            
+
             <RevealStagger className="space-y-4 border-l-2 border-border ml-4 pl-6 relative">
               {[
                 { title: 'Company Expects', content: 'Distributed systems, Leetcode Medium/Hard' },

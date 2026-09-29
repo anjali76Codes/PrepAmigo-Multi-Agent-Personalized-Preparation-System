@@ -3,10 +3,18 @@ import { Logo } from '../ui/Logo';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { PageBackground } from '../ui/PageBackground';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 export function PublicLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 100);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div className="min-h-screen text-carbon-700 relative flex flex-col font-sans selection:bg-forest-100 selection:text-forest-800 bg-transparent">
@@ -14,21 +22,25 @@ export function PublicLayout() {
       <PageBackground className="fixed inset-0 z-[-1]" />
       
       {/* Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-bg/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <header className={`fixed top-0 z-50 transition-all duration-300 w-full ${isScrolled ? 'px-4 pt-4' : 'px-0 pt-0'}`}>
+        <div className={`mx-auto flex items-center justify-between transition-all duration-300 ${
+          isScrolled 
+            ? 'max-w-4xl h-16 px-6 rounded-full border border-border bg-bg/80 backdrop-blur-xl shadow-pop text-carbon-700' 
+            : 'max-w-7xl h-20 px-6 border-b border-white/10 bg-carbon-900 text-white'
+        }`}>
           <Link to="/" className="flex items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-forest-700 rounded-control">
-            <Logo />
+            <Logo tone={isScrolled ? "default" : "inverse"} />
           </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex flex-1 items-center justify-end gap-8">
-            <Link to="#features" className="text-sm font-medium text-carbon-500 hover:text-carbon-900 transition-colors outline-none focus-visible:text-forest-700">
+            <Link to="#features" className={`text-sm font-medium transition-colors outline-none focus-visible:text-forest-700 ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}>
               Features
             </Link>
-            <Link to="#agents" className="text-sm font-medium text-carbon-500 hover:text-carbon-900 transition-colors outline-none focus-visible:text-forest-700">
+            <Link to="#agents" className={`text-sm font-medium transition-colors outline-none focus-visible:text-forest-700 ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}>
               Agents
             </Link>
-            <div className="flex items-center gap-4 border-l border-border pl-8">
+            <div className={`flex items-center gap-4 border-l pl-8 ${isScrolled ? 'border-border' : 'border-white/20'}`}>
               {/* <Link to="/login" className="text-sm font-medium text-carbon-500 hover:text-carbon-900 transition-colors outline-none focus-visible:text-forest-700">
                 Log in
               </Link> */}
@@ -42,7 +54,7 @@ export function PublicLayout() {
 
           {/* Mobile menu toggle */}
           <button 
-            className="md:hidden p-2 text-carbon-500 hover:text-carbon-900"
+            className={`md:hidden p-2 transition-colors ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
           >

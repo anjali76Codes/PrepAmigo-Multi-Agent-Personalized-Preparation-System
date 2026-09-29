@@ -84,6 +84,23 @@ export function StyleGuide() {
         <h2 className="text-2xl font-bold text-carbon-900">Tabs</h2>
         <Tabs tabs={[{ id: '1', label: 'Tab 1' }, { id: '2', label: 'Tab 2' }]} variant="segmented" />
       </section>
+
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold text-carbon-900">Dark Chrome</h2>
+        <div className="p-8 bg-chrome text-on-chrome rounded-card space-y-8">
+          <div className="flex items-center gap-4">
+             <div className="font-bold">Inverse IconButton:</div>
+             <div className="focus-visible:outline-chrome-accent rounded-control">
+               <Button variant="outline" className="text-on-chrome border-chrome-border hover:bg-chrome-hover">Outline</Button>
+             </div>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="font-bold">Badges:</div>
+             <Badge variant="sunny" styleType="solid">Sunny</Badge>
+             <Badge variant="coral" styleType="solid">Coral</Badge>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
