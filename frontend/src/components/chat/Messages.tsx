@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Icon } from '../ui/Icon';
-import { FlashcardDeck } from '../preps/FlashcardDeck';
+import { FlashcardDeck } from '../practice/FlashcardDeck';
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
 import { Link } from 'react-router-dom';
 

@@ -35,7 +35,7 @@ export function Chat() {
     const lower = text.toLowerCase();
     
     if (lower.includes('45 days') && lower.includes('company x')) {
-      await runPipeline(['Company Research', 'Job Intelligence', 'Interview Intelligence', 'Skill Gap', 'Planner'], 
+      await runPipeline(['Company Research', 'Job Intelligence', 'Research', 'Skill Gap', 'Planner'], 
         "Analyzing Company X...",
         "Building your 45-day roadmap..."
       );
@@ -57,7 +57,7 @@ export function Chat() {
       setHighlightField('gaps');
       setHighlightSource('Assessment');
     } else if (lower.includes('missed')) {
-      await runPipeline(['Progress', 'Planner'], "Checking missed days...", "Redistributing workload...");
+      await runPipeline(['Research', 'Planner'], "Checking missed days...", "Redistributing workload...");
       setMessages(prev => [...prev, {
         id: Date.now().toString(), sender: 'agent', 
         content: "No worries! I've shifted your tasks to maintain a balanced workload.",

@@ -47,7 +47,10 @@ The visual language uses a **light navy, forest, beige, and white aesthetic**:
 - Layer 3: Practice, Progress, Calendar, Notifications, Settings implementation.
 - Layer 4: PrepAmigo chat interface, agent pipeline animation, and mock scenario matching.
 - Layer 5: Home (landing), AppHome (dashboard), and Auth pages.
+- Layer 6: final cleanup, shared state, and leftover removal.
+
 ## Features
 - Conversational PrepAmigo workspace with suggested prompts and mock scenario matching
-- Dynamic Agent Activity pipeline showing the 8 AI agents working
+- Dynamic Agent Activity pipeline showing the 6 AI agents working
 - 5 Core Planner Outputs: Roadmap, Calendar, Resource Pack, Assessments, Progress Dashboard
+- Shared state context across the application

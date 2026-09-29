@@ -1,6 +1,7 @@
 import { Card } from '../ui/Card';
 import { Icon } from '../ui/Icon';
 import type { SkillGap, Skill } from '../../data/mockData';
+import { AffectedTopics } from './AffectedTopics';
 
 interface SkillGapMapProps {
   gaps: SkillGap[];
@@ -42,6 +43,9 @@ export function SkillGapMap({ gaps }: SkillGapMapProps) {
                 <div className="text-xs font-bold px-2 py-1 bg-background border border-border rounded-md text-primary-text">
                   Impact: {gap.impactScore}
                 </div>
+              </div>
+              <div className="mt-4">
+                <AffectedTopics topics={[gap.skill]} />
               </div>
             </div>
           </div>

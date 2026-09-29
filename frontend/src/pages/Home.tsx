@@ -2,6 +2,7 @@ import { PageBackground } from '../components/ui/PageBackground';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
+import { AGENTS } from '../data/mockData';
 
 export function Home() {
   const shouldReduceMotion = useReducedMotion();
@@ -86,16 +87,7 @@ export function Home() {
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-16">The Intelligence Engine</h2>
           <div className="grid md:grid-cols-4 gap-4">
-            {[
-              { name: 'Company Research', role: 'Finds company-specific culture and stack.', out: 'Company X prefers React and AWS.' },
-              { name: 'Job Intelligence', role: 'Analyzes the specific job description.', out: 'Role requires distributed systems knowledge.' },
-              { name: 'Interview Intelligence', role: 'Finds past interview patterns.', out: 'They frequently ask System Design first.' },
-              { name: 'Skill Gap', role: 'Compares your resume to the job.', out: 'Gap identified: High-scale database design.' },
-              { name: 'Research', role: 'Gathers learning resources.', out: 'Found 5 highly-rated System Design articles.' },
-              { name: 'Assessment', role: 'Generates quizzes and flashcards.', out: 'Created 15 flashcards for load balancing.' },
-              { name: 'Planner', role: 'Builds and adjusts the roadmap.', out: 'Scheduled System Design for Day 3.' },
-              { name: 'Progress', role: 'Tracks your velocity and streak.', out: 'Streak maintained! XP awarded.' }
-            ].map((a, i) => (
+            {AGENTS.map((a, i) => (
               <div key={i} className="p-5 bg-background border border-border rounded-2xl hover:border-primary hover:shadow-lg hover:shadow-primary/5 transition-all group">
                 <h4 className="font-bold text-primary-text mb-1">{a.name}</h4>
                 <p className="text-xs text-secondary-text mb-3">{a.role}</p>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
-import { WeeklyQuiz } from '../components/preps/WeeklyQuiz';
-import { FlashcardDeck } from '../components/preps/FlashcardDeck';
+import { WeeklyQuiz } from '../components/practice/WeeklyQuiz';
+import { FlashcardDeck } from '../components/practice/FlashcardDeck';
 import { PracticeItem } from '../components/preps/PracticeItem';
 import { Icon } from '../components/ui/Icon';
 
@@ -59,10 +59,10 @@ export function Practice() {
           className="max-w-4xl space-y-6"
         >
           {activeTab === 'quizzes' && allQuizzes.map(quiz => (
-            <WeeklyQuiz key={quiz.id} quiz={quiz} />
+            <WeeklyQuiz key={quiz.id} />
           ))}
           {activeTab === 'flashcards' && allFlashcards.map(deck => (
-            <FlashcardDeck key={deck.id} deck={deck} />
+            <FlashcardDeck key={deck.id} />
           ))}
           {activeTab === 'coding' && codingTasks.map(task => (
             <PracticeItem key={task.id} item={task} />

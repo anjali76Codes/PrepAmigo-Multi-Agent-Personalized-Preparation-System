@@ -1,28 +1,29 @@
-export type AgentName =
-  | 'Company Research'
-  | 'Job Intelligence'
-  | 'Interview Intelligence'
-  | 'Skill Gap'
-  | 'Research'
-  | 'Assessment'
-  | 'Planner'
-  | 'Progress';
+export const AGENTS = [
+  { name: 'Company Research', role: 'Finds company-specific culture and stack.', out: 'Company X prefers React and AWS.' },
+  { name: 'Job Intelligence', role: 'Analyzes the specific job description.', out: 'Role requires distributed systems knowledge.' },
+  { name: 'Skill Gap', role: 'Compares your resume to the job.', out: 'Gap identified: High-scale database design.' },
+  { name: 'Research', role: 'Gathers learning resources.', out: 'Found 5 highly-rated System Design articles.' },
+  { name: 'Assessment', role: 'Generates quizzes and flashcards.', out: 'Created 15 flashcards for load balancing.' },
+  { name: 'Planner', role: 'Builds and adjusts the roadmap.', out: 'Scheduled System Design for Day 3.' }
+] as const;
 
-export interface CompanyProfile {
+export type AgentName = typeof AGENTS[number]['name'];
+
+interface CompanyProfile {
   name: string;
   industry: string;
   description: string;
   culture: string[];
 }
 
-export interface JobRequirement {
+interface JobRequirement {
   id: string;
   category: 'technical' | 'soft' | 'domain';
   skill: string;
   importance: 'critical' | 'important' | 'nice-to-have';
 }
 
-export interface InterviewPattern {
+interface InterviewPattern {
   round: string;
   focus: string;
   format: string;
@@ -40,7 +41,7 @@ export interface SkillGap {
   hoursAllocated: number;
 }
 
-export interface ResourceItem {
+interface ResourceItem {
   id: string;
   title: string;
   type: 'article' | 'docs' | 'video' | 'problem set';
@@ -49,7 +50,7 @@ export interface ResourceItem {
   url: string;
 }
 
-export interface ResourceGroup {
+interface ResourceGroup {
   purpose: 'Start here' | 'Go deeper' | 'Practice' | 'Interview-specific';
   items: ResourceItem[];
 }
@@ -59,7 +60,7 @@ export interface ResourcePack {
   groups: ResourceGroup[];
 }
 
-export interface PracticeTask {
+interface PracticeTask {
   id: string;
   type: 'quiz' | 'flashcard' | 'coding' | 'mock-interview';
   title: string;
@@ -97,18 +98,6 @@ export interface CalendarEntry {
   originalDate?: string;
 }
 
-export interface Reminder {
-  id: string;
-  message: string;
-  date: string;
-}
-
-export interface MissedTask {
-  id: string;
-  taskTitle: string;
-  originalDate: string;
-}
-
 export interface WeeklyQuiz {
   id: string;
   title: string;
@@ -116,7 +105,7 @@ export interface WeeklyQuiz {
   score?: number;
 }
 
-export interface Flashcard {
+interface Flashcard {
   id: string;
   front: string;
   back: string;

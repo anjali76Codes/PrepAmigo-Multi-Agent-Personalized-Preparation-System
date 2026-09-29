@@ -1,4 +1,4 @@
 
-export function FlashcardDeck() {
+export function FlashcardDeck(_props: { deck?: any }) {
   return <div>FlashcardDeck</div>;
 }

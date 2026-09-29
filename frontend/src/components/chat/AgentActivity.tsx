@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Icon } from '../ui/Icon';
+import { AGENTS } from '../../data/mockData';
 import type { AgentName } from '../../data/mockData';
 
 interface AgentActivityProps {
@@ -9,16 +10,7 @@ interface AgentActivityProps {
 
 export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
   
-  const allAgents: AgentName[] = [
-    'Company Research',
-    'Job Intelligence',
-    'Interview Intelligence',
-    'Skill Gap',
-    'Research',
-    'Assessment',
-    'Planner',
-    'Progress'
-  ];
+  const allAgents: AgentName[] = AGENTS.map(a => a.name);
 
   return (
     <div className="bg-surface border-b border-border p-4 overflow-hidden shrink-0">
