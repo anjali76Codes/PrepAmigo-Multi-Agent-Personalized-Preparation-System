@@ -1,164 +1,160 @@
-import { useState, useEffect } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { ChatInput } from '../components/chat/ChatInput';
-import { UserMessage, KajuMessage, SuggestedPrompt } from '../components/chat/Messages';
 import { AgentActivity } from '../components/chat/AgentActivity';
-import { TripContextPanel } from '../components/trips/TripContextPanel';
-import { DependencyGraph } from '../components/trips/DependencyGraph';
-import { mockTripData, mockChatMessages, mockAgents } from '../data/mockData';
+import { Messages } from '../components/chat/Messages';
+import type { Message } from '../components/chat/Messages';
+import { LearningContextPanel } from '../components/preps/LearningContextPanel';
+import { useAppContext } from '../context/AppContext';
+import type { AgentName } from '../data/mockData';
 import { Icon } from '../components/ui/Icon';
 
 export function Chat() {
-  const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isStarted, setIsStarted] = useState(false);
-  const [isCoordinating, setIsCoordinating] = useState(false);
-  const shouldReduceMotion = useReducedMotion();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [activeAgent, setActiveAgent] = useState<AgentName | null>(null);
+  const [statusText, setStatusText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [highlightField, setHighlightField] = useState<'role' | 'summary' | 'gaps' | 'all' | null>(null);
+  const [highlightSource, setHighlightSource] = useState<string>('');
 
-  // Auto-scroll ref
-  const bottomRef = useState<HTMLDivElement | null>(null);
+  const { preps: mockPreps } = useAppContext();
+  const mockContext = mockPreps[0].learningContext;
 
-  const startConversation = () => {
-    setIsStarted(true);
-    setMessages([mockChatMessages[0]]);
-    setIsCoordinating(true);
+  const suggestions = [
+    "I have 45 days to prepare for SDE at Company X",
+    "I scored badly on my DSA quiz, adjust my plan",
+    "I missed the last two days",
+    "Give me revision cards for system design"
+  ];
 
-    // Simulate kaju thinking and replying after a short delay
-    setTimeout(() => {
-      setMessages([mockChatMessages[0], mockChatMessages[1]]);
+  const handleSend = async (text: string) => {
+    const newMsg: Message = { id: Date.now().toString(), sender: 'user', content: text };
+    setMessages(prev => [...prev, newMsg]);
+    setIsProcessing(true);
 
-      // Simulate coordination finishing
-      setTimeout(() => {
-        setIsCoordinating(false);
-        setMessages([
-          mockChatMessages[0],
-          {
-            ...mockChatMessages[1],
-            isThinking: false,
-          }
-        ]);
-      }, 3000);
-    }, 1000);
+    const lower = text.toLowerCase();
+    
+    if (lower.includes('45 days') && lower.includes('company x')) {
+      await runPipeline(['Company Research', 'Job Intelligence', 'Interview Intelligence', 'Skill Gap', 'Planner'], 
+        "Analyzing Company X...",
+        "Building your 45-day roadmap..."
+      );
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(), sender: 'agent', 
+        content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
+        scenario: 'setup',
+        data: { role: 'SDE', company: 'Company X' }
+      }]);
+      setHighlightField('all');
+      setHighlightSource('Planner');
+    } else if (lower.includes('scored badly') || lower.includes('adjust my plan')) {
+      await runPipeline(['Assessment', 'Planner'], "Analyzing recent assessment results...", "Reprioritizing upcoming sprints...");
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(), sender: 'agent', 
+        content: "I've adjusted your roadmap to spend more time on your weak areas.",
+        scenario: 'plan-update'
+      }]);
+      setHighlightField('gaps');
+      setHighlightSource('Assessment');
+    } else if (lower.includes('missed')) {
+      await runPipeline(['Progress', 'Planner'], "Checking missed days...", "Redistributing workload...");
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(), sender: 'agent', 
+        content: "No worries! I've shifted your tasks to maintain a balanced workload.",
+        scenario: 'missed-task'
+      }]);
+      setHighlightField('summary');
+      setHighlightSource('Progress');
+    } else if (lower.includes('revision cards')) {
+      await runPipeline(['Planner', 'Assessment'], "Fetching relevant topics...", "Generating flashcards...");
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(), sender: 'agent', 
+        content: "Here's a quick revision deck for System Design:",
+        scenario: 'flashcards',
+        data: mockPreps[0].assessments.flashcardDecks[0]
+      }]);
+      setHighlightField('gaps');
+      setHighlightSource('Planner');
+    } else {
+      setActiveAgent('Planner');
+      setStatusText('Thinking...');
+      await new Promise(r => setTimeout(r, 1000));
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(), sender: 'agent', 
+        content: "I can help with interview preparation, roadmap adjustments, and study materials. Try one of the suggested prompts!"
+      }]);
+    }
+    
+    setActiveAgent(null);
+    setStatusText('');
+    setIsProcessing(false);
   };
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-    setInputValue('');
-    if (!isStarted) {
-      startConversation();
+  const runPipeline = async (agents: AgentName[], startMsg: string, endMsg: string) => {
+    for (let i = 0; i < agents.length; i++) {
+      setActiveAgent(agents[i]);
+      setStatusText(i === 0 ? startMsg : i === agents.length - 1 ? endMsg : `Processing step ${i + 1}...`);
+      await new Promise(r => setTimeout(r, 1200));
     }
   };
 
-  const handleSuggestedPrompt = (text: string) => {
-    setInputValue(text);
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: shouldReduceMotion ? 0 : 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-  };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full">
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full relative mx-auto w-full">
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth pb-32">
-          {!isStarted ? (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto space-y-8"
-            >
-              <motion.div variants={itemVariants} className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-primary">
-                <Icon name="sparkles" className="text-4xl text-white" />
-              </motion.div>
-              <div>
-                <motion.h1 variants={itemVariants} className="text-3xl font-bold mb-3">Hi, I'm kaju.</motion.h1>
-                <motion.p variants={itemVariants} className="text-secondary-text text-lg leading-relaxed">
-                  Tell me what's changed with your trip, and I'll figure out what needs to happen next.
-                </motion.p>
-              </div>
-
-              <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-8">
-                <SuggestedPrompt text="My flight was cancelled" onClick={() => handleSuggestedPrompt("My flight was cancelled")} />
-                <SuggestedPrompt text="Find me a hotel near the airport" onClick={() => handleSuggestedPrompt("Find me a hotel near the airport")} />
-                <SuggestedPrompt text="Move tomorrow's dinner reservation" onClick={() => handleSuggestedPrompt("Move tomorrow's dinner reservation")} />
-                <SuggestedPrompt text="The weather changed. What does that affect?" onClick={() => handleSuggestedPrompt("The weather changed. What does that affect?")} />
-              </motion.div>
-            </motion.div>
-          ) : (
-            <div className="flex flex-col max-w-3xl mx-auto w-full pb-8 space-y-2">
-              {messages.map((msg, idx) => {
-                if (msg.role === 'user') {
-                  return (
-                    <motion.div key={msg.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                      <UserMessage content={msg.content} />
-                    </motion.div>
-                  );
-                }
-
-                return (
-                  <motion.div key={msg.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                    <KajuMessage isThinking={msg.isThinking}>
-                      <p>{msg.content}</p>
-                      {isCoordinating && msg.isThinking && (
-                        <div className="mt-6">
-                          <AgentActivity agents={mockAgents} />
-                        </div>
-                      )}
-                      {!msg.isThinking && !isCoordinating && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2 }}
-                          className="mt-4 space-y-4"
-                        >
-                          <DependencyGraph nodes={mockTripData.nodes} />
-                          <p className="pt-2 text-accent font-medium">
-                            Your cancelled flight affects the airport transfer and hotel check-in.
-                            <br /><br />
-                            <span className="text-primary-text font-normal">I'm looking for alternatives that keep your existing plans intact.</span>
-                          </p>
-                        </motion.div>
-                      )}
-                    </KajuMessage>
-                  </motion.div>
-                );
-              })}
+    <div className="flex-1 flex flex-col md:flex-row bg-background h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full relative">
+        <AgentActivity activeAgent={activeAgent} statusText={statusText} />
+        
+        {messages.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
+              <Icon name="chatbubbles-outline" className="text-3xl" />
             </div>
-          )}
-        </div>
-
-        {/* Input Area */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-surface via-surface to-transparent pt-12 w-full"
-        >
-          <div className="max-w-3xl mx-auto">
-            <ChatInput
-              value={inputValue}
-              onChange={setInputValue}
-              onSubmit={handleSend}
-              isLoading={isCoordinating}
-            />
+            <h2 className="text-2xl font-bold text-primary-text mb-8">How can PrepAmigo help?</h2>
+            <div className="grid gap-3 w-full max-w-2xl">
+              {suggestions.map((s, i) => (
+                <button 
+                  key={i}
+                  onClick={() => handleSend(s)}
+                  disabled={isProcessing}
+                  className="bg-surface border border-border p-4 rounded-xl text-left hover:border-primary/50 hover:bg-background transition-colors text-primary-text text-sm"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
-        </motion.div>
+        ) : (
+          <Messages messages={messages} />
+        )}
+        
+        <div className="p-4 bg-background border-t border-border z-10 safe-area-bottom">
+          <div className="max-w-3xl mx-auto">
+            <ChatInput onSend={handleSend} disabled={isProcessing} />
+          </div>
+        </div>
       </div>
 
-      {/* Desktop Trip Context Panel */}
-      <div className="hidden lg:block">
-        <TripContextPanel data={mockTripData} className="!bg-black/20" />
+      <div className="w-full md:w-80 border-l border-border bg-surface flex flex-col h-full overflow-hidden">
+        <div className="p-4 border-b border-border bg-background shrink-0">
+          <h3 className="font-bold text-primary-text flex items-center gap-2">
+            <Icon name="person-outline" className="text-primary" /> Live Context
+          </h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 relative">
+          <motion.div
+            animate={{ 
+              boxShadow: highlightField ? '0 0 0 2px var(--color-primary)' : '0 0 0 0px transparent'
+            }}
+            transition={{ duration: 0.5 }}
+            className="rounded-xl overflow-hidden"
+          >
+            <LearningContextPanel 
+              context={mockContext} 
+              highlightField={highlightField} 
+              highlightSource={highlightSource} 
+            />
+          </motion.div>
+        </div>
       </div>
     </div>
   );

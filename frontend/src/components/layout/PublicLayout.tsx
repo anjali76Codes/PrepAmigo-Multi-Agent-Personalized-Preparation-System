@@ -2,7 +2,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
-import { ShaderBackground } from '../ui/ShaderBackground';
+import { PageBackground } from '../ui/PageBackground';
 import { useState } from 'react';
 
 export function PublicLayout() {
@@ -10,8 +10,8 @@ export function PublicLayout() {
 
   return (
     <div className="min-h-screen text-primary-text relative flex flex-col font-sans selection:bg-accent/30 selection:text-text bg-transparent">
-      {/* Organic Marble Background */}
-      <ShaderBackground className="fixed inset-0 z-[-1]" />
+      {/* Organic Background */}
+      <PageBackground className="fixed inset-0 z-[-1]" />
       
       {/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/60 backdrop-blur-xl">
@@ -72,10 +72,10 @@ export function PublicLayout() {
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
             <Logo compact />
-            <span className="font-semibold text-sm">TravelAmigo</span>
+            <span className="font-semibold text-sm">PrepAmigo</span>
           </div>
           <p className="text-xs text-muted-text">
-            © {new Date().getFullYear()} TravelAmigo. All rights reserved.
+            © {new Date().getFullYear()} PrepAmigo. All rights reserved.
           </p>
         </div>
       </footer>

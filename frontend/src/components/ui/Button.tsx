@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { cn } from '../../lib/utils';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,7 +12,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50';
 
     const variants = {
-      primary: 'bg-primary text-primary-text hover:bg-primary-hover shadow-glow-primary hover:shadow-glow-accent',
+      primary: 'bg-primary text-white hover:bg-primary/90 shadow-soft-primary hover:shadow-soft-accent',
       secondary: 'bg-surface-elevated text-primary-text hover:bg-border border border-border',
       ghost: 'hover:bg-surface-elevated text-primary-text hover:text-primary',
       danger: 'bg-error/10 text-error hover:bg-error/20 border border-error/20',

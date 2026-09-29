@@ -1,48 +1,60 @@
-import React from 'react';
-import { cn } from '../../lib/utils';
+import { motion } from 'framer-motion';
 import { Icon } from '../ui/Icon';
+import type { AgentName } from '../../data/mockData';
 
-interface Agent {
-  id: string;
-  name: string;
-  icon: string;
-  status: string;
+interface AgentActivityProps {
+  activeAgent: AgentName | null;
+  statusText: string;
 }
 
-export function AgentActivity({ agents, title = "kaju is coordinating your trip" }: { agents: Agent[], title?: string }) {
+export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
+  
+  const allAgents: AgentName[] = [
+    'Company Research',
+    'Job Intelligence',
+    'Interview Intelligence',
+    'Skill Gap',
+    'Research',
+    'Assessment',
+    'Planner',
+    'Progress'
+  ];
+
   return (
-    <div className="flex flex-col mb-4">
-      <div className="flex items-center gap-2 mb-3 text-sm font-medium text-accent">
-        <Icon name="sync-outline" className="animate-spin text-lg" />
-        {title}
+    <div className="bg-surface border-b border-border p-4 overflow-hidden shrink-0">
+      <div className="flex items-center gap-3 mb-4 overflow-x-auto hide-scrollbar pb-2">
+        {allAgents.map((agent, i) => {
+          const isActive = activeAgent === agent;
+          const isDone = activeAgent ? allAgents.indexOf(agent) < allAgents.indexOf(activeAgent) : false;
+          
+          return (
+            <div key={agent} className="flex items-center gap-2 shrink-0">
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                isActive ? 'bg-primary/10 border-primary/20 text-primary' : 
+                isDone ? 'bg-accent/10 border-accent/20 text-accent' : 
+                'bg-background border-border text-secondary-text'
+              }`}>
+                {isActive && (
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-3 h-3 border-2 border-current border-t-transparent rounded-full"
+                  />
+                )}
+                {isDone && <Icon name="checkmark-outline" />}
+                {agent}
+              </div>
+              {i < allAgents.length - 1 && (
+                <div className="w-4 h-px bg-border" />
+              )}
+            </div>
+          );
+        })}
       </div>
       
-      <div className="flex flex-col ml-2 pl-3 border-l-2 border-border/50 space-y-3 relative">
-        {agents.map((agent) => (
-          <div key={agent.id} className="flex items-center gap-3 text-sm">
-            <div className="relative">
-              {/* Connector dot */}
-              <div className="absolute -left-[17px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent" />
-              
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center border",
-                agent.status === 'active' ? "bg-accent/10 border-accent/30 text-accent shadow-[0_0_10px_rgba(47,163,107,0.2)]" : "bg-surface border-border text-secondary-text"
-              )}>
-                <Icon name={agent.icon} />
-              </div>
-            </div>
-            
-            <span className={cn(
-              agent.status === 'active' ? "text-primary-text font-medium" : "text-secondary-text"
-            )}>
-              {agent.name}
-            </span>
-            
-            {agent.status === 'active' && (
-              <span className="text-xs text-accent animate-pulse ml-1">updating...</span>
-            )}
-          </div>
-        ))}
+      <div className="flex items-center gap-2 text-sm text-secondary-text bg-background p-3 rounded-lg border border-border">
+        <Icon name="information-circle-outline" className="text-primary" />
+        <span className="font-medium text-primary-text">{activeAgent || 'Idle'}:</span> {statusText || 'Waiting for input...'}
       </div>
     </div>
   );

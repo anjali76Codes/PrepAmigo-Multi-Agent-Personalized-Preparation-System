@@ -1,140 +1,117 @@
-import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Icon } from '../components/ui/Icon';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
 
 export function Settings() {
   const shouldReduceMotion = useReducedMotion();
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: shouldReduceMotion ? 0 : 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-  };
-
   return (
-    <div className="flex-1 overflow-y-auto w-full h-full p-6 md:p-10 relative">
-      <div className="max-w-4xl mx-auto w-full space-y-10">
+    <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
+      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
+        <h1 className="text-3xl font-bold text-primary-text mb-2">Settings</h1>
+        <p className="text-secondary-text">Manage your learning preferences and schedules.</p>
+      </div>
 
-        {/* Header */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative safe-area-bottom">
         <motion.div
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : -10 }}
+          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="max-w-3xl mx-auto space-y-8 pb-12"
         >
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Settings</h1>
-          <p className="text-secondary-text text-lg">
-            Manage your preferences and travel profile.
-          </p>
-        </motion.div>
+          <Card className="p-6 bg-surface border-border">
+            <h3 className="text-lg font-bold text-primary-text mb-6 flex items-center gap-2">
+              <Icon name="time-outline" className="text-primary" />
+              Study Schedule
+            </h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-primary-text mb-2">Hours per day</label>
+                <input type="range" min="1" max="8" defaultValue="2" className="w-full accent-primary" />
+                <div className="flex justify-between text-xs text-secondary-text mt-1">
+                  <span>1 hr</span>
+                  <span>4 hrs</span>
+                  <span>8+ hrs</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-primary-text mb-2">Study Days</label>
+                <div className="flex gap-2">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+                    <button key={idx} className={`w-10 h-10 rounded-full font-medium transition-colors ${
+                      idx > 0 && idx < 6 ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-background border border-border text-secondary-text hover:border-primary/50'
+                    }`}>
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="space-y-8"
-        >
-          {/* Profile Section */}
-          <motion.section variants={itemVariants}>
-            <h2 className="text-lg font-bold text-primary-text mb-4 px-2">Profile</h2>
-            <Card className="p-6 rounded-3xl border-border bg-elevated/40 backdrop-blur-sm divide-y divide-border">
-              <div className="flex items-center justify-between py-4 first:pt-0">
-                <div>
-                  <p className="font-medium text-primary-text">Name</p>
-                  <p className="text-sm text-secondary-text">Krisha Cherry</p>
-                </div>
-                <Button variant="secondary" className="rounded-full px-4 text-sm">Edit</Button>
+              <div>
+                <label className="block text-sm font-medium text-primary-text mb-2">Target Deadline</label>
+                <input type="date" defaultValue="2026-11-15" className="w-full bg-background border border-border rounded-lg px-4 py-2 text-primary-text" />
               </div>
-              <div className="flex items-center justify-between py-4 pb-0">
-                <div>
-                  <p className="font-medium text-primary-text">Email</p>
-                  <p className="text-sm text-secondary-text">krisha.cherry@example.com</p>
-                </div>
-                <Button variant="secondary" className="rounded-full px-4 text-sm">Edit</Button>
-              </div>
-            </Card>
-          </motion.section>
-
-          {/* Travel Preferences */}
-          <motion.section variants={itemVariants}>
-            <h2 className="text-lg font-bold text-primary-text mb-4 px-2">Travel Preferences</h2>
-            <Card className="p-6 rounded-3xl border-border bg-elevated/40 backdrop-blur-sm divide-y divide-border">
-              <div className="flex items-center justify-between py-4 first:pt-0">
-                <div>
-                  <p className="font-medium text-primary-text">Travel Style</p>
-                  <p className="text-sm text-secondary-text">Balanced (Culture & Relaxation)</p>
-                </div>
-                <Icon name="chevron-forward-outline" className="text-secondary-text" />
-              </div>
-              <div className="flex items-center justify-between py-4">
-                <div>
-                  <p className="font-medium text-primary-text">Food Preferences</p>
-                  <p className="text-sm text-secondary-text">Vegetarian</p>
-                </div>
-                <Icon name="chevron-forward-outline" className="text-secondary-text" />
-              </div>
-              <div className="flex items-center justify-between py-4 pb-0">
-                <div>
-                  <p className="font-medium text-primary-text">Accommodation</p>
-                  <p className="text-sm text-secondary-text">Boutique Hotels, 4+ Stars</p>
-                </div>
-                <Icon name="chevron-forward-outline" className="text-secondary-text" />
-              </div>
-            </Card>
-          </motion.section>
-
-          {/* Notifications & Appearance */}
-          <motion.section variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h2 className="text-lg font-bold text-primary-text mb-4 px-2">Notifications</h2>
-              <Card className="p-6 rounded-3xl border-border bg-elevated/40 backdrop-blur-sm space-y-4">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm font-medium">Trip Updates</span>
-                  <div className="w-10 h-6 bg-accent rounded-full relative">
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-background rounded-full" />
-                  </div>
-                </label>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm font-medium">Booking Changes</span>
-                  <div className="w-10 h-6 bg-accent rounded-full relative">
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-background rounded-full" />
-                  </div>
-                </label>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm font-medium">Important Alerts</span>
-                  <div className="w-10 h-6 bg-accent rounded-full relative">
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-background rounded-full" />
-                  </div>
-                </label>
-              </Card>
             </div>
+          </Card>
 
-            <div>
-              <h2 className="text-lg font-bold text-primary-text mb-4 px-2">Appearance</h2>
-              <Card className="p-6 rounded-3xl border-border bg-elevated/40 backdrop-blur-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Theme</span>
-                  <span className="text-sm text-secondary-text flex items-center gap-1">
-                    Dark <Icon name="moon-outline" className="ml-1" />
-                  </span>
+          <Card className="p-6 bg-surface border-border">
+            <h3 className="text-lg font-bold text-primary-text mb-6 flex items-center gap-2">
+              <Icon name="cog-outline" className="text-primary" />
+              Agent Preferences
+            </h3>
+            
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-primary-text">Reschedule Preference</h4>
+                  <p className="text-sm text-secondary-text mt-1">How should the Planner handle missed tasks?</p>
                 </div>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm font-medium">Reduced Motion</span>
-                  <div className="w-10 h-6 bg-surface-elevated rounded-full relative border border-border">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-secondary-text rounded-full" />
-                  </div>
-                </label>
-              </Card>
-            </div>
-          </motion.section>
+                <select className="bg-background border border-border rounded-lg px-4 py-2 text-primary-text text-sm">
+                  <option>Auto-suggest new dates</option>
+                  <option>Always ask me</option>
+                  <option>Push everything back</option>
+                </select>
+              </div>
 
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-primary-text">Reminder Times</h4>
+                  <p className="text-sm text-secondary-text mt-1">When to send daily digests</p>
+                </div>
+                <input type="time" defaultValue="09:00" className="bg-background border border-border rounded-lg px-4 py-2 text-primary-text text-sm" />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-surface border-border">
+            <h3 className="text-lg font-bold text-primary-text mb-6 flex items-center gap-2">
+              <Icon name="document-text-outline" className="text-primary" />
+              Context & Baseline
+            </h3>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium text-primary-text mb-2">Resume</h4>
+                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer bg-background">
+                  <Icon name="cloud-upload-outline" className="text-3xl text-secondary-text mb-2" />
+                  <p className="text-primary-text font-medium">Re-upload Resume</p>
+                  <p className="text-xs text-secondary-text mt-1">PDF or DOCX up to 5MB</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-primary-text mb-2">Self Assessment</h4>
+                <textarea 
+                  className="w-full h-32 bg-background border border-border rounded-xl p-4 text-sm text-primary-text resize-none"
+                  defaultValue="I have 5 years of frontend experience heavily focused on React and Node.js. Lacking formalized DSA and large-scale system design practice."
+                />
+              </div>
+              
+              <Button className="w-full">Save Changes & Recalibrate</Button>
+            </div>
+          </Card>
         </motion.div>
       </div>
     </div>

@@ -20,7 +20,7 @@ export function StyleGuide() {
     <div className="p-8 max-w-6xl mx-auto space-y-16">
       <div className="space-y-4">
         <h1 className="text-4xl font-bold">Design System & Style Guide</h1>
-        <p className="text-secondary-text">A showcase of reusable components and tokens for TravelAmigo.</p>
+        <p className="text-secondary-text">A showcase of reusable components and tokens for PrepAmigo.</p>
       </div>
 
       <section className="space-y-6">
@@ -67,7 +67,7 @@ export function StyleGuide() {
           <div className="text-3xl font-semibold">Heading 1 (3xl)</div>
           <div className="text-2xl font-semibold">Heading 2 (2xl)</div>
           <div className="text-xl font-semibold">Heading 3 (xl)</div>
-          <div className="text-base text-primary-text">Body (base) - Tell kaju what changed. TravelAmigo figures out what happens next.</div>
+          <div className="text-base text-primary-text">Body (base) - Tell PrepAmigo what changed. PrepAmigo figures out what happens next.</div>
           <div className="text-sm text-secondary-text">Body Small (sm) - Secondary text style.</div>
           <div className="text-xs text-muted-text uppercase tracking-wider font-semibold">Label (xs)</div>
         </div>
@@ -101,7 +101,7 @@ export function StyleGuide() {
             <Input placeholder="Disabled Input" disabled />
           </div>
           <div className="space-y-4">
-            <SearchInput placeholder="Search trips..." />
+            <SearchInput placeholder="Search preps..." />
             <Select>
               <option>Option 1</option>
               <option>Option 2</option>
@@ -166,9 +166,9 @@ export function StyleGuide() {
         <h2 className="text-2xl font-semibold border-b border-border pb-2">Feedback & States</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <EmptyState 
-            title="No trips found" 
-            description="You haven't created any trips yet. Tell kaju to plan one for you!" 
-            action={<Button size="sm" variant="secondary">Create Trip</Button>}
+            title="No preps found" 
+            description="You haven't created any preps yet. Tell PrepAmigo to plan one for you!" 
+            action={<Button size="sm" variant="secondary">Create Prep</Button>}
           />
           <ErrorState />
         </div>
@@ -199,8 +199,8 @@ export function StyleGuide() {
             </Tooltip>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <Toast title="Trip created successfully" variant="success" onClose={() => {}} />
-            <Toast title="Flight changed" description="Your departure time has moved." variant="warning" onClose={() => {}} />
+            <Toast title="Prep created successfully" variant="success" onClose={() => {}} />
+            <Toast title="Plan changed" description="Your timeline has moved." variant="warning" onClose={() => {}} />
           </div>
         </div>
       </section>
