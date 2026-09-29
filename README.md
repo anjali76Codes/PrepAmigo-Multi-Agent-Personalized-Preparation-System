@@ -51,8 +51,4 @@ The agents service exposes `GET /health` and `POST /api/chat`. See `agents/READM
 
 The agents service requires a working LLM provider. With the default Ollama setup, install `llama3.1` using `ollama pull llama3.1`, or set `OLLAMA_MODEL` to a model shown by `ollama list`. A SerpApi key is required for flight searches.
 
-## Completed
 
-- Layer 8: UI v2
-- Layer 9: chat input morph
-- Layer 10: dark chrome
