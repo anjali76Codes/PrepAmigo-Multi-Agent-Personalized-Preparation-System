@@ -5,7 +5,7 @@ info:
 
 http:
   method: post
-  url: "http://localhost:8000/api/agents/job-intelligence"
+  url: http://localhost:8000/api/agents/job-intelligence
   headers:
     - name: Content-Type
       value: application/json
@@ -14,10 +14,9 @@ http:
     data: |-
       {
         "company": "Google",
-        "role": "Software Engineer",
-        "location": "San Francisco, CA"
+        "role": "Software engineer",
+        "location": "India"
       }
-  auth: none
 
 settings:
   encodeUrl: false
@@ -28,5 +27,5 @@ settings:
 
 docs: |
   ## Direct Python Job Intelligence
-  
+
   Hits the new Python-based endpoint directly on the agents-service.

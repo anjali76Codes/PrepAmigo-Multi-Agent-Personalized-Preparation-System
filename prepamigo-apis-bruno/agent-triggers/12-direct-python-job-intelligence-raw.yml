@@ -5,7 +5,7 @@ info:
 
 http:
   method: post
-  url: "http://localhost:8000/api/agents/job-intelligence/raw-search"
+  url: http://localhost:8000/api/agents/job-intelligence/raw-search
   headers:
     - name: Content-Type
       value: application/json
@@ -15,9 +15,8 @@ http:
       {
         "company": "Google",
         "role": "Software Engineer",
-        "location": "San Francisco, CA"
+        "location": "India"
       }
-  auth: none
 
 settings:
   encodeUrl: false
@@ -28,5 +27,5 @@ settings:
 
 docs: |
   ## Direct Python Job Intelligence (Raw Search)
-  
+
   Hits the new Python-based raw-search endpoint directly on the agents-service.

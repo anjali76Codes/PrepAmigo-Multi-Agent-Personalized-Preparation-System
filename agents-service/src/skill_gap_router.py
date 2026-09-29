@@ -54,32 +54,7 @@ def parse_resume(file: UploadFile, file_bytes: bytes) -> str:
         raise ValueError("Unsupported file format. Please upload a PDF or DOCX file.")
 
 
-# ----------------- SerpApi Helper -----------------
-_serpapi_cache = {}
-
-def search_unfamiliar_skill(skill: str) -> str:
-    if skill in _serpapi_cache:
-        return _serpapi_cache[skill]
-    
-    if not settings.serpapi_api_key:
-        return "No API key"
-
-    try:
-        from serpapi import GoogleSearch  # type: ignore
-        params = {
-            "engine": "google",
-            "q": f"what is {skill} technology",
-            "api_key": settings.serpapi_api_key,
-            "num": 3
-        }
-        result = GoogleSearch(params).get_dict()
-        snippets = [res.get("snippet", "") for res in result.get("organic_results", [])[:3]]
-        info = " ".join(snippets)
-        _serpapi_cache[skill] = info
-        return info
-    except Exception as exc:
-        logger.warning(f"Failed to search skill {skill}: {exc}")
-        return ""
+# Removed SerpApi Helper per user request to improve performance
 
 
 # ----------------- Schema Definitions -----------------
@@ -208,15 +183,6 @@ async def analyze_skill_gap(
 
     # 1. Build Profile
     candidate_profile = await build_candidate_profile(resume_text)
-
-    # Search up to 3 unfamiliar skills if any (simple heuristic: if a required skill is not in candidate skills, check it)
-    cand_skill_names = [s.lower() for s in candidate_profile.get("skills", [])]
-    searches_made = 0
-    for req_s in required_skills_info:
-        name = req_s.get("name", "").lower()
-        if name and name not in cand_skill_names and searches_made < 3:
-            search_unfamiliar_skill(name)
-            searches_made += 1
 
     # 2. Evaluate Gaps
     gap_evaluation = await evaluate_gaps(candidate_profile, required_skills_info)
