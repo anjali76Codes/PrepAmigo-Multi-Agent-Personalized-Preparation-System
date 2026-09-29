@@ -1,164 +1,290 @@
-import { useState, useEffect } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChatInput } from '../components/chat/ChatInput';
-import { UserMessage, KajuMessage, SuggestedPrompt } from '../components/chat/Messages';
-import { AgentActivity } from '../components/chat/AgentActivity';
-import { TripContextPanel } from '../components/trips/TripContextPanel';
-import { DependencyGraph } from '../components/trips/DependencyGraph';
-import { mockTripData, mockChatMessages, mockAgents } from '../data/mockData';
+import { Messages } from '../components/chat/Messages';
+import type { Message } from '../components/chat/Messages';
+import type { JourneyStep, JourneyAction } from '../components/chat/AgentJourney';
+import { LearningContextPanel } from '../components/preps/LearningContextPanel';
+import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
+import { cn } from '../lib/utils';
+
+// 6 nodes per scenario. Rename agents to match your AGENTS list if you like.
+const JOURNEYS: Record<'setup' | 'plan-update' | 'missed-task' | 'flashcards' | 'fallback', JourneyStep[]> = {
+  setup: [
+    { agent: 'Intake Agent', text: 'Reading your goal…' },
+    { agent: 'Company Research', text: 'Analyzing Company X…' },
+    { agent: 'Job Intelligence', text: 'Extracting role expectations…' },
+    { agent: 'Research Agent', text: 'Collecting prep resources…' },
+    { agent: 'Skill Gap Agent', text: 'Comparing against your skills…' },
+    { agent: 'Planner Agent', text: 'Building your 45-day roadmap…' },
+  ],
+  'plan-update': [
+    { agent: 'Intake Agent', text: 'Understanding what went wrong…' },
+    { agent: 'Assessment Agent', text: 'Analyzing your quiz results…' },
+    { agent: 'Skill Gap Agent', text: 'Finding weak topics…' },
+    { agent: 'Research Agent', text: 'Picking better resources…' },
+    { agent: 'Planner Agent', text: 'Reprioritizing upcoming sprints…' },
+    { agent: 'Reviewer Agent', text: 'Double-checking the new plan…' },
+  ],
+  'missed-task': [
+    { agent: 'Intake Agent', text: 'Checking what you missed…' },
+    { agent: 'Progress Agent', text: 'Reviewing your streak…' },
+    { agent: 'Research Agent', text: 'Checking topic priorities…' },
+    { agent: 'Skill Gap Agent', text: 'Estimating the impact…' },
+    { agent: 'Planner Agent', text: 'Redistributing workload…' },
+    { agent: 'Reviewer Agent', text: 'Making sure it stays balanced…' },
+  ],
+  flashcards: [
+    { agent: 'Intake Agent', text: 'Reading your request…' },
+    { agent: 'Planner Agent', text: 'Fetching relevant topics…' },
+    { agent: 'Research Agent', text: 'Pulling key concepts…' },
+    { agent: 'Assessment Agent', text: 'Generating flashcards…' },
+    { agent: 'Difficulty Agent', text: 'Tuning difficulty levels…' },
+    { agent: 'Reviewer Agent', text: 'Polishing the deck…' },
+  ],
+  fallback: [
+    { agent: 'Intake Agent', text: 'Reading your message…' },
+    { agent: 'Planner Agent', text: 'Thinking…' },
+    { agent: 'Research Agent', text: 'Looking for context…' },
+    { agent: 'Skill Gap Agent', text: 'Checking your profile…' },
+    { agent: 'Assessment Agent', text: 'Weighing options…' },
+    { agent: 'Reviewer Agent', text: 'Wrapping up…' },
+  ],
+};
+
+const STEP_MS = 1500;   // time the mascot spends at each node
+const FINISH_MS = 1000; // time to show the "cheer" state before the answer appears
+
+let idCounter = 0;
+const uid = () => `${Date.now()}-${idCounter++}`;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Chat() {
-  const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isStarted, setIsStarted] = useState(false);
-  const [isCoordinating, setIsCoordinating] = useState(false);
-  const shouldReduceMotion = useReducedMotion();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [highlightField, setHighlightField] = useState<'role' | 'summary' | 'gaps' | 'all' | null>(null);
+  const [highlightSource, setHighlightSource] = useState<string>('');
 
-  // Auto-scroll ref
-  const bottomRef = useState<HTMLDivElement | null>(null);
+  const { preps: mockPreps } = useAppContext();
+  const mockContext = mockPreps[0].learningContext;
 
-  const startConversation = () => {
-    setIsStarted(true);
-    setMessages([mockChatMessages[0]]);
-    setIsCoordinating(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Simulate kaju thinking and replying after a short delay
-    setTimeout(() => {
-      setMessages([mockChatMessages[0], mockChatMessages[1]]);
-
-      // Simulate coordination finishing
+  useEffect(() => {
+    if (messages.length > 0) {
       setTimeout(() => {
-        setIsCoordinating(false);
-        setMessages([
-          mockChatMessages[0],
-          {
-            ...mockChatMessages[1],
-            isThinking: false,
-          }
-        ]);
-      }, 3000);
-    }, 1000);
-  };
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [messages]);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-    setInputValue('');
-    if (!isStarted) {
-      startConversation();
+  const suggestions = [
+    'I have 45 days to prepare for SDE at Company X',
+    'I scored badly on my DSA quiz, adjust my plan',
+    'I missed the last two days',
+    'Give me revision cards for system design',
+  ];
+
+  // Shows the journey as the agent's "response", advances it, then removes it.
+  const runJourney = async (
+    steps: JourneyStep[],
+    opts: { finalAction?: JourneyAction; keep?: boolean } = {}
+  ) => {
+    const journeyId = uid();
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: journeyId,
+        sender: 'agent',
+        content: '',
+        scenario: 'agent-journey',
+        data: { steps, activeIndex: 0, finalAction: opts.finalAction },
+      },
+    ]);
+
+    const setIndex = (index: number) =>
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === journeyId ? { ...m, data: { ...m.data, activeIndex: index } } : m
+        )
+      );
+
+    for (let i = 0; i < steps.length; i++) {
+      if (i > 0) setIndex(i);
+      await sleep(STEP_MS);
+    }
+
+    setIndex(steps.length);
+    await sleep(FINISH_MS);
+
+    // Only remove the journey when it has no button to keep alive
+    if (!opts.keep) {
+      setMessages((prev) => prev.filter((m) => m.id !== journeyId));
     }
   };
 
-  const handleSuggestedPrompt = (text: string) => {
-    setInputValue(text);
-  };
+  const addAgentMessage = (msg: Omit<Message, 'id' | 'sender'>) =>
+    setMessages((prev) => [...prev, { id: uid(), sender: 'agent', ...msg }]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: shouldReduceMotion ? 0 : 0.1 }
+  const handleSend = async (text: string) => {
+    setMessages((prev) => [...prev, { id: uid(), sender: 'user', content: text }]);
+    setIsProcessing(true);
+
+    const lower = text.toLowerCase();
+
+    try {
+      if (lower.includes('45 days') && lower.includes('company x')) {
+        await runJourney(JOURNEYS.setup, {
+          keep: true,
+          finalAction: { label: 'View Roadmap', to: '/app/preps/prep-1' },
+        });
+        addAgentMessage({
+          content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
+          scenario: 'setup',
+          data: { role: 'SDE', company: 'Company X' },
+        });
+        setHighlightField('all');
+        setHighlightSource('Planner');
+      } else if (lower.includes('scored badly') || lower.includes('adjust my plan')) {
+        await runJourney(JOURNEYS['plan-update']);
+        addAgentMessage({
+          content: "I've adjusted your roadmap to spend more time on your weak areas.",
+          scenario: 'plan-update',
+        });
+        setHighlightField('gaps');
+        setHighlightSource('Assessment');
+      } else if (lower.includes('missed')) {
+        await runJourney(JOURNEYS['missed-task']);
+        addAgentMessage({
+          content: "No worries! I've shifted your tasks to maintain a balanced workload.",
+          scenario: 'missed-task',
+        });
+        setHighlightField('summary');
+        setHighlightSource('Progress');
+      } else if (lower.includes('revision cards')) {
+        await runJourney(JOURNEYS.flashcards);
+        addAgentMessage({
+          content: "Here's a quick revision deck for System Design:",
+          scenario: 'flashcards',
+          data: mockPreps[0].assessments.flashcardDecks[0],
+        });
+        setHighlightField('gaps');
+        setHighlightSource('Planner');
+      } else {
+        await runJourney(JOURNEYS.fallback);
+        addAgentMessage({
+          content:
+            'I can help with interview preparation, roadmap adjustments, and study materials. Try one of the suggested prompts!',
+        });
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-  };
+  const hasStarted = messages.length > 0;
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full">
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full relative mx-auto w-full">
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth pb-32">
-          {!isStarted ? (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto space-y-8"
-            >
-              <motion.div variants={itemVariants} className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-primary">
-                <Icon name="sparkles" className="text-4xl text-white" />
-              </motion.div>
-              <div>
-                <motion.h1 variants={itemVariants} className="text-3xl font-bold mb-3">Hi, I'm kaju.</motion.h1>
-                <motion.p variants={itemVariants} className="text-secondary-text text-lg leading-relaxed">
-                  Tell me what's changed with your trip, and I'll figure out what needs to happen next.
-                </motion.p>
-              </div>
+    <div className="flex-1 flex flex-col md:flex-row bg-bg h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+        {/* AgentActivity removed: the journey now lives inside the conversation */}
 
-              <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-8">
-                <SuggestedPrompt text="My flight was cancelled" onClick={() => handleSuggestedPrompt("My flight was cancelled")} />
-                <SuggestedPrompt text="Find me a hotel near the airport" onClick={() => handleSuggestedPrompt("Find me a hotel near the airport")} />
-                <SuggestedPrompt text="Move tomorrow's dinner reservation" onClick={() => handleSuggestedPrompt("Move tomorrow's dinner reservation")} />
-                <SuggestedPrompt text="The weather changed. What does that affect?" onClick={() => handleSuggestedPrompt("The weather changed. What does that affect?")} />
-              </motion.div>
-            </motion.div>
-          ) : (
-            <div className="flex flex-col max-w-3xl mx-auto w-full pb-8 space-y-2">
-              {messages.map((msg, idx) => {
-                if (msg.role === 'user') {
-                  return (
-                    <motion.div key={msg.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                      <UserMessage content={msg.content} />
-                    </motion.div>
-                  );
-                }
-
-                return (
-                  <motion.div key={msg.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                    <KajuMessage isThinking={msg.isThinking}>
-                      <p>{msg.content}</p>
-                      {isCoordinating && msg.isThinking && (
-                        <div className="mt-6">
-                          <AgentActivity agents={mockAgents} />
-                        </div>
-                      )}
-                      {!msg.isThinking && !isCoordinating && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2 }}
-                          className="mt-4 space-y-4"
-                        >
-                          <DependencyGraph nodes={mockTripData.nodes} />
-                          <p className="pt-2 text-accent font-medium">
-                            Your cancelled flight affects the airport transfer and hotel check-in.
-                            <br /><br />
-                            <span className="text-primary-text font-normal">I'm looking for alternatives that keep your existing plans intact.</span>
-                          </p>
-                        </motion.div>
-                      )}
-                    </KajuMessage>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Input Area */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-surface via-surface to-transparent pt-12 w-full"
-        >
-          <div className="max-w-3xl mx-auto">
-            <ChatInput
-              value={inputValue}
-              onChange={setInputValue}
-              onSubmit={handleSend}
-              isLoading={isCoordinating}
-            />
+        {hasStarted && (
+          <div className="flex-1 overflow-y-auto">
+            <Messages messages={messages} />
+            <div ref={messagesEndRef} className="h-4" />
           </div>
-        </motion.div>
+        )}
+
+        <div
+          className={cn(
+            'flex flex-col w-full z-10 relative',
+            hasStarted
+              ? 'mt-auto pt-6 pb-4 px-4 bg-bg border-t border-border safe-area-bottom'
+              : 'flex-1 justify-center items-center px-4 sm:px-8 overflow-y-auto'
+          )}
+        >
+          {hasStarted && (
+            <div className="absolute top-0 left-0 w-full h-12 -translate-y-full bg-gradient-to-t from-bg to-transparent pointer-events-none" />
+          )}
+
+          <AnimatePresence mode="popLayout">
+            {!hasStarted && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                className="flex flex-col items-center w-full mb-12 mt-10"
+              >
+                <h2 className="text-4xl font-extrabold text-carbon-900 tracking-tight">How can PrepAmigo help?</h2>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.div
+            layout
+            layoutId="chat-input-morph"
+            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+            className={cn('w-full relative z-20', hasStarted ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto')}
+          >
+            <ChatInput
+              onSend={handleSend}
+              disabled={isProcessing}
+              placeholder={hasStarted ? 'Message PrepAmigo...' : "Tell PrepAmigo what you're preparing for..."}
+            />
+          </motion.div>
+
+          <AnimatePresence mode="popLayout">
+            {!hasStarted && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mt-12"
+              >
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(s)}
+                    disabled={isProcessing}
+                    className="flex flex-col gap-2 items-start justify-center p-5 text-left bg-white border border-border rounded-[1.5rem] hover:-translate-y-1 hover:shadow-pop hover:border-chrome-accent/30 transition-all text-carbon-900 disabled:opacity-50 group"
+                  >
+                    <Icon
+                      name={i === 0 ? 'rocket' : i === 1 ? 'bar-chart' : i === 2 ? 'time' : 'albums'}
+                      className="text-xl text-carbon-500 group-hover:text-chrome-accent transition-colors"
+                    />
+                    <span className="text-sm font-medium leading-relaxed">{s}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* Desktop Trip Context Panel */}
-      <div className="hidden lg:block">
-        <TripContextPanel data={mockTripData} className="!bg-black/20" />
+      <div className="w-full md:w-96 border-l border-border bg-surface flex flex-col h-full overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)]">
+        <div className="p-6 border-b border-border bg-bg shrink-0">
+          <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-3">
+            <Icon name="person" className="text-chrome-accent text-xl" /> Live Context
+          </h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 relative">
+          <motion.div
+            animate={{
+              boxShadow: highlightField ? '0 0 0 2px var(--color-violet-500)' : '0 0 0 0px transparent',
+            }}
+            transition={{ duration: 0.5 }}
+            className="rounded-card overflow-hidden"
+          >
+            <LearningContextPanel
+              context={mockContext}
+              highlightField={highlightField}
+              highlightSource={highlightSource}
+            />
+          </motion.div>
+        </div>
       </div>
     </div>
   );

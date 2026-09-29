@@ -1,18 +1,22 @@
-import { Outlet, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "../ui/Logo";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
-import { Avatar } from "../ui/Avatar";
-import { MarbleBackground } from "../ui/MarbleBackground";
+import { PageBackground } from "../ui/PageBackground";
+
 import { useAuth } from "../../lib/useAuth";
 
 export function AppLayout() {
-  const { user, loading, logout } = useAuth();
+  const { loading, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   if (loading) return null; // or a spinner
 
-  if (!user) return <Navigate to="/login" replace />;
+  // if (!user) return <Navigate to="/login" replace />;
 
   const handleLogout = async () => {
     const success = await logout();
@@ -23,25 +27,38 @@ export function AppLayout() {
   };
 
   const navItems = [
-    { to: "/app", icon: "add-circle-outline", label: "New Trip", exact: true },
-    { to: "/app/chat", icon: "chatbubbles-outline", label: "Chat" },
-    { to: "/app/trips", icon: "map-outline", label: "Trips" },
-    { to: "/app/bookings", icon: "ticket-outline", label: "Bookings" },
-    { to: "/app/budget", icon: "wallet-outline", label: "Budget" },
+    { to: "/app", icon: "home-outline", label: "Home", exact: true },
+    { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
+    { to: "/app/preps", icon: "map-outline", label: "Preps" },
+    { to: "/app/calendar", icon: "calendar-outline", label: "Calendar" },
+    { to: "/app/practice", icon: "clipboard-outline", label: "Practice" },
+    { to: "/app/progress", icon: "bar-chart-outline", label: "Progress" },
+    { to: "/app/notifications", icon: "notifications-outline", label: "Notifications" },
   ];
 
   return (
-    <div className="flex h-screen bg-background text-primary-text overflow-hidden font-sans selection:bg-accent/30 selection:text-text relative z-0">
-      <MarbleBackground
-        animate={true}
-        intensity="medium"
-        className="fixed inset-0 z-[-1]"
-      />
+    <div className="flex h-screen bg-bg text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
+      <PageBackground />
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-background/50 backdrop-blur-md">
-        <div className="h-16 flex items-center px-6 border-b border-border">
-          <Logo />
+      <motion.aside
+        initial={{ width: 256 }}
+        animate={{ width: isSidebarOpen ? 256 : 80 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="hidden md:flex flex-col border-r border-chrome-border bg-chrome text-on-chrome relative overflow-hidden"
+      >
+        <div className={`h-16 flex items-center border-b border-chrome-border shrink-0 transition-all ${isSidebarOpen ? 'px-6 justify-between' : 'justify-center'}`}>
+          {isSidebarOpen && (
+            <div className="overflow-hidden transition-opacity">
+              <Logo tone="inverse" />
+            </div>
+          )}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 hover:bg-white/10 rounded-xl transition-colors flex items-center justify-center"
+          >
+            <Icon name="menu" tone="inverse" className="text-2xl" />
+          </button>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
@@ -50,85 +67,155 @@ export function AppLayout() {
               key={item.to}
               to={item.to}
               end={item.exact}
+              title={!isSidebarOpen ? item.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${
                   isActive
-                    ? "bg-elevated/80 text-accent font-medium shadow-sm"
-                    : "text-secondary-text hover:text-primary-text hover:bg-elevated/40"
-                }`
+                    ? "text-on-chrome font-medium"
+                    : "text-on-chrome-muted hover:text-on-chrome"
+                } ${isSidebarOpen ? 'px-3' : 'justify-center'}`
               }
             >
-              <Icon name={item.icon} className="text-xl" />
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  <div className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? 'bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]' : 'bg-white/5 group-hover:bg-white/10'}`}>
+                    <Icon name={item.icon} className="text-xl text-inherit" tone={isActive ? "default" : "inverse"} />
+                  </div>
+                  <AnimatePresence>
+                    {isSidebarOpen && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        className="ml-3 whitespace-nowrap overflow-hidden"
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-chrome-border flex flex-col gap-2 shrink-0">
           <NavLink
             to="/app/settings"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary-text hover:text-primary-text hover:bg-elevated/40 transition-colors"
+            title={!isSidebarOpen ? "Settings" : undefined}
+            className={({ isActive }) =>
+                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${
+                  isActive
+                    ? "text-on-chrome font-medium"
+                    : "text-on-chrome-muted hover:text-on-chrome"
+                } ${isSidebarOpen ? 'px-3' : 'justify-center'}`
+              }
           >
-            <Avatar size="sm" />
-            <span className="font-medium text-sm">My Account</span>
+             {({ isActive }) => (
+                <>
+                    <div className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? 'bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]' : 'bg-white/5 group-hover:bg-white/10'}`}>
+                        <Icon name="settings-outline" className="text-xl text-inherit" tone={isActive ? "default" : "inverse"} />
+                    </div>
+                    <AnimatePresence>
+                        {isSidebarOpen && (
+                        <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: "auto" }}
+                            exit={{ opacity: 0, width: 0 }}
+                            className="ml-3 font-medium text-sm whitespace-nowrap overflow-hidden"
+                        >
+                            Settings
+                        </motion.span>
+                        )}
+                    </AnimatePresence>
+                </>
+             )}
           </NavLink>
 
-          {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary-text hover:text-primary-text hover:bg-elevated/40 transition-colors"
+            title={!isSidebarOpen ? "Logout" : undefined}
+            className={`group w-full flex items-center gap-3 py-2 rounded-xl text-on-chrome-muted hover:text-on-chrome transition-colors focus-visible:outline-chrome-accent ${isSidebarOpen ? 'px-3' : 'justify-center'}`}
           >
-            <Icon name="log-out-outline" className="text-xl" />
-            <span className="font-medium text-sm">Logout</span>
+            <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
+                <Icon name="log-out-outline" className="text-xl" tone="inverse" />
+            </div>
+            <AnimatePresence>
+                {isSidebarOpen && (
+                <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="ml-3 font-medium text-sm whitespace-nowrap overflow-hidden"
+                >
+                    Logout
+                </motion.span>
+                )}
+            </AnimatePresence>
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative bg-transparent">
-        <header className="md:hidden h-16 border-b border-border bg-background flex items-center justify-between px-4 z-10">
+        <header className="md:hidden h-16 border-b border-chrome-border bg-chrome text-on-chrome flex items-center justify-between px-4 z-10">
           <div className="flex items-center">
-            <Logo compact />
+            <Logo compact tone="inverse" />
           </div>
 
           <div className="flex items-center gap-2">
-            <NavLink to="/app/notifications">
-              <IconButton icon="notifications-outline" variant="ghost" />
+            <NavLink to="/app/notifications" className="focus-visible:outline-chrome-accent rounded-control">
+              <IconButton icon="notifications-outline" variant="ghost" tone="inverse" />
             </NavLink>
 
             {/* Mobile Logout */}
-            <IconButton
-              icon="log-out-outline"
-              variant="ghost"
-              onClick={handleLogout}
-            />
+            <div className="focus-visible:outline-chrome-accent rounded-control">
+              <IconButton
+                icon="log-out-outline"
+                variant="ghost"
+                onClick={handleLogout}
+                tone="inverse"
+              />
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-hidden flex flex-col z-10">
-          <Outlet />
+        <main className="flex-1 overflow-hidden flex flex-col z-10 relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              className="flex-1 overflow-y-auto w-full h-full"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background flex items-center justify-around px-2 z-50 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-chrome-border bg-chrome flex items-center justify-around px-2 z-50 safe-area-bottom">
         {[
           { to: "/app", icon: "home-outline", label: "Home", exact: true },
-          { to: "/app/chat", icon: "chatbubbles-outline", label: "Chat" },
-          { to: "/app/trips", icon: "map-outline", label: "Trips" },
+          { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
+          { to: "/app/preps", icon: "map-outline", label: "Preps" },
+          { to: "/app/calendar", icon: "calendar-outline", label: "Calendar" },
         ].map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.exact}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${
-                isActive ? "text-accent" : "text-secondary-text"
+              `flex flex-col items-center justify-center gap-1 p-2 rounded-control transition-colors min-w-[64px] focus-visible:outline-chrome-accent ${
+                isActive ? "text-on-chrome" : "text-on-chrome-muted"
               }`
             }
           >
-            <Icon name={item.icon} className="text-xl" />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <Icon name={item.icon} className="text-xl" tone={isActive ? "inverse" : "default"} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

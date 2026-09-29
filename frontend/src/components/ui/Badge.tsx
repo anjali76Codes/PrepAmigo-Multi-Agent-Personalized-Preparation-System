@@ -1,26 +1,44 @@
-import React from 'react';
-import { cn } from '../../lib/utils';
+import { forwardRef, type HTMLAttributes } from "react";
+import { cn } from "./Button";
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'primary' | 'secondary' | 'outline';
+export interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "neutral" | "navy" | "forest" | "amber" | "danger" | "warning" | "sunny" | "coral";
+  styleType?: "solid" | "soft";
+  tone?: "default" | "inverse";
 }
 
-export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
-  const variants = {
-    default: 'bg-surface-elevated text-primary-text',
-    primary: 'bg-primary/20 text-accent border border-primary/30',
-    secondary: 'bg-border text-secondary-text',
-    outline: 'text-secondary-text border border-border',
-  };
+export const Badge = forwardRef<HTMLDivElement, BadgeProps>(
+  ({ className, variant = "neutral", styleType = "soft", tone = "default", ...props }, ref) => {
+    const base = "inline-flex items-center rounded-badge px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
+    
+    const variants = {
+      solid: {
+        default: tone === 'inverse' ? "bg-chrome-accent text-chrome" : "bg-carbon-900 text-white",
+        neutral: tone === 'inverse' ? "bg-chrome-hover text-on-chrome" : "bg-surface-muted text-carbon-700",
+        navy: "bg-navy-900 text-white",
+        forest: "bg-forest-700 text-white",
+        amber: "bg-amber-600 text-white",
+        warning: "bg-amber-600 text-white",
+        danger: "bg-danger-600 text-white",
+        sunny: "bg-sunny-500 text-navy-900",
+        coral: "bg-coral-500 text-navy-900",
+      },
+      soft: {
+        default: "bg-carbon-100 text-carbon-900",
+        neutral: "bg-surface-muted text-carbon-500",
+        navy: "bg-navy-100 text-navy-900",
+        forest: "bg-forest-100 text-forest-800",
+        amber: "bg-amber-100 text-amber-600",
+        warning: "bg-amber-100 text-amber-600",
+        danger: "bg-danger-100 text-danger-600",
+        sunny: "bg-sunny-100 text-amber-800",
+        coral: "bg-coral-100 text-coral-800",
+      }
+    };
 
-  return (
-    <div
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent',
-        variants[variant],
-        className
-      )}
-      {...props}
-    />
-  );
-}
+    return (
+      <div ref={ref} className={cn(base, variants[styleType][variant], className)} {...props} />
+    );
+  }
+);
+Badge.displayName = "Badge";

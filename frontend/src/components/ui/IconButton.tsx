@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { cn } from '../../lib/utils';
 import { Icon } from './Icon';
 
@@ -7,17 +7,23 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  tone?: 'default' | 'inverse';
 }
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  ({ className, icon, variant = 'ghost', size = 'md', isLoading, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50';
+  ({ className, icon, variant = 'ghost', size = 'md', isLoading, disabled, tone = 'default', ...props }, ref) => {
+    const baseStyles = cn('inline-flex items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50', tone === 'inverse' ? 'focus-visible:ring-chrome-accent' : 'focus-visible:ring-forest-700');
     
-    const variants = {
-      primary: 'bg-primary text-primary-text hover:bg-primary-hover shadow-glow-primary hover:shadow-glow-accent',
-      secondary: 'bg-surface-elevated text-primary-text hover:bg-border border border-border',
-      ghost: 'hover:bg-surface-elevated text-secondary-text hover:text-primary-text',
-      danger: 'bg-error/10 text-error hover:bg-error/20 border border-error/20',
+    const variants = tone === 'inverse' ? {
+      primary: 'bg-chrome-accent text-chrome hover:bg-chrome-accent/90 shadow-pop',
+      secondary: 'bg-chrome-hover text-on-chrome border border-chrome-border hover:bg-chrome-border',
+      ghost: 'text-on-chrome-muted hover:text-on-chrome hover:bg-chrome-hover',
+      danger: 'bg-danger-600/20 text-danger-100 hover:bg-danger-600/30 border border-danger-600/20',
+    } : {
+      primary: 'bg-carbon-900 text-white hover:bg-carbon-700 shadow-pop',
+      secondary: 'bg-surface-muted text-carbon-900 hover:bg-border border border-border',
+      ghost: 'hover:bg-surface-muted text-carbon-500 hover:text-carbon-900',
+      danger: 'bg-danger-100 text-danger-600 hover:bg-danger-600/20 border border-danger-600/20',
     };
     
     const sizes = {

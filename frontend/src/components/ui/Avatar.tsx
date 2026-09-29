@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '../../lib/utils';
 import { Icon } from './Icon';
 
@@ -6,9 +5,10 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string;
   fallback?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  tone?: 'default' | 'inverse';
 }
 
-export function Avatar({ className, src, fallback, size = 'md', ...props }: AvatarProps) {
+export function Avatar({ className, src, fallback, size = 'md', tone = 'default', ...props }: AvatarProps) {
   const sizes = {
     sm: 'h-8 w-8 text-xs',
     md: 'h-10 w-10 text-sm',
@@ -19,7 +19,8 @@ export function Avatar({ className, src, fallback, size = 'md', ...props }: Avat
   return (
     <div
       className={cn(
-        'relative flex shrink-0 overflow-hidden rounded-full bg-surface-elevated',
+        'relative flex shrink-0 overflow-hidden rounded-full',
+        tone === 'inverse' ? 'bg-chrome-border' : 'bg-surface-muted',
         sizes[size],
         className
       )}
@@ -32,7 +33,7 @@ export function Avatar({ className, src, fallback, size = 'md', ...props }: Avat
           alt={fallback || 'Avatar'}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center font-medium text-secondary-text">
+        <div className={cn("flex h-full w-full items-center justify-center font-medium", tone === 'inverse' ? 'text-on-chrome-muted' : 'text-carbon-500')}>
           {fallback ? (
             fallback.substring(0, 2).toUpperCase()
           ) : (

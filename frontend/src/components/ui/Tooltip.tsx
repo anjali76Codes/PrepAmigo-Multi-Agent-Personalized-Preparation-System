@@ -5,9 +5,10 @@ export interface TooltipProps extends Omit<React.HTMLAttributes<HTMLDivElement>,
   content: React.ReactNode;
   children: React.ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
+  tone?: 'default' | 'inverse';
 }
 
-export function Tooltip({ className, content, children, position = 'top', ...props }: TooltipProps) {
+export function Tooltip({ className, content, children, position = 'top', tone = 'default', ...props }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   const positionClasses = {
@@ -29,7 +30,8 @@ export function Tooltip({ className, content, children, position = 'top', ...pro
       {isVisible && (
         <div
           className={cn(
-            'absolute z-50 whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 text-xs text-primary-text shadow-md border border-border animate-in fade-in zoom-in-95 duration-200',
+            'absolute z-50 whitespace-nowrap rounded-control px-3 py-1.5 text-xs shadow-card animate-in fade-in zoom-in-95 duration-200',
+            tone === 'inverse' ? 'bg-chrome-hover text-on-chrome border border-chrome-border' : 'bg-surface-muted text-carbon-900 border border-border',
             positionClasses[position],
             className
           )}
