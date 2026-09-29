@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F7F5F0;
+  --color-bg: #F4F6FB;
   --color-surface: #FFFFFF;
   --color-surface-muted: #EFECE4;
   --color-border: #DEDACF;
-  --color-navy-900: #2B3650;
-  --color-navy-700: #3D4B6B;
-  --color-navy-500: #66728F;
-  --color-navy-100: #E3E7F0;
+  --color-navy-900: #18122B;
+  --color-navy-700: #393053;
+  --color-navy-500: #443C68;
+  --color-navy-100: #635985;
   --color-forest-700: #4A6B57;
   --color-forest-800: #3B5646;
   --color-forest-100: #E1EBE4;
@@ -16,6 +16,15 @@
   --color-amber-100: #F7ECD5;
   --color-danger-600: #B4534B;
   --color-danger-100: #F6E3E1;
+  --color-carbon-900: #18122B;
+  --color-carbon-700: #393053;
+  --color-carbon-500: #443C68;
+  --color-sunny-500: #E5B84B;
+  --color-sunny-100: #FBF1D6;
+  --color-coral-500: #DD7A62;
+  --color-coral-100: #F9E4DD;
+  --color-sky-500: #6FA8C9;
+  --color-sky-100: #E0EEF6;
 
   --radius-control: 0.5rem;
   --radius-card: 1rem;
@@ -29,18 +38,19 @@
 
 @layer base {
   :root {
-    /* default preset */
-    --radius-control: 0.5rem;
-    --radius-card: 1rem;
-    --border-width: 1px;
-    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  }
-  
-  html[data-style="soft"] {
+    /* default preset is now the 'soft' style */
     --radius-control: 1rem;
     --radius-card: 1.5rem;
     --border-width: 0px;
     --shadow-card: 0 10px 15px -3px rgba(43, 54, 80, 0.1);
+  }
+  
+  html[data-style="solid"] {
+    /* previous default preset */
+    --radius-control: 0.5rem;
+    --radius-card: 1rem;
+    --border-width: 1px;
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   }
 
   html[data-style="outlined"] {

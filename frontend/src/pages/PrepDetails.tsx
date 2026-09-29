@@ -1,9 +1,7 @@
-
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { PrepOverview } from '../components/preps/PrepOverview';
-
 import { SkillGapMap } from '../components/preps/SkillGapMap';
 import { AffectedTopics } from '../components/preps/AffectedTopics';
 import { PlanUpdateTimeline } from '../components/preps/PlanUpdateTimeline';
@@ -14,7 +12,7 @@ import { ResourcePack } from '../components/preps/ResourcePack';
 import { AssessmentCard } from '../components/preps/AssessmentCard';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
-
+import { Card } from '../components/ui/Card';
 
 export function PrepDetails() {
   const { prepId } = useParams();
@@ -30,8 +28,8 @@ export function PrepDetails() {
 
   if (!prep) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--color-bg)]">
-        <h2 className="text-2xl font-bold text-[var(--color-forest-700)]-text mb-4">Prep not found</h2>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg">
+        <h2 className="text-2xl font-bold text-carbon-900 mb-4">Prep not found</h2>
         <Button onClick={() => navigate('/app/preps')}>Back to Preps</Button>
       </div>
     );
@@ -57,23 +55,23 @@ export function PrepDetails() {
           <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
               <PrepOverview context={prep.learningContext} />
-              <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-6 rounded-[var(--radius-card)]">
-                <h3 className="text-lg font-semibold mb-4 text-[var(--color-forest-700)]-text">What the Agents Found</h3>
+              <Card variant="default" className="p-6">
+                <h3 className="text-lg font-semibold mb-4 text-carbon-900">What the Agents Found</h3>
                 <div className="space-y-4">
                   {mockAgentEvents.map(event => (
                     <div key={event.id} className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-[var(--color-forest-700)]/10 text-[var(--color-forest-700)] flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-forest-100 text-forest-700 flex items-center justify-center shrink-0">
                         <Icon name="scan-outline" />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-[var(--color-forest-700)]-text">{event.agent}</div>
-                        <div className="text-sm text-[var(--color-navy-500)] mt-1">{event.action}</div>
-                        <div className="text-xs text-[var(--color-navy-500)]/60 mt-1">{new Date(event.timestamp).toLocaleTimeString()}</div>
+                        <div className="text-sm font-semibold text-carbon-900">{event.agent}</div>
+                        <div className="text-sm text-carbon-500 mt-1">{event.action}</div>
+                        <div className="text-xs text-carbon-500/60 mt-1">{new Date(event.timestamp).toLocaleTimeString()}</div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             </div>
             <div className="space-y-6">
               <LearningContextPanel context={prep.learningContext} />
@@ -110,13 +108,13 @@ export function PrepDetails() {
         return (
           <div className="grid md:grid-cols-2 gap-6 max-w-5xl">
             <div className="space-y-6">
-              <h3 className="text-xl font-bold text-[var(--color-forest-700)]-text mb-4">Weekly Quizzes</h3>
+              <h3 className="text-xl font-bold text-carbon-900 mb-4">Weekly Quizzes</h3>
               {prep.assessments.quizzes.map(quiz => (
                 <AssessmentCard key={quiz.id} item={quiz} type="quiz" />
               ))}
             </div>
             <div className="space-y-6">
-              <h3 className="text-xl font-bold text-[var(--color-forest-700)]-text mb-4">Flashcard Decks</h3>
+              <h3 className="text-xl font-bold text-carbon-900 mb-4">Flashcard Decks</h3>
               {prep.assessments.flashcardDecks.map(deck => (
                 <AssessmentCard key={deck.id} item={deck} type="flashcard" />
               ))}
@@ -129,27 +127,27 @@ export function PrepDetails() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[var(--color-bg)] h-full overflow-hidden">
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] shrink-0 z-10 sticky top-0">
+    <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
+      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0">
         <div className="px-4 md:px-8 py-4 flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/app/preps')} className="hidden md:flex p-2 -ml-2 rounded-full">
             <Icon name="arrow-back-outline" className="text-xl" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--color-forest-700)]-text">{prep.title}</h1>
-            <p className="text-sm text-[var(--color-navy-500)]">{prep.durationDays} Days • {prep.learningContext.targetRole}</p>
+            <h1 className="text-2xl font-bold text-carbon-900">{prep.title}</h1>
+            <p className="text-sm text-carbon-500">{prep.durationDays} Days • {prep.learningContext.targetRole}</p>
           </div>
         </div>
         
-        <div className="flex overflow-x-auto hide-scrollbar px-4 md:px-8 gap-6 border-t border-[var(--color-border)] mt-2">
+        <div className="flex overflow-x-auto hide-scrollbar px-4 md:px-8 gap-6 border-t border-border mt-2">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setTab(tab.id)}
               className={`flex items-center gap-2 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-accent text-[var(--color-forest-700)]'
-                  : 'border-transparent text-[var(--color-navy-500)] hover:text-[var(--color-forest-700)]-text'
+                  ? 'border-forest-700 text-forest-700'
+                  : 'border-transparent text-carbon-500 hover:text-carbon-900'
               }`}
             >
               <Icon name={tab.icon} />

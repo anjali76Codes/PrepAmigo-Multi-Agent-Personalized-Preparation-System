@@ -5,6 +5,7 @@ import { Icon } from '../ui/Icon';
 import { MissedTaskBanner } from './MissedTaskBanner';
 import { RescheduleDialog } from './RescheduleDialog';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
 
 interface PlanCalendarProps {
   entries: CalendarEntry[];
@@ -27,25 +28,34 @@ export function PlanCalendar({ entries: initialEntries }: PlanCalendarProps) {
     setSelectedTaskToReschedule(null);
   };
 
+  const getBadgeVariant = (type: string) => {
+    switch(type) {
+      case 'due': return 'navy';
+      case 'missed': return 'warning';
+      case 'rescheduled': return 'forest';
+      default: return 'default';
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
       {missedTasks.length > 0 && (
         <MissedTaskBanner count={missedTasks.length} />
       )}
       
-      <Card className="p-6 bg-[var(--color-surface)] border-[var(--color-border)]">
+      <Card variant="default" className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-[var(--color-forest-700)]-text flex items-center gap-2">
-            <Icon name="calendar-outline" className="text-[var(--color-forest-700)]" />
+          <h3 className="text-lg font-semibold text-carbon-900 flex items-center gap-2">
+            <Icon name="calendar-outline" className="text-forest-700" />
             Schedule
           </h3>
-          <div className="flex bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-control)] overflow-hidden">
+          <div className="flex bg-bg border border-border rounded-control overflow-hidden">
             <button 
-              className={`px-4 py-1.5 text-sm ${view === 'day' ? 'bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] font-medium' : 'text-[var(--color-navy-500)]'}`}
+              className={`px-4 py-1.5 text-sm ${view === 'day' ? 'bg-navy-100 text-forest-700 font-medium' : 'text-carbon-500'}`}
               onClick={() => setView('day')}
             >Day</button>
             <button 
-              className={`px-4 py-1.5 text-sm ${view === 'week' ? 'bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] font-medium' : 'text-[var(--color-navy-500)]'}`}
+              className={`px-4 py-1.5 text-sm ${view === 'week' ? 'bg-navy-100 text-forest-700 font-medium' : 'text-carbon-500'}`}
               onClick={() => setView('week')}
             >Week</button>
           </div>
@@ -53,26 +63,19 @@ export function PlanCalendar({ entries: initialEntries }: PlanCalendarProps) {
 
         <div className="space-y-4">
           {entries.map(entry => (
-            <div key={entry.id} className="flex items-center gap-4 p-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)]">
-              <div className="shrink-0 w-12 text-center text-[var(--color-navy-500)]">
+            <div key={entry.id} className="flex items-center gap-4 p-4 rounded-card border border-border bg-bg">
+              <div className="shrink-0 w-12 text-center text-carbon-500">
                 <div className="text-xs uppercase">{new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                <div className="font-bold text-[var(--color-forest-700)]-text">{new Date(entry.date).getDate()}</div>
+                <div className="font-bold text-carbon-900">{new Date(entry.date).getDate()}</div>
               </div>
               <div className="w-px h-10 bg-border" />
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <h4 className="font-medium text-[var(--color-forest-700)]-text">{entry.title}</h4>
-                  <span className={`text-xs px-2 py-1 rounded-[var(--radius-control)] border ${
-                    entry.type === 'due' ? 'bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] border-primary/20' :
-                    entry.type === 'missed' ? 'bg-[var(--color-amber-600)]/10 text-[var(--color-amber-600)] border-warning/20' :
-                    entry.type === 'rescheduled' ? 'bg-[var(--color-forest-700)]/10 text-[var(--color-forest-700)] border-accent/20' :
-                    'bg-border/50 text-[var(--color-navy-500)] border-[var(--color-border)]'
-                  }`}>
-                    {entry.type}
-                  </span>
+                  <h4 className="font-medium text-carbon-900">{entry.title}</h4>
+                  <Badge variant={getBadgeVariant(entry.type) as any}>{entry.type}</Badge>
                 </div>
-                {entry.reason && <p className="text-xs text-[var(--color-navy-500)] mt-1">Reason: {entry.reason}</p>}
-                {entry.originalDate && <p className="text-xs text-[var(--color-navy-500)]">Originally: {new Date(entry.originalDate).toLocaleDateString()}</p>}
+                {entry.reason && <p className="text-xs text-carbon-500 mt-1">Reason: {entry.reason}</p>}
+                {entry.originalDate && <p className="text-xs text-carbon-500">Originally: {new Date(entry.originalDate).toLocaleDateString()}</p>}
               </div>
               {entry.type === 'missed' && (
                 <Button variant="outline" size="sm" onClick={() => setSelectedTaskToReschedule(entry.id)}>

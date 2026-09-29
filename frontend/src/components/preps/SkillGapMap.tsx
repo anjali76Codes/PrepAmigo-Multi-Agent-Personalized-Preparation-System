@@ -9,17 +9,16 @@ interface SkillGapMapProps {
 }
 
 export function SkillGapMap({ gaps }: SkillGapMapProps) {
-  // severity colors (forest = strong, navy = moderate, amber = high-priority gap)
   const getSeverity = (impact: number) => {
-    if (impact >= 80) return 'text-[var(--color-amber-600)] bg-[var(--color-amber-600)]/10 border-warning/20'; // high-priority
-    if (impact >= 50) return 'text-[var(--color-forest-700)] bg-[var(--color-navy-900)]/10 border-primary/20'; // moderate (navy)
-    return 'text-[var(--color-forest-700)] bg-[var(--color-forest-700)]/10 border-accent/20'; // strong (forest)
+    if (impact >= 80) return 'text-amber-600 bg-amber-100 border-amber-600/20'; // high-priority
+    if (impact >= 50) return 'text-forest-700 bg-navy-100 border-forest-700/20'; // moderate (navy)
+    return 'text-forest-700 bg-forest-100 border-forest-700/20'; // strong (forest)
   };
 
   return (
-    <Card className="p-6 bg-[var(--color-surface)] border-[var(--color-border)]">
-      <h3 className="text-lg font-semibold mb-6 text-[var(--color-forest-700)]-text flex items-center gap-2">
-        <Icon name="git-network-outline" className="text-[var(--color-forest-700)]" />
+    <Card variant="default" className="p-6">
+      <h3 className="text-lg font-semibold mb-6 text-carbon-900 flex items-center gap-2">
+        <Icon name="git-network-outline" className="text-forest-700" />
         Topic Dependency & Skill Gaps
       </h3>
       
@@ -30,17 +29,17 @@ export function SkillGapMap({ gaps }: SkillGapMapProps) {
               <div className="absolute left-[19px] top-10 bottom-[-20px] w-px bg-border z-0" />
             )}
             
-            <div className={`relative z-10 w-10 h-10 rounded-[var(--radius-card)] border flex items-center justify-center shrink-0 ${getSeverity(gap.impactScore)}`}>
+            <div className={`relative z-10 w-10 h-10 rounded-card border flex items-center justify-center shrink-0 ${getSeverity(gap.impactScore)}`}>
               <Icon name="warning-outline" className="text-lg" />
             </div>
             
             <div className="flex-1 pb-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="font-medium text-[var(--color-forest-700)]-text">{gap.skill}</h4>
-                  <p className="text-xs text-[var(--color-navy-500)] mt-1">{gap.hoursAllocated} hours allocated</p>
+                  <h4 className="font-medium text-carbon-900">{gap.skill}</h4>
+                  <p className="text-xs text-carbon-500 mt-1">{gap.hoursAllocated} hours allocated</p>
                 </div>
-                <div className="text-xs font-bold px-2 py-1 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-control)] text-[var(--color-forest-700)]-text">
+                <div className="text-xs font-bold px-2 py-1 bg-bg border border-border rounded-control text-carbon-900">
                   Impact: {gap.impactScore}
                 </div>
               </div>

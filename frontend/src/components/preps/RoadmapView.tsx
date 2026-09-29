@@ -1,5 +1,6 @@
 import type { Roadmap } from '../../data/mockData';
 import { SprintTimeline } from './SprintTimeline';
+import { Card } from '../ui/Card';
 
 interface RoadmapViewProps {
   roadmap: Roadmap;
@@ -8,9 +9,9 @@ interface RoadmapViewProps {
 export function RoadmapView({ roadmap }: RoadmapViewProps) {
   if (!roadmap || roadmap.sprints.length === 0) {
     return (
-      <div className="p-8 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-card)]">
-        <p className="text-[var(--color-navy-500)]">No roadmap available for this prep.</p>
-      </div>
+      <Card variant="default" className="p-8 text-center">
+        <p className="text-carbon-500">No roadmap available for this prep.</p>
+      </Card>
     );
   }
 

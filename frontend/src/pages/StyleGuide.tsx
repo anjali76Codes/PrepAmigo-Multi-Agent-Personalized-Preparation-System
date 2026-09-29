@@ -8,8 +8,8 @@ import { Tabs } from '../components/ui/Tabs';
 function StylePresetSwitcher() {
   const { preset, setPreset } = useStyle();
   return (
-    <div className="mb-12 p-6 border rounded-[var(--radius-card)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <h3 className="text-xl font-bold mb-4">Style Presets</h3>
+    <div className="mb-12 p-6 border border-border rounded-card bg-surface shadow-card">
+      <h3 className="text-xl font-bold mb-4 text-carbon-900">Style Presets</h3>
       <div className="flex gap-4">
         {['default', 'soft', 'outlined', 'crisp'].map((p) => (
           <Button 
@@ -29,23 +29,23 @@ export function StyleGuide() {
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-16">
       <div className="space-y-4">
-        <h1 className="text-4xl font-bold text-[var(--color-navy-900)]">Design System & Style Guide</h1>
-        <p className="text-[var(--color-navy-500)]">A showcase of reusable components and tokens for PrepAmigo.</p>
+        <h1 className="text-4xl font-bold text-carbon-900">Design System & Style Guide</h1>
+        <p className="text-carbon-500">A showcase of reusable components and tokens for PrepAmigo.</p>
       </div>
       
       <StylePresetSwitcher />
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Colors</h2>
+        <h2 className="text-2xl font-bold text-carbon-900">Colors</h2>
         <div className="flex gap-4 flex-wrap">
-          <div className="w-24 h-24 bg-[var(--color-navy-900)] rounded-[var(--radius-control)]"></div>
-          <div className="w-24 h-24 bg-[var(--color-forest-700)] rounded-[var(--radius-control)]"></div>
-          <div className="w-24 h-24 bg-[var(--color-amber-600)] rounded-[var(--radius-control)]"></div>
+          <div className="w-24 h-24 bg-carbon-900 rounded-control"></div>
+          <div className="w-24 h-24 bg-forest-700 rounded-control"></div>
+          <div className="w-24 h-24 bg-amber-600 rounded-control"></div>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Buttons</h2>
+        <h2 className="text-2xl font-bold text-carbon-900">Buttons</h2>
         <div className="flex gap-4">
           <Button variant="primary">Primary</Button>
           <Button variant="accent">Accent</Button>
@@ -55,7 +55,7 @@ export function StyleGuide() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Cards</h2>
+        <h2 className="text-2xl font-bold text-carbon-900">Cards</h2>
         <div className="grid grid-cols-2 gap-4">
           <Card variant="default" className="p-4">Default Card</Card>
           <Card variant="muted" className="p-4">Muted Card</Card>
@@ -65,7 +65,7 @@ export function StyleGuide() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Badges</h2>
+        <h2 className="text-2xl font-bold text-carbon-900">Badges</h2>
         <div className="flex gap-4">
           <Badge variant="navy" styleType="solid">Navy</Badge>
           <Badge variant="forest" styleType="soft">Forest</Badge>
@@ -73,7 +73,7 @@ export function StyleGuide() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Alerts</h2>
+        <h2 className="text-2xl font-bold text-carbon-900">Alerts</h2>
         <div className="space-y-2">
           <Alert variant="info">Info Alert</Alert>
           <Alert variant="success">Success Alert</Alert>
@@ -81,7 +81,7 @@ export function StyleGuide() {
       </section>
       
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Tabs</h2>
+        <h2 className="text-2xl font-bold text-carbon-900">Tabs</h2>
         <Tabs tabs={[{ id: '1', label: 'Tab 1' }, { id: '2', label: 'Tab 2' }]} variant="segmented" />
       </section>
     </div>

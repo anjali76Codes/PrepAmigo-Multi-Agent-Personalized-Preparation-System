@@ -10,13 +10,13 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   ({ className, onSearch, ...props }, ref) => {
     return (
       <div className="relative w-full">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--color-navy-500)]">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-carbon-500">
           <Icon name="search-outline" className="h-4 w-4" />
         </div>
         <input
           type="search"
           className={cn(
-            'flex h-10 w-full rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] pl-10 pr-3 py-2 text-sm text-[var(--color-forest-700)]-text ring-offset-background placeholder:text-[var(--color-navy-500)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+            'flex h-10 w-full rounded-control border border-border bg-surface pl-10 pr-3 py-2 text-sm text-carbon-900 ring-offset-background placeholder:text-carbon-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             className
           )}
           ref={ref}

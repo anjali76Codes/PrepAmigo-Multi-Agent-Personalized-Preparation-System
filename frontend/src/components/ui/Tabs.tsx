@@ -5,21 +5,21 @@ export function Tabs({ tabs, defaultTab, variant = "underline", onChange }: any)
   const [active, setActive] = useState(defaultTab || tabs[0]?.id);
 
   const variants = {
-    underline: "border-b-2 border-transparent text-[var(--color-navy-500)] hover:text-[var(--color-navy-700)]",
-    pill: "px-4 py-2 rounded-full text-[var(--color-navy-500)] hover:bg-[var(--color-surface-muted)]",
-    segmented: "px-4 py-1 text-sm rounded-[var(--radius-control)] text-[var(--color-navy-500)] hover:text-[var(--color-navy-900)]",
+    underline: "border-b-2 border-transparent text-carbon-500 hover:text-carbon-700",
+    pill: "px-4 py-2 rounded-full text-carbon-500 hover:bg-surface-muted",
+    segmented: "px-4 py-1 text-sm rounded-control text-carbon-500 hover:text-carbon-900",
   };
 
   const activeVariants = {
-    underline: "border-[var(--color-forest-700)] text-[var(--color-navy-900)]",
-    pill: "bg-[var(--color-navy-900)] text-white hover:bg-[var(--color-navy-700)] hover:text-white",
-    segmented: "bg-white shadow-[var(--shadow-card)] text-[var(--color-navy-900)]",
+    underline: "border-forest-700 text-carbon-900",
+    pill: "bg-carbon-900 text-white hover:bg-carbon-700 hover:text-white",
+    segmented: "bg-white shadow-card text-carbon-900",
   };
 
   const containerVariants = {
-    underline: "flex space-x-4 border-b border-[var(--color-border)]",
+    underline: "flex space-x-4 border-b border-border",
     pill: "flex space-x-2",
-    segmented: "flex p-1 bg-[var(--color-surface-muted)] rounded-[var(--radius-control)] inline-flex",
+    segmented: "flex p-1 bg-surface-muted rounded-control inline-flex",
   };
 
   return (

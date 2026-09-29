@@ -15,10 +15,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", loading, children, disabled, ...props }, ref) => {
     const variants = {
-      primary: "bg-[var(--color-navy-900)] text-white hover:bg-[var(--color-navy-700)]",
-      accent: "bg-[var(--color-forest-700)] text-white hover:bg-[var(--color-forest-800)]",
-      outline: "border-2 border-[var(--color-navy-900)] text-[var(--color-navy-900)] hover:bg-[var(--color-navy-100)]",
-      ghost: "text-[var(--color-navy-700)] hover:bg-[var(--color-surface-muted)]",
+      primary: "bg-carbon-900 text-white hover:bg-carbon-700",
+      accent: "bg-forest-700 text-white hover:bg-forest-800",
+      outline: "border-2 border-carbon-900 text-carbon-900 hover:bg-carbon-900/5",
+      ghost: "text-carbon-700 hover:bg-surface-muted",
     };
     const sizes = {
       sm: "h-8 px-3 text-xs",
@@ -31,7 +31,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center rounded-[var(--radius-control)] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center rounded-control font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
           variants[variant],
           sizes[size],
           className

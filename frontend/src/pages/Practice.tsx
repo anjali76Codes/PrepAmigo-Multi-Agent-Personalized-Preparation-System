@@ -27,20 +27,20 @@ export function Practice() {
   ] as const;
 
   return (
-    <div className="flex-1 flex flex-col bg-[var(--color-bg)] h-full overflow-hidden">
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <h1 className="text-3xl font-bold text-[var(--color-forest-700)]-text mb-2">Practice Hub</h1>
-        <p className="text-[var(--color-navy-500)] mb-6">Test your knowledge and strengthen your weak areas.</p>
+    <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
+      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
+        <h1 className="text-3xl font-bold text-carbon-900 mb-2">Practice Hub</h1>
+        <p className="text-carbon-500 mb-6">Test your knowledge and strengthen your weak areas.</p>
         
-        <div className="flex overflow-x-auto hide-scrollbar gap-6 border-t border-[var(--color-border)] mt-2 pt-2">
+        <div className="flex overflow-x-auto hide-scrollbar gap-6 border-t border-border mt-2 pt-2">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-accent text-[var(--color-forest-700)]'
-                  : 'border-transparent text-[var(--color-navy-500)] hover:text-[var(--color-forest-700)]-text'
+                  ? 'border-forest-700 text-forest-700'
+                  : 'border-transparent text-carbon-500 hover:text-carbon-900'
               }`}
             >
               <Icon name={tab.icon} />

@@ -1,11 +1,13 @@
-import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Icon } from '../components/ui/Icon';
+import { Button } from '../components/ui/Button';
+import { Mascot } from '../components/ui/Mascot';
+import { Alert } from '../components/ui/Alert';
+import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
 import { useAppContext } from '../context/AppContext';
 
 export function AppHome() {
-  const shouldReduceMotion = useReducedMotion();
   const { preps: mockPreps } = useAppContext();
   const prep = mockPreps[0]; // Primary active prep
   
@@ -18,126 +20,132 @@ export function AppHome() {
   const xp = prep.learningContext.progress.xp;
   
   return (
-    <div className="flex-1 flex flex-col bg-[var(--color-bg)] h-full overflow-hidden">
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
-        <h1 className="text-3xl font-bold text-[var(--color-forest-700)]-text mb-2">Welcome back!</h1>
-        <p className="text-[var(--color-navy-500)]">Here is your snapshot for today.</p>
+    <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
+      <div className="border-b border-border bg-surface shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6">
+        <h1 className="text-3xl font-bold text-carbon-900 mb-2">Welcome back!</h1>
+        <p className="text-carbon-500">Here is your snapshot for today.</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative safe-area-bottom">
-        <motion.div
-          initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-6xl mx-auto space-y-8 pb-12"
-        >
+        <RevealStagger className="max-w-6xl mx-auto space-y-8 pb-12">
+          
           {missedTasks > 0 && (
-            <div className="bg-[var(--color-amber-600)]/10 border border-warning/20 p-4 rounded-[var(--radius-card)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Icon name="warning" className="text-[var(--color-amber-600)] text-2xl" />
-                <div>
-                  <h4 className="font-bold text-[var(--color-amber-600)]">You have {missedTasks} missed task</h4>
-                  <p className="text-sm text-[var(--color-amber-600)]/80">PrepAmigo can reschedule this for you.</p>
+            <RevealStaggerItem>
+              <Alert variant="warning" icon="warning">
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <h4 className="font-bold text-amber-800">You have {missedTasks} missed task</h4>
+                    <p className="text-sm opacity-80">PrepAmigo can reschedule this for you.</p>
+                  </div>
+                  <Link to="/app/chat">
+                    <Button variant="primary" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white border-none shadow-none">
+                      Reschedule
+                    </Button>
+                  </Link>
                 </div>
-              </div>
-              <Link to="/app/chat" className="bg-[var(--color-amber-600)] text-white px-4 py-2 rounded-[var(--radius-control)] font-medium text-sm hover:bg-[var(--color-amber-600)]/90">
-                Reschedule
-              </Link>
-            </div>
+              </Alert>
+            </RevealStaggerItem>
           )}
 
-          <div className="grid md:grid-cols-4 gap-4">
-            <MetricCard title="Days Left" value={daysLeft.toString()} icon="calendar" color="primary" />
-            <MetricCard title="Readiness" value={`${readiness}%`} icon="bar-chart" color="accent" />
-            <MetricCard title="Day Streak" value={streak.toString()} icon="flame" color="warning" />
-            <MetricCard title="Total XP" value={xp.toLocaleString()} icon="star" color="primary" />
-          </div>
+          <RevealStaggerItem className="grid md:grid-cols-4 gap-4">
+            <MetricCard title="Days Left" value={daysLeft.toString()} icon="calendar" tint="sky" />
+            <MetricCard title="Readiness" value={`${readiness}%`} icon="bar-chart" tint="coral" />
+            <MetricCard title="Day Streak" value={streak.toString()} icon="flame" tint="sunny" />
+            <MetricCard title="Total XP" value={xp.toLocaleString()} icon="star" tint="forest" />
+          </RevealStaggerItem>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-2 space-y-6">
+            <RevealStaggerItem className="md:col-span-2 space-y-6">
               <div className="flex justify-between items-end">
-                <h2 className="text-xl font-bold text-[var(--color-forest-700)]-text">Today's Tasks</h2>
-                <Link to="/app/preps/prep-1" className="text-sm text-[var(--color-forest-700)] font-medium hover:underline">View Roadmap</Link>
+                <h2 className="text-xl font-bold text-carbon-900">Today's Tasks</h2>
+                <Link to="/app/preps/prep-1" className="text-sm text-forest-700 font-medium hover:underline">View Roadmap</Link>
               </div>
               
               <div className="space-y-3">
                 {todayTasks.map(task => (
-                  <Card key={task.dayNumber} className="p-4 bg-[var(--color-surface)] flex items-center justify-between border-[var(--color-border)] group hover:border-primary/30">
+                  <Card key={task.dayNumber} variant="default" className="p-4 flex items-center justify-between group hover:border-forest-700/30 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center ${task.status === 'done' ? 'bg-[var(--color-navy-900)] border-primary text-white' : 'border-secondary-text/30'}`}>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center ${task.status === 'done' ? 'bg-carbon-900 border-carbon-900 text-white' : 'border-carbon-500/30'}`}>
                         {task.status === 'done' && <Icon name="checkmark" className="text-xs" />}
                       </div>
-                      <span className={`font-medium ${task.status === 'done' ? 'text-[var(--color-navy-500)] line-through' : 'text-[var(--color-forest-700)]-text'}`}>
+                      <span className={`font-medium ${task.status === 'done' ? 'text-carbon-500 line-through' : 'text-carbon-900'}`}>
                         {task.topic}
                       </span>
                     </div>
-                    <span className="text-xs text-[var(--color-navy-500)] bg-[var(--color-bg)] px-2 py-1 rounded">{task.estimatedMinutes}m</span>
+                    <span className="text-xs text-carbon-500 bg-bg px-2 py-1 rounded-control">{task.estimatedMinutes}m</span>
                   </Card>
                 ))}
               </div>
-            </div>
+            </RevealStaggerItem>
 
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-[var(--color-forest-700)]-text">Upcoming Due</h2>
+            <RevealStaggerItem className="space-y-6">
+              <h2 className="text-xl font-bold text-carbon-900">Upcoming Due</h2>
               
-              <Card className="p-4 bg-[var(--color-surface)] border-[var(--color-border)]">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[var(--color-forest-700)]/10 text-[var(--color-forest-700)] flex items-center justify-center">
+              <Card variant="default" className="p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-forest-100 text-forest-700 flex items-center justify-center">
                     <Icon name="help-circle" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-[var(--color-forest-700)]-text">System Design Quiz</h4>
-                    <p className="text-xs text-[var(--color-amber-600)] font-medium">Due Tomorrow</p>
+                    <h4 className="font-bold text-carbon-900">System Design Quiz</h4>
+                    <p className="text-xs text-amber-600 font-medium">Due Tomorrow</p>
                   </div>
                 </div>
-                <Link to="/app/practice" className="block text-center text-sm text-[var(--color-forest-700)] font-medium bg-[var(--color-bg)] py-2 rounded-[var(--radius-control)] hover:bg-[var(--color-navy-900)]/5 transition-colors">Start Quiz</Link>
+                <Link to="/app/practice" className="w-full">
+                  <Button variant="outline" className="w-full">Start Quiz</Button>
+                </Link>
               </Card>
 
-              <Card className="p-4 bg-[var(--color-surface)] border-[var(--color-border)]">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[var(--color-navy-900)]/10 text-[var(--color-forest-700)] flex items-center justify-center">
+              <Card variant="default" className="p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-700 flex items-center justify-center">
                     <Icon name="albums" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-[var(--color-forest-700)]-text">DSA Flashcards</h4>
-                    <p className="text-xs text-[var(--color-navy-500)]">12 cards to review</p>
+                    <h4 className="font-bold text-carbon-900">DSA Flashcards</h4>
+                    <p className="text-xs text-carbon-500">12 cards to review</p>
                   </div>
                 </div>
-                <Link to="/app/practice" className="block text-center text-sm text-[var(--color-forest-700)] font-medium bg-[var(--color-bg)] py-2 rounded-[var(--radius-control)] hover:bg-[var(--color-navy-900)]/5 transition-colors">Review Now</Link>
+                <Link to="/app/practice" className="w-full">
+                  <Button variant="outline" className="w-full">Review Now</Button>
+                </Link>
               </Card>
 
-              <div className="p-6 bg-[var(--color-navy-900)] text-white rounded-[var(--radius-card)] shadow-[var(--shadow-pop)] mt-8">
-                <h3 className="font-bold mb-2">Ask PrepAmigo</h3>
-                <p className="text-sm text-white/80 mb-4">Need to change your plan or practice a specific topic?</p>
-                <Link to="/app/chat" className="block relative group">
-                  <div className="w-full bg-white/10 border border-white/20 rounded-[var(--radius-card)] py-3 px-4 text-white/70 group-hover:bg-white/20 transition-colors flex justify-between items-center">
-                    <span>Message PrepAmigo...</span>
-                    <div className="w-8 h-8 flex items-center justify-center bg-white text-[var(--color-forest-700)] rounded-[var(--radius-control)] opacity-80 group-hover:opacity-100 transition-opacity">
-                      <Icon name="arrow-up" />
-                    </div>
+              <Card variant="carbon" className="p-6 mt-8 flex flex-col shadow-pop">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-white">Ask PrepAmigo</h3>
+                  <Mascot size="sm" mood="idle" className="bg-white/20 text-white" />
+                </div>
+                <p className="text-sm text-white/80 mb-6">Need to change your plan or practice a specific topic?</p>
+                <Link to="/app/chat" className="block w-full">
+                  <div className="w-full bg-white/10 border border-white/20 rounded-control py-3 px-4 text-white/70 hover:bg-white/20 transition-colors flex justify-between items-center cursor-pointer">
+                    <span className="text-sm">Message PrepAmigo...</span>
+                    <Icon name="arrow-up" />
                   </div>
                 </Link>
-              </div>
-            </div>
+              </Card>
+            </RevealStaggerItem>
           </div>
-        </motion.div>
+        </RevealStagger>
       </div>
     </div>
   );
 }
 
-function MetricCard({ title, value, icon, color }: { title: string, value: string, icon: string, color: string }) {
-  const colorMap: Record<string, string> = {
-    primary: 'text-[var(--color-forest-700)] bg-[var(--color-navy-900)]/10',
-    accent: 'text-[var(--color-forest-700)] bg-[var(--color-forest-700)]/10',
-    warning: 'text-[var(--color-amber-600)] bg-[var(--color-amber-600)]/10'
+function MetricCard({ title, value, icon, tint }: { title: string, value: string, icon: string, tint: 'sky' | 'coral' | 'sunny' | 'forest' }) {
+  const iconColor = {
+    sky: 'text-sky-500',
+    coral: 'text-coral-500',
+    sunny: 'text-sunny-500',
+    forest: 'text-forest-700',
   };
 
   return (
-    <Card className="p-5 bg-[var(--color-surface)] border-[var(--color-border)] flex flex-col">
-      <div className="flex items-center gap-2 text-sm text-[var(--color-navy-500)] mb-2">
-        <Icon name={icon} className={colorMap[color].split(' ')[0]} /> {title}
+    <Card variant="default" className="p-5 flex flex-col h-full hover:-translate-y-1 transition-transform">
+      <div className="flex items-center gap-2 text-sm text-carbon-500 mb-3">
+        <Icon name={icon} className={iconColor[tint]} /> {title}
       </div>
-      <div className="text-3xl font-bold text-[var(--color-forest-700)]-text">{value}</div>
+      <div className="text-3xl font-bold text-carbon-900 mt-auto">{value}</div>
     </Card>
   );
 }
