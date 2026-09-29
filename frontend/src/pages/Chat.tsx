@@ -142,7 +142,7 @@ export function Chat() {
                 className="flex flex-col items-center w-full mb-8"
               >
                 <Mascot size="lg" mood="idle" className="mb-6 bg-surface shadow-card border border-border" />
-                <h2 className="text-2xl font-bold text-ink mb-2 text-center">How can PrepAmigo help?</h2>
+                <h2 className="text-2xl font-bold text-carbon-900 mb-2 text-center">How can PrepAmigo help?</h2>
               </motion.div>
             )}
           </AnimatePresence>
@@ -174,7 +174,7 @@ export function Chat() {
                     variant="outline"
                     onClick={() => handleSend(s)}
                     disabled={isProcessing}
-                    className="h-auto p-4 justify-start text-left text-ink text-sm bg-surface hover:bg-surface-muted hover:border-violet-500/50 whitespace-normal font-normal"
+                    className="h-auto p-4 justify-start text-left text-carbon-900 text-sm bg-surface hover:bg-surface-muted hover:border-forest-700/50 whitespace-normal font-normal"
                   >
                     {s}
                   </Button>
@@ -187,8 +187,8 @@ export function Chat() {
 
       <div className="w-full md:w-80 border-l border-border bg-surface flex flex-col h-full overflow-hidden">
         <div className="p-4 border-b border-border bg-bg shrink-0">
-          <h3 className="font-bold text-ink flex items-center gap-2">
-            <Icon name="person-outline" className="text-violet-500" /> Live Context
+          <h3 className="font-bold text-carbon-900 flex items-center gap-2">
+            <Icon name="person-outline" className="text-forest-700" /> Live Context
           </h3>
         </div>
         <div className="flex-1 overflow-y-auto p-4 relative">

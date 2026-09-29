@@ -60,7 +60,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Message PrepAmigo..
           disabled={disabled}
           placeholder={placeholder}
           rows={1}
-          className="w-full bg-transparent px-2 py-2 text-ink placeholder:text-plum-700 outline-none resize-none overflow-y-auto min-h-[40px] max-h-[150px]"
+          className="w-full bg-transparent px-2 py-2 text-carbon-900 placeholder:text-carbon-500 outline-none resize-none overflow-y-auto min-h-[40px] max-h-[150px]"
         />
         <div className="flex justify-end mt-1">
           <IconButton
@@ -74,7 +74,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Message PrepAmigo..
         </div>
       </form>
       <div className="text-center mt-1">
-        <span className="text-xs text-plum-700 opacity-80">PrepAmigo uses mock data in this demo.</span>
+        <span className="text-xs text-carbon-500 opacity-80">PrepAmigo uses mock data in this demo.</span>
       </div>
     </div>
   );

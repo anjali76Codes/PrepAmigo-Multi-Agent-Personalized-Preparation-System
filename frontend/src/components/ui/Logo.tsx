@@ -2,12 +2,14 @@ import { cn } from '../../lib/utils';
 
 export interface LogoProps extends React.HTMLAttributes<HTMLDivElement> {
   compact?: boolean;
+  tone?: 'default' | 'inverse';
 }
 
-export function Logo({ className, compact = false, ...props }: LogoProps) {
+export function Logo({ className, compact = false, tone = 'default', ...props }: LogoProps) {
+  const isInverse = tone === 'inverse';
   return (
     <div className={cn('flex items-center gap-2 select-none', className)} {...props}>
-      <div className="relative flex h-8 w-8 items-center justify-center rounded-control bg-carbon-900 shadow-pop">
+      <div className={cn("relative flex h-8 w-8 items-center justify-center rounded-control shadow-pop", isInverse ? "bg-chrome-accent text-chrome" : "bg-carbon-900 text-white")}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -16,13 +18,13 @@ export function Logo({ className, compact = false, ...props }: LogoProps) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="h-5 w-5 text-white"
+          className="h-5 w-5 text-current"
         >
           <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
         </svg>
       </div>
       {!compact && (
-        <span className="font-bold tracking-tight text-xl text-carbon-900">
+        <span className={cn("font-bold tracking-tight text-xl", isInverse ? "text-on-chrome" : "text-carbon-900")}>
           PrepAmigo
         </span>
       )}

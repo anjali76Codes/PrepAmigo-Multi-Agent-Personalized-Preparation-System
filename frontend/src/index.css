@@ -25,7 +25,15 @@
   --color-coral-100: #F9E4DD;
   --color-sky-500: #6FA8C9;
   --color-sky-100: #E0EEF6;
-
+  
+  --color-chrome: #393053;
+  --color-chrome-hover: #463D63;
+  --color-chrome-border: #4E4570;
+  --color-on-chrome: #F5F3FA;
+  --color-on-chrome-muted: #B4ABCD;
+  --color-chrome-accent: #C9C1E0;
+  --color-lavender-100: #ECE9F5;
+  --color-lavender-50: #F5F3FA;
   --radius-control: 0.5rem;
   --radius-card: 1rem;
   --radius-badge: 9999px;

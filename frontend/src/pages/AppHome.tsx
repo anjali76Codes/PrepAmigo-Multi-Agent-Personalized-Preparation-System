@@ -92,7 +92,7 @@ export function AppHome() {
                   </div>
                 </div>
                 <Link to="/app/practice" className="w-full">
-                  <Button variant="outline" className="w-full">Start Quiz</Button>
+                  <Button variant="primary" className="w-full">Start Quiz</Button>
                 </Link>
               </Card>
 
@@ -111,14 +111,14 @@ export function AppHome() {
                 </Link>
               </Card>
 
-              <Card variant="carbon" className="p-6 mt-8 flex flex-col shadow-pop">
+              <Card variant="default" className="p-6 mt-8 flex flex-col shadow-pop">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-white">Ask PrepAmigo</h3>
-                  <Mascot size="sm" mood="idle" className="bg-white/20 text-white" />
+                  <h3 className="font-bold text-carbon-900">Ask PrepAmigo</h3>
+                  <Mascot size="sm" mood="idle" className="bg-surface-muted text-carbon-900" />
                 </div>
-                <p className="text-sm text-white/80 mb-6">Need to change your plan or practice a specific topic?</p>
+                <p className="text-sm text-carbon-500 mb-6">Need to change your plan or practice a specific topic?</p>
                 <Link to="/app/chat" className="block w-full">
-                  <div className="w-full bg-white/10 border border-white/20 rounded-control py-3 px-4 text-white/70 hover:bg-white/20 transition-colors flex justify-between items-center cursor-pointer">
+                  <div className="w-full bg-surface-muted border border-border rounded-control py-3 px-4 text-carbon-700 hover:bg-border transition-colors flex justify-between items-center cursor-pointer">
                     <span className="text-sm">Message PrepAmigo...</span>
                     <Icon name="arrow-up" />
                   </div>

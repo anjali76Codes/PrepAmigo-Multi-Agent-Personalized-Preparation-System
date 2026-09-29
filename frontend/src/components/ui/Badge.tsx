@@ -2,23 +2,26 @@ import { forwardRef, type HTMLAttributes } from "react";
 import { cn } from "./Button";
 
 export interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "neutral" | "navy" | "forest" | "amber" | "danger" | "warning";
+  variant?: "default" | "neutral" | "navy" | "forest" | "amber" | "danger" | "warning" | "sunny" | "coral";
   styleType?: "solid" | "soft";
+  tone?: "default" | "inverse";
 }
 
 export const Badge = forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant = "neutral", styleType = "soft", ...props }, ref) => {
+  ({ className, variant = "neutral", styleType = "soft", tone = "default", ...props }, ref) => {
     const base = "inline-flex items-center rounded-badge px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
     
     const variants = {
       solid: {
-        default: "bg-carbon-900 text-white",
-        neutral: "bg-surface-muted text-carbon-700",
+        default: tone === 'inverse' ? "bg-chrome-accent text-chrome" : "bg-carbon-900 text-white",
+        neutral: tone === 'inverse' ? "bg-chrome-hover text-on-chrome" : "bg-surface-muted text-carbon-700",
         navy: "bg-navy-900 text-white",
         forest: "bg-forest-700 text-white",
         amber: "bg-amber-600 text-white",
         warning: "bg-amber-600 text-white",
         danger: "bg-danger-600 text-white",
+        sunny: "bg-sunny-500 text-navy-900",
+        coral: "bg-coral-500 text-navy-900",
       },
       soft: {
         default: "bg-carbon-100 text-carbon-900",
@@ -28,6 +31,8 @@ export const Badge = forwardRef<HTMLDivElement, BadgeProps>(
         amber: "bg-amber-100 text-amber-600",
         warning: "bg-amber-100 text-amber-600",
         danger: "bg-danger-100 text-danger-600",
+        sunny: "bg-sunny-100 text-amber-800",
+        coral: "bg-coral-100 text-coral-800",
       }
     };
 
