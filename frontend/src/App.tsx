@@ -37,7 +37,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname.split('/')[1] || 'root'}>
+      <Routes location={location} key={['login', 'signup'].includes(location.pathname.split('/')[1]) ? 'auth' : location.pathname.split('/')[1] || 'root'}>
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<PageTransition><Home /></PageTransition>} />
