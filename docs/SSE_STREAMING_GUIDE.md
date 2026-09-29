@@ -16,9 +16,9 @@ Python FastAPI Worker (LangGraph / Agents)
 
 ## 2. Why Did You See Consecutive `ping` Messages?
 
-* **SSE Heartbeat (Keep-Alive):** Node.js dispatches `event: ping` every **15 seconds** to prevent browser/Nginx proxy timeouts.
-* **Worker Crash Handling:** If Python is stopped (`Ctrl + C`) mid-execution without sending `completed` or `failed`, Node.js previously waited on Redis indefinitely.
-* **Watchdog Inactivity Timeout:** We added a **35-second watchdog timer**. If Python stops emitting events (e.g. crashes or is killed), Node.js automatically emits a `failed` event (`"Agent execution timed out or Python worker disconnected"`) and cleanly terminates the SSE stream.
+- **SSE Heartbeat (Keep-Alive):** Node.js dispatches `event: ping` every **15 seconds** to prevent browser/Nginx proxy timeouts.
+- **Worker Crash Handling:** If Python is stopped (`Ctrl + C`) mid-execution without sending `completed` or `failed`, Node.js previously waited on Redis indefinitely.
+- **Watchdog Inactivity Timeout:** We added a **35-second watchdog timer**. If Python stops emitting events (e.g. crashes or is killed), Node.js automatically emits a `failed` event (`"Agent execution timed out or Python worker disconnected"`) and cleanly terminates the SSE stream.
 
 ---
 
@@ -68,16 +68,16 @@ await publisher.emit_event(
 
 ## 4. Standard Event Contract Types
 
-| Event Type | Purpose |
-| :--- | :--- |
-| `thinking` | Supervisor / router evaluating intent and planning next steps. |
-| `calling_agent` | Handoff to a specialist agent (e.g., flight booking, hotels). |
-| `researching` | Tool execution (e.g. Google Flights, SerpApi, DB search). |
-| `processing` | Safety checks, guardrails, policy validation. |
-| `structuring` | Synthesizing results and structuring final response payload. |
-| `completed` | Terminal event containing final output data. |
-| `failed` | Terminal event indicating error, timeout, or failure. |
-| `ping` | 15s keep-alive heartbeat (ignored by UI business logic). |
+| Event Type      | Purpose                                                        |
+| :-------------- | :------------------------------------------------------------- |
+| `thinking`      | Supervisor / router evaluating intent and planning next steps. |
+| `calling_agent` | Handoff to a specialist agent (e.g., flight booking, hotels).  |
+| `researching`   | Tool execution (e.g. Google Flights, SerpApi, DB search).      |
+| `processing`    | Safety checks, guardrails, policy validation.                  |
+| `structuring`   | Synthesizing results and structuring final response payload.   |
+| `completed`     | Terminal event containing final output data.                   |
+| `failed`        | Terminal event indicating error, timeout, or failure.          |
+| `ping`          | 15s keep-alive heartbeat (ignored by UI business logic).       |
 
 For `interview_intelligence`, the final `completed` event's payload is `{ "message": "<final Markdown report>" }`. The full report is sent once, after synthesis; progress events contain status/count metadata only.
 
@@ -86,6 +86,7 @@ For `interview_intelligence`, the final `completed` event's payload is `{ "messa
 ## 5. Testing Quick Reference
 
 1. **Trigger Agent Run:**
+
    ```bash
    curl -X POST http://localhost:3000/api/agent/run \
      -H "Content-Type: application/json" \
@@ -94,6 +95,7 @@ For `interview_intelligence`, the final `completed` event's payload is `{ "messa
    ```
 
 2. **Stream Execution:**
+
    ```bash
    curl -N http://localhost:3000/api/agent/stream/<RUN_ID>
    ```

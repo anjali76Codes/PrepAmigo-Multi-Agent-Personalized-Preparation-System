@@ -13,7 +13,7 @@ http:
     type: json
     data: |-
       {
-        "query": "Research the interview rounds, reported topics, question patterns, and candidate experiences for a Google SWE. Include recent publicly reported interview-process changes."
+        "query": "Research the interview rounds, reported topics, question patterns, and candidate experiences for a Google SDE. Include recent publicly reported interview-process changes."
       }
   auth: inherit
 

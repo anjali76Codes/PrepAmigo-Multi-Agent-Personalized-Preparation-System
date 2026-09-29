@@ -5,7 +5,7 @@ info:
 
 http:
   method: get
-  url: http://localhost:3000/api/agent/stream/7036e588-d75b-4a9c-ab93-22c475e6bf1c
+  url: "{{EXPRESS-SERVICE}}/api/agent/stream/0599b532-4b7b-4ef5-a6ca-b1b4837362d5"
   auth: inherit
 
 settings:
