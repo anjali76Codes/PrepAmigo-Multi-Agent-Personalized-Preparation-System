@@ -14,7 +14,7 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
     <motion.div
       initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
+      viewport={{ once: false, margin: "-50px" }}
       transition={{ duration: 0.5, delay, ease: "easeOut" }}
       className={className}
     >
@@ -52,7 +52,7 @@ export function RevealStagger({ children, className, delayOffset = 0.1 }: Reveal
       variants={container}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, margin: "-50px" }}
+      viewport={{ once: false, margin: "-50px" }}
       className={className}
     >
       {children}

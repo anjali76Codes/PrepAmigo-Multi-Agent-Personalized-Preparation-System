@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { PageBackground } from '../ui/PageBackground';
 import { useState, useEffect } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+
 
 export function PublicLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

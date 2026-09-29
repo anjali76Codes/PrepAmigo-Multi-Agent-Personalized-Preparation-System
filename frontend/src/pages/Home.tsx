@@ -1,13 +1,16 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Icon } from '../components/ui/Icon';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Reveal, RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
+import { useNavigate } from 'react-router-dom';
+import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
 import { Mascot } from '../components/ui/Mascot';
 import { PageBackground } from '../components/ui/PageBackground';
-import { AGENTS } from '../data/mockData';
+
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ChatInput } from '../components/chat/ChatInput';
+import { ScrollSteps } from '../components/home/ScrollSteps';
+import { WhatYouGet } from '../components/home/WhatYouGet';
+import { InterviewTrap } from '../components/home/InterviewTrap';
+import { PromptToPlan } from '../components/home/PromptToPlan';
+import { Gamification } from '../components/home/Gamification';
+import { BottomCTA } from '../components/home/BottomCTA';
 
 export function Home() {
   const navigate = useNavigate();
@@ -23,7 +26,7 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-bg relative overflow-hidden text-carbon-700">
+    <div className="min-h-screen bg-bg relative overflow-x-clip text-carbon-700">
       <PageBackground />
 
       {/* 1. Hero */}
@@ -58,94 +61,19 @@ export function Home() {
       </motion.section>
 
       {/* 2. Problem */}
-      <section className="py-20 px-6 bg-surface-muted/50 border-y border-border relative z-10">
-        <Reveal className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-carbon-900">The Interview Prep Trap</h2>
-          <RevealStagger className="grid md:grid-cols-3 gap-8 items-start">
-            {[
-              { icon: 'search', title: 'Fragmented Research', desc: 'Scouring Reddit, Blind, and Glassdoor for days just to find what a company actually asks.', translate: 'md:translate-y-0' },
-              { icon: 'help-circle', title: 'Unclear Priorities', desc: 'Not knowing if you should study System Design, LeetCode Hard, or behavioral questions today.', translate: 'md:translate-y-8' },
-              { icon: 'time', title: 'Limited Time', desc: 'Wasting precious hours planning when you only have 3 weeks until the onsite.', translate: 'md:translate-y-16' }
-            ].map((p, i) => (
-              <RevealStaggerItem key={i} className={`${p.translate} transition-transform`}>
-                <Card variant="outlined" className="p-8 text-center hover:-translate-y-2 transition-transform h-full">
-                  <div className="w-16 h-16 bg-navy-100 text-navy-900 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Icon name={p.icon} className="text-3xl" />
-                  </div>
-                  <h3 className="font-bold text-xl mb-3 text-carbon-900">{p.title}</h3>
-                  <p className="text-carbon-500">{p.desc}</p>
-                </Card>
-              </RevealStaggerItem>
-            ))}
-          </RevealStagger>
-        </Reveal>
-      </section>
+      <InterviewTrap />
 
       {/* 3. How it works */}
-      <section className="py-24 px-6 max-w-6xl mx-auto relative z-10 overflow-hidden">
-        <h2 className="text-3xl font-bold text-center mb-16 text-carbon-900">How PrepAmigo Works</h2>
-        
-        <div className="relative w-full max-w-[850px] mx-auto md:h-[650px] flex flex-col md:flex-row items-center justify-center gap-12 md:gap-0 mt-10 md:mt-12">
-          
-          {/* Center Mascot */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, filter: 'blur(10px)' }}
-            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, ease: [0, 0.71, 0.2, 1.01] }}
-            className="md:absolute z-20 order-first md:order-none mb-8 md:mb-0"
-          >
-            <Mascot size="2xl" mood="happy" className="shadow-pop bg-forest-100 ring-[12px] ring-bg" />
-          </motion.div>
-
-          {/* Optional dashed circle in background */}
-          <motion.div 
-             initial={{ opacity: 0, scale: 0.8 }}
-             whileInView={{ opacity: 1, scale: 1 }}
-             viewport={{ once: true }}
-             transition={{ duration: 1, delay: 0.2 }}
-             className="hidden md:block absolute w-[450px] h-[450px] rounded-full border-2 border-dashed border-carbon-200 -z-10" 
-          />
-
-          {/* Orbiting items */}
-          {[
-            { step: '1', title: 'Input', desc: 'Tell us your target role and upload your resume.', variant: 'forest', position: 'md:top-0 md:left-0' },
-            { step: '2', title: 'Analyze', desc: 'Our agents find company expectations and your skill gaps.', variant: 'sunny', position: 'md:top-0 md:right-0' },
-            { step: '3', title: 'Plan', desc: 'We generate a day-by-day study roadmap.', variant: 'coral', position: 'md:bottom-0 md:right-0' },
-            { step: '4', title: 'Adapt', desc: 'The plan shifts based on your quiz scores and missed days.', variant: 'sky', position: 'md:bottom-0 md:left-0' }
-          ].map((s, i) => (
-             <motion.div
-                key={i}
-                className={`w-full max-w-sm md:absolute md:w-64 z-10 ${s.position}`}
-                initial={{ opacity: 0, scale: 0.5, filter: 'blur(10px)' }}
-                whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{
-                    duration: 0.8,
-                    delay: 0.3 + (i * 0.15),
-                    ease: [0, 0.71, 0.2, 1.01],
-                }}
-             >
-                <Card variant={s.variant as any} className="p-6 relative group hover:-translate-y-2 transition-transform text-center shadow-lg h-full">
-                  <div className="w-10 h-10 bg-carbon-900 text-white rounded-full flex items-center justify-center font-bold text-lg absolute -top-5 left-1/2 -translate-x-1/2 shadow-card ring-4 ring-bg">
-                    {s.step}
-                  </div>
-                  <h3 className="font-bold text-lg mt-4 mb-2">{s.title}</h3>
-                  <p className="text-sm opacity-80">{s.desc}</p>
-                </Card>
-             </motion.div>
-          ))}
-        </div>
-      </section>
+      <ScrollSteps />
 
       {/* 4. Agent grid */}
-      <section className="py-20 px-6 bg-surface border-y border-border relative z-10">
+      {/* <section className="py-20 px-6 bg-surface border-y border-border relative z-10">
         <Reveal className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-16 text-carbon-900">The Intelligence Engine</h2>
           <RevealStagger className="grid md:grid-cols-3 gap-4 items-start pb-12">
             {AGENTS.map((a, i) => {
-              const tints = ['forest', 'sunny', 'coral', 'sky', 'navy', 'default'];
-              const tint = tints[i % tints.length] as any;
+              const tints = ['forest', 'sunny', 'coral', 'sky', 'navy', 'default'] as const;
+              const tint = tints[i % tints.length];
               const yOffset = i % 2 === 0 ? 'md:translate-y-0' : 'md:translate-y-12';
               return (
                 <RevealStaggerItem key={i} className={`${yOffset} h-full`}>
@@ -159,143 +87,18 @@ export function Home() {
             })}
           </RevealStagger>
         </Reveal>
-      </section>
+      </section> */}
 
       {/* 5. What the Planner builds */}
-      <section className="py-20 px-6 max-w-6xl mx-auto relative z-10">
-        <Reveal>
-          <h2 className="text-3xl font-bold text-center mb-16 text-carbon-900">What You Get</h2>
-          <RevealStagger className="grid md:grid-cols-2 gap-8">
-            <RevealStaggerItem>
-              <Card variant="navy" className="p-6 flex flex-col h-full hover:-translate-y-1 transition-transform">
-                <h3 className="font-bold text-xl mb-2">Roadmap</h3>
-                <p className="opacity-80 mb-6 text-sm">Day-by-day task lists tailored to your timeframe.</p>
-                <div className="mt-auto bg-white/60 p-4 rounded-card">
-                  <div className="h-12 bg-white/50 rounded-control flex items-center px-4">
-                    <div className="w-4 h-4 rounded-full border-2 border-navy-900 mr-3" />
-                    <div className="h-2 w-32 bg-navy-900/40 rounded-full" />
-                  </div>
-                </div>
-              </Card>
-            </RevealStaggerItem>
-
-            <RevealStaggerItem>
-              <Card variant="coral" className="p-6 flex flex-col h-full hover:-translate-y-1 transition-transform">
-                <h3 className="font-bold text-xl mb-2">Calendar</h3>
-                <p className="opacity-80 mb-6 text-sm">A global view of deadlines and missed tasks.</p>
-                <div className="mt-auto bg-white/60 p-4 rounded-card">
-                  <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: 14 }).map((_, i) => (
-                      <div key={i} className={`h-6 rounded ${i === 5 ? 'bg-amber-600/20 border border-amber-600' : 'bg-white'}`} />
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            </RevealStaggerItem>
-
-            <RevealStaggerItem>
-              <Card variant="sunny" className="p-6 flex flex-col h-full hover:-translate-y-1 transition-transform">
-                <h3 className="font-bold text-xl mb-2">Resource Pack</h3>
-                <p className="opacity-80 mb-6 text-sm">Curated links grouped by start, deep dive, and practice.</p>
-                <div className="mt-auto bg-white/60 p-4 rounded-card">
-                  <div className="space-y-2">
-                    <div className="h-8 bg-white rounded flex items-center px-3">
-                      <Icon name="link" className="mr-2 text-sm opacity-50" />
-                      <div className="h-1.5 w-24 bg-black/10 rounded-full" />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </RevealStaggerItem>
-
-            <RevealStaggerItem>
-              <Card variant="sky" className="p-6 flex flex-col h-full hover:-translate-y-1 transition-transform">
-                <h3 className="font-bold text-xl mb-2">Assessments</h3>
-                <p className="opacity-80 mb-6 text-sm">Quizzes, coding tasks, and flashcard decks.</p>
-                <div className="mt-auto bg-white/60 p-4 rounded-card">
-                  <div className="h-16 bg-white rounded-card flex items-center justify-center p-2">
-                    <div className="font-bold">Q: What is a Bloom Filter?</div>
-                  </div>
-                </div>
-              </Card>
-            </RevealStaggerItem>
-
-            <RevealStaggerItem className="md:col-span-2">
-              <Card variant="forest" className="p-6 flex flex-col h-full hover:-translate-y-1 transition-transform">
-                <h3 className="font-bold text-xl mb-2">Progress Dashboard</h3>
-                <p className="opacity-80 mb-6 text-sm">Track your level, streaks, and XP as you complete real work.</p>
-                <div className="mt-auto bg-white/60 p-4 rounded-card">
-                  <div className="h-4 bg-white rounded-full overflow-hidden mt-2">
-                    <div className="h-full bg-forest-700 w-2/3" />
-                  </div>
-                </div>
-              </Card>
-            </RevealStaggerItem>
-          </RevealStagger>
-        </Reveal>
-      </section>
+      <WhatYouGet />
 
       {/* 6. Worked Example */}
-      <section className="py-20 px-6 bg-surface border-y border-border relative z-10 overflow-hidden">
-        <Reveal className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-8 text-carbon-900">From Prompt to Plan</h2>
-          <Card variant="default" className="p-8">
-            <Card variant="navy" className="p-4 mb-8 font-medium">
-              "I have 45 days. Target: SDE at Company X. Strong in React/Node. Weak in DSA and System Design."
-            </Card>
-
-            <RevealStagger className="space-y-4 border-l-2 border-border ml-4 pl-6 relative">
-              {[
-                { title: 'Company Expects', content: 'Distributed systems, Leetcode Medium/Hard' },
-                { title: 'Candidate Knows', content: 'Frontend architectures, basic APIs' },
-                { title: 'Gaps that matter', content: 'Scalability patterns, Graph algorithms' },
-                { title: 'What to learn', content: 'System Design basics, Load Balancing, BFS/DFS' },
-                { title: 'Time Allocation', content: '70% DSA & Systems, 30% React/Node revision' }
-              ].map((step, i) => (
-                <RevealStaggerItem key={i} className="relative">
-                  <div className="absolute w-3 h-3 bg-carbon-900 rounded-full -left-[31px] top-1.5 ring-4 ring-surface" />
-                  <h4 className="font-bold text-carbon-900">{step.title}</h4>
-                  <p className="text-sm text-carbon-500">{step.content}</p>
-                </RevealStaggerItem>
-              ))}
-            </RevealStagger>
-          </Card>
-        </Reveal>
-      </section>
+      <PromptToPlan />
 
       {/* 7. Gamification */}
-      <section className="py-20 px-6 max-w-6xl mx-auto text-center relative z-10">
-        <Reveal>
-          <h2 className="text-3xl font-bold mb-6 text-carbon-900">Real Work = Real Progress</h2>
-          <p className="text-carbon-500 max-w-2xl mx-auto mb-12">
-            Earn XP, maintain your streak, and unlock titles by completing tasks and passing assessments. Progress here means you're actually getting better, not just spending time in the app.
-          </p>
-          <RevealStagger className="flex justify-center gap-8 flex-wrap">
-            {['5 Day Streak!', '+250 XP', 'Level Up: Architect', 'Badge: DSA Master'].map((badge, i) => (
-              <RevealStaggerItem key={i}>
-                <div className="px-6 py-3 bg-surface border border-border rounded-full font-bold text-carbon-900 shadow-card flex items-center gap-2">
-                  <Icon name="star" className="text-sunny-500" /> {badge}
-                </div>
-              </RevealStaggerItem>
-            ))}
-          </RevealStagger>
-        </Reveal>
-      </section>
+      <Gamification />
 
-      {/* 8. USP / CTA */}
-      <section className="py-24 px-6 bg-carbon-900 text-white text-center relative z-10">
-        <Reveal className="max-w-3xl mx-auto space-y-8">
-          <h2 className="text-4xl font-bold">Tell PrepAmigo where you want to go.</h2>
-          <p className="text-2xl text-white/80">It figures out what you need to learn next.</p>
-          <div className="pt-8">
-            <Link to="/signup">
-              <Button variant="primary" size="lg" className="bg-white text-carbon-900 hover:bg-white/90 shadow-pop">
-                Create your account
-              </Button>
-            </Link>
-          </div>
-        </Reveal>
-      </section>
+      <BottomCTA />
     </div>
   );
 }
