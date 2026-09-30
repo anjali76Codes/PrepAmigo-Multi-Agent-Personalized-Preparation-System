@@ -31,6 +31,11 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
 from agents.company_research_agent import CompanyResearchAgent
+from agents.interview_prep_orchestrator import (
+    InterviewPrepOrchestrator,
+    route_after_evaluate,
+    route_after_prepare,
+)
 from agents.registry import AUTO_WIRED_SPECIALISTS, SPECIALISTS
 from agents.supervisor import supervisor_node
 from graph.router import route_after_agent, route_from_supervisor
@@ -53,6 +58,11 @@ def build_graph():
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("dispatch", dispatch)
     graph.add_node("save_memory", save_memory)
+    interview_prep = InterviewPrepOrchestrator()
+    graph.add_node("interview_prep", interview_prep.prepare)
+    graph.add_node("interview_prep_pause", interview_prep.pause_for_input)
+    graph.add_node("interview_prep_run", interview_prep.run_parallel)
+    graph.add_node("interview_prep_evaluate", interview_prep.evaluate)
     for specialist in AUTO_WIRED_SPECIALISTS:
         graph.add_node(specialist.name, specialist.factory())
         graph.add_edge(specialist.name, "save_memory")
@@ -66,6 +76,19 @@ def build_graph():
     graph.add_conditional_edges("company_research", route_after_agent, {"tools": "cr_guardrails", END: "save_memory"})
     graph.add_conditional_edges("cr_guardrails", route_after_agent, {"tools": "cr_tools", END: "save_memory"})
     graph.add_edge("cr_tools", "company_research")
+
+    graph.add_conditional_edges(
+        "interview_prep",
+        route_after_prepare,
+        {"pause": "interview_prep_pause", "run": "interview_prep_run", "stop": "save_memory"},
+    )
+    graph.add_edge("interview_prep_pause", "interview_prep")
+    graph.add_edge("interview_prep_run", "interview_prep_evaluate")
+    graph.add_conditional_edges(
+        "interview_prep_evaluate",
+        route_after_evaluate,
+        {"pause": "interview_prep_pause", "save": "save_memory"},
+    )
 
     graph.add_edge(START, "load_memory")
     graph.add_edge(START, "supervisor")

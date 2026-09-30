@@ -8,6 +8,8 @@ from agents.registry import DEFAULT_SPECIALIST, SPECIALIST_NAMES
 
 
 def route_from_supervisor(state: dict) -> str:
+    if state.get("workflow_mode") == "interview_prep":
+        return "interview_prep"
     agent = state.get("next_agent")
     return agent if agent in SPECIALIST_NAMES else DEFAULT_SPECIALIST
 

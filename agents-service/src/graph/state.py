@@ -50,6 +50,19 @@ class AgentState(TypedDict):
     # which specialist agent should run next (set by the supervisor/router)
     next_agent: Optional[str]
 
+    # direct structured workflow requests bypass supervisor classification
+    workflow_mode: Optional[str]
+    workflow_input: dict[str, Any]
+    workflow_text_input: Optional[str]
+    workflow_resume_input: dict[str, Any]
+    workflow_status: Optional[str]
+    workflow_question: Optional[dict[str, Any]]
+    workflow_clarification_rounds: int
+    interview_prep_input: dict[str, Any]
+    company_research_result: dict[str, Any]
+    job_intelligence_result: dict[str, Any]
+    interview_prep_result: dict[str, Any]
+
     # long-lived task context — survives across turns via the checkpointer
     task_context: dict[str, Any]
 

@@ -68,6 +68,14 @@ SPECIALISTS: tuple[Specialist, ...] = (
         factory=None,  # tool-calling loop wired in graph/builder.py
     ),
     Specialist(
+        name="interview_prep",
+        description=(
+            "the user wants a combined, company- and role-specific interview-preparation brief "
+            "with both company research and current job-market skills, seniority, and qualifications"
+        ),
+        factory=None,  # bounded parallel workflow wired in graph/builder.py
+    ),
+    Specialist(
         name="chat",
         description=(
             "everything else: questions, advice, study plans, telling you about "

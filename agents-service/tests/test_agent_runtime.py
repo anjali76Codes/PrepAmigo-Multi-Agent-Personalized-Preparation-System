@@ -61,7 +61,7 @@ def test_guardrail_blocks_irreversible_tool_call():
 
 
 def test_search_flights_validates_configuration(monkeypatch):
-    monkeypatch.setattr(search_tools, "settings", Settings(serpapi_api_key=""))
+    monkeypatch.setattr(search_tools, "settings", Settings(serpapi_api_key="", serpapi_enabled=True))
 
     with pytest.raises(RuntimeError, match="SERPAPI_API_KEY"):
         search_tools.search_flights.invoke(
@@ -83,7 +83,7 @@ def test_supervisor_prompt_is_generated_from_registry_and_ends_with_the_instruct
     assert "Latest user message:\nfind me docs on consistent hashing" in prompt
     assert "User: I'm prepping for Stripe" in prompt
     assert prompt.count("Great!") < 60  # earlier turns are truncated
-    assert prompt.rstrip().endswith("research or chat")
+    assert prompt.rstrip().endswith("interview_prep or chat")
 
 
 def test_router_falls_back_for_unknown_agents():
