@@ -1,16 +1,16 @@
-import { useNavigate } from 'react-router-dom';
-import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
-import { Mascot } from '../components/ui/Mascot';
-import { PageBackground } from '../components/ui/PageBackground';
+import { useNavigate } from "react-router-dom";
+import { RevealStagger, RevealStaggerItem } from "../components/ui/Reveal";
+import { Mascot } from "../components/ui/Mascot";
+import { PageBackground } from "../components/ui/PageBackground";
 
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { ChatInput } from '../components/chat/ChatInput';
-import { ScrollSteps } from '../components/home/ScrollSteps';
-import { WhatYouGet } from '../components/home/WhatYouGet';
-import { InterviewTrap } from '../components/home/InterviewTrap';
-import { PromptToPlan } from '../components/home/PromptToPlan';
-import { Gamification } from '../components/home/Gamification';
-import { BottomCTA } from '../components/home/BottomCTA';
+import { motion, useScroll, useTransform } from "framer-motion";
+import { ChatInput } from "../components/chat/ChatInput";
+import { ScrollSteps } from "../components/home/ScrollSteps";
+import { WhatYouGet } from "../components/home/WhatYouGet";
+import { InterviewTrap } from "../components/home/InterviewTrap";
+import { PromptToPlan } from "../components/home/PromptToPlan";
+import { Gamification } from "../components/home/Gamification";
+import { BottomCTA } from "../components/home/BottomCTA";
 
 export function Home() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export function Home() {
 
   const handleChatSubmit = (message: string) => {
     if (message.trim()) {
-      navigate('/app/chat');
+      navigate("/app/chat");
     }
   };
 
@@ -32,30 +32,21 @@ export function Home() {
       {/* 1. Hero */}
       <motion.section
         style={{ scale, filter }}
-        className="relative pt-32 pb-12 px-6 mx-4 rounded-b-[2.5rem] h-[98vh] bg-carbon-900 text-white text-center z-10 shadow-lg"
+        className="relative pt-24 pb-12 px-4 md:px-6 mx-2 md:mx-4 rounded-3xl md:rounded-b-[2.5rem] min-h-[92vh] flex flex-col items-center justify-center bg-carbon-900 text-white text-center z-10 shadow-2xl"
       >
-        <RevealStagger className="max-w-4xl mx-auto space-y-8">
+        <RevealStagger className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center space-y-5 my-auto">
           <RevealStaggerItem>
-            <Mascot size="xl" mood="cheer" className="mb-6 shadow-pop bg-forest-100 mx-auto" />
-          </RevealStaggerItem>
-          <RevealStaggerItem>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
-              Ace your interview.<br /> Without the <span className="text-forest-400 italic">guesswork</span>.
-            </h1>
-          </RevealStaggerItem>
-          <RevealStaggerItem>
-            <p className="text-xl text-carbon-300 max-w-2xl mx-auto leading-relaxed">
-              PrepAmigo creates your personalized, adaptive study plan in seconds.
+            <p className="text-sm sm:text-base md:text-lg text-carbon-300 max-w-xl mx-auto leading-relaxed">
+              PrepAmigo builds your preparation roadmap in seconds.
             </p>
           </RevealStaggerItem>
-          <RevealStaggerItem>
-            <div className="max-w-xl mx-auto mt-8">
-              <ChatInput
-                onSend={handleChatSubmit}
-                placeholder="E.g. I have a frontend interview at Google in 2 weeks..."
-                className="text-left"
-              />
-            </div>
+
+          <RevealStaggerItem className="w-full max-w-2xl mx-auto pt-2">
+            <ChatInput
+              onSend={handleChatSubmit}
+              placeholder="What role, company, or topic are you prepping for?..."
+              className="text-left"
+            />
           </RevealStaggerItem>
         </RevealStagger>
       </motion.section>

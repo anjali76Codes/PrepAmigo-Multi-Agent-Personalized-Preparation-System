@@ -1,4 +1,3 @@
-import { Card } from '../ui/Card';
 import { Icon } from '../ui/Icon';
 import type { Prep } from '../../data/mockData';
 

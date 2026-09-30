@@ -22,11 +22,11 @@ export function PublicLayout() {
       <PageBackground className="fixed inset-0 z-[-1]" />
       
       {/* Navigation */}
-      <header className={`fixed top-0 z-50 transition-all duration-300 w-full ${isScrolled ? 'px-4 pt-4' : 'px-0 pt-0'}`}>
+      <header className="fixed top-0 z-50 transition-all duration-300 w-full px-4 pt-4 md:px-8 md:pt-5">
         <div className={`mx-auto flex items-center justify-between transition-all duration-300 ${
           isScrolled 
-            ? 'max-w-4xl h-16 px-6 rounded-full border border-border bg-bg/80 backdrop-blur-xl shadow-pop text-carbon-700' 
-            : 'max-w-7xl h-20 px-6 border-b border-white/10 bg-carbon-900 text-white'
+            ? 'max-w-4xl h-16 px-6 rounded-full border border-border bg-surface/90 backdrop-blur-xl shadow-pop text-carbon-700' 
+            : 'max-w-7xl h-18 md:h-20 px-6 md:px-8 rounded-2xl md:rounded-full border border-white/15 bg-carbon-900/90 backdrop-blur-xl shadow-2xl text-white'
         }`}>
           <Link to="/" className="flex items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-forest-700 rounded-control">
             <Logo tone={isScrolled ? "default" : "inverse"} />

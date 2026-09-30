@@ -20,11 +20,12 @@ export interface AgentStreamEvent {
 export interface StreamCallbacks {
   onEvent?: (event: AgentStreamEvent) => void;
   onCompleted?: (payload: Record<string, any>) => void;
+  onWaiting?: (payload: Record<string, any>) => void;
   onError?: (error: any) => void;
   onStateChange?: (state: StreamState) => void;
 }
 
-export type StreamStatus = "idle" | "connecting" | "streaming" | "completed" | "failed";
+export type StreamStatus = "idle" | "connecting" | "streaming" | "awaiting_input" | "completed" | "failed";
 
 export interface StreamState {
   status: StreamStatus;

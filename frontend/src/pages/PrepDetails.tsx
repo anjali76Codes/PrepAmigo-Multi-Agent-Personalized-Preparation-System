@@ -12,7 +12,6 @@ import { ResourcePack } from '../components/preps/ResourcePack';
 import { AssessmentCard } from '../components/preps/AssessmentCard';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
-import { Card } from '../components/ui/Card';
 
 export function PrepDetails() {
   const { prepId } = useParams();

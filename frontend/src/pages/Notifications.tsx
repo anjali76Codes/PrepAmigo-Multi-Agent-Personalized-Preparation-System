@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
-import { Card } from '../components/ui/Card';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';

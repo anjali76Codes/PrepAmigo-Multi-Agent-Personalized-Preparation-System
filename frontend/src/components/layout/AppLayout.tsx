@@ -29,11 +29,20 @@ export function AppLayout() {
   const navItems = [
     { to: "/app", icon: "home-outline", label: "Home", exact: true },
     { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
+    {
+      to: "/app/interview-prep",
+      icon: "briefcase-outline",
+      label: "Interview Prep",
+    },
     { to: "/app/preps", icon: "map-outline", label: "Preps" },
     { to: "/app/calendar", icon: "calendar-outline", label: "Calendar" },
-    { to: "/app/practice", icon: "clipboard-outline", label: "Practice" },
+    { to: "/app/roadmap", icon: "git-network-outline", label: "Roadmap" },
     { to: "/app/progress", icon: "bar-chart-outline", label: "Progress" },
-    { to: "/app/notifications", icon: "notifications-outline", label: "Notifications" },
+    {
+      to: "/app/notifications",
+      icon: "notifications-outline",
+      label: "Notifications",
+    },
   ];
 
   return (
@@ -47,7 +56,9 @@ export function AppLayout() {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="hidden md:flex flex-col border-r border-chrome-border bg-chrome text-on-chrome relative overflow-hidden"
       >
-        <div className={`h-16 flex items-center border-b border-chrome-border shrink-0 transition-all ${isSidebarOpen ? 'px-6 justify-between' : 'justify-center'}`}>
+        <div
+          className={`h-16 flex items-center border-b border-chrome-border shrink-0 transition-all ${isSidebarOpen ? "px-6 justify-between" : "justify-center"}`}
+        >
           {isSidebarOpen && (
             <div className="overflow-hidden transition-opacity">
               <Logo tone="inverse" />
@@ -73,13 +84,19 @@ export function AppLayout() {
                   isActive
                     ? "text-on-chrome font-medium"
                     : "text-on-chrome-muted hover:text-on-chrome"
-                } ${isSidebarOpen ? 'px-3' : 'justify-center'}`
+                } ${isSidebarOpen ? "px-3" : "justify-center"}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <div className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? 'bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]' : 'bg-white/5 group-hover:bg-white/10'}`}>
-                    <Icon name={item.icon} className="text-xl text-inherit" tone={isActive ? "default" : "inverse"} />
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? "bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]" : "bg-white/5 group-hover:bg-white/10"}`}
+                  >
+                    <Icon
+                      name={item.icon}
+                      className="text-xl text-inherit"
+                      tone={isActive ? "default" : "inverse"}
+                    />
                   </div>
                   <AnimatePresence>
                     {isSidebarOpen && (
@@ -104,53 +121,59 @@ export function AppLayout() {
             to="/app/settings"
             title={!isSidebarOpen ? "Settings" : undefined}
             className={({ isActive }) =>
-                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${
-                  isActive
-                    ? "text-on-chrome font-medium"
-                    : "text-on-chrome-muted hover:text-on-chrome"
-                } ${isSidebarOpen ? 'px-3' : 'justify-center'}`
-              }
+              `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${
+                isActive
+                  ? "text-on-chrome font-medium"
+                  : "text-on-chrome-muted hover:text-on-chrome"
+              } ${isSidebarOpen ? "px-3" : "justify-center"}`
+            }
           >
-             {({ isActive }) => (
-                <>
-                    <div className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? 'bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]' : 'bg-white/5 group-hover:bg-white/10'}`}>
-                        <Icon name="settings-outline" className="text-xl text-inherit" tone={isActive ? "default" : "inverse"} />
-                    </div>
-                    <AnimatePresence>
-                        {isSidebarOpen && (
-                        <motion.span
-                            initial={{ opacity: 0, width: 0 }}
-                            animate={{ opacity: 1, width: "auto" }}
-                            exit={{ opacity: 0, width: 0 }}
-                            className="ml-3 font-medium text-sm whitespace-nowrap overflow-hidden"
-                        >
-                            Settings
-                        </motion.span>
-                        )}
-                    </AnimatePresence>
-                </>
-             )}
+            {({ isActive }) => (
+              <>
+                <div
+                  className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? "bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]" : "bg-white/5 group-hover:bg-white/10"}`}
+                >
+                  <Icon
+                    name="settings-outline"
+                    className="text-xl text-inherit"
+                    tone={isActive ? "default" : "inverse"}
+                  />
+                </div>
+                <AnimatePresence>
+                  {isSidebarOpen && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: "auto" }}
+                      exit={{ opacity: 0, width: 0 }}
+                      className="ml-3 font-medium text-sm whitespace-nowrap overflow-hidden"
+                    >
+                      Settings
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
           </NavLink>
 
           <button
             onClick={handleLogout}
             title={!isSidebarOpen ? "Logout" : undefined}
-            className={`group w-full flex items-center gap-3 py-2 rounded-xl text-on-chrome-muted hover:text-on-chrome transition-colors focus-visible:outline-chrome-accent ${isSidebarOpen ? 'px-3' : 'justify-center'}`}
+            className={`group w-full flex items-center gap-3 py-2 rounded-xl text-on-chrome-muted hover:text-on-chrome transition-colors focus-visible:outline-chrome-accent ${isSidebarOpen ? "px-3" : "justify-center"}`}
           >
             <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
-                <Icon name="log-out-outline" className="text-xl" tone="inverse" />
+              <Icon name="log-out-outline" className="text-xl" tone="inverse" />
             </div>
             <AnimatePresence>
-                {isSidebarOpen && (
+              {isSidebarOpen && (
                 <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "auto" }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="ml-3 font-medium text-sm whitespace-nowrap overflow-hidden"
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="ml-3 font-medium text-sm whitespace-nowrap overflow-hidden"
                 >
-                    Logout
+                  Logout
                 </motion.span>
-                )}
+              )}
             </AnimatePresence>
           </button>
         </div>
@@ -164,8 +187,15 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <NavLink to="/app/notifications" className="focus-visible:outline-chrome-accent rounded-control">
-              <IconButton icon="notifications-outline" variant="ghost" tone="inverse" />
+            <NavLink
+              to="/app/notifications"
+              className="focus-visible:outline-chrome-accent rounded-control"
+            >
+              <IconButton
+                icon="notifications-outline"
+                variant="ghost"
+                tone="inverse"
+              />
             </NavLink>
 
             {/* Mobile Logout */}
@@ -197,6 +227,11 @@ export function AppLayout() {
         {[
           { to: "/app", icon: "home-outline", label: "Home", exact: true },
           { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
+          {
+            to: "/app/interview-prep",
+            icon: "briefcase-outline",
+            label: "Interview Prep",
+          },
           { to: "/app/preps", icon: "map-outline", label: "Preps" },
           { to: "/app/calendar", icon: "calendar-outline", label: "Calendar" },
         ].map((item) => (
@@ -212,7 +247,11 @@ export function AppLayout() {
           >
             {({ isActive }) => (
               <>
-                <Icon name={item.icon} className="text-xl" tone={isActive ? "inverse" : "default"} />
+                <Icon
+                  name={item.icon}
+                  className="text-xl"
+                  tone={isActive ? "inverse" : "default"}
+                />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </>
             )}

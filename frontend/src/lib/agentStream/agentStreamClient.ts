@@ -96,6 +96,10 @@ export class AgentStreamClient {
             this.isTerminated = true;
             callbacks.onError?.(parsed.payload);
             this.close();
+          } else if (parsed.type === "waiting") {
+            this.isTerminated = true;
+            callbacks.onWaiting?.(parsed.payload);
+            this.close();
           }
         } catch (parseErr) {
           console.error("[AgentStreamClient] Error parsing SSE event payload:", parseErr);

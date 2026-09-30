@@ -47,6 +47,9 @@ export function useAgentStream(baseUrl?: string) {
                 result: payload,
               }));
             },
+            onWaiting: () => {
+              setState((prev) => ({ ...prev, status: "awaiting_input" }));
+            },
             onError: (err: any) => {
               setState((prev) => ({
                 ...prev,
@@ -89,6 +92,9 @@ export function useAgentStream(baseUrl?: string) {
           status: "completed",
           result: payload,
         }));
+      },
+      onWaiting: () => {
+        setState((prev) => ({ ...prev, status: "awaiting_input" }));
       },
       onError: (err: any) => {
         setState((prev) => ({

@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Card } from '../components/ui/Card';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Mascot } from '../components/ui/Mascot';
@@ -91,7 +90,7 @@ export function AppHome() {
                     <p className="text-sm text-chrome-accent font-medium">Due Tomorrow</p>
                   </div>
                 </div>
-                <Link to="/app/practice" className="w-full">
+                <Link to="/app/roadmap" className="w-full">
                   <Button variant="primary" className="w-full bg-chrome-accent hover:bg-chrome-accent/90 text-chrome border-none">Start Quiz</Button>
                 </Link>
               </div>
@@ -106,7 +105,7 @@ export function AppHome() {
                     <p className="text-sm text-carbon-500">12 cards to review</p>
                   </div>
                 </div>
-                <Link to="/app/practice" className="w-full">
+                <Link to="/app/roadmap" className="w-full">
                   <Button variant="outline" className="w-full rounded-xl">Review Now</Button>
                 </Link>
               </div>

@@ -1,12 +1,10 @@
 import { motion } from 'framer-motion';
 import { Icon } from '../ui/Icon';
 import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { FlashcardDeck } from '../practice/FlashcardDeck';
 import { AgentJourney, type JourneyStep } from './AgentJourney'; // NEW
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
-import { Link } from 'react-router-dom';
 
 export interface Message {
   id: string;

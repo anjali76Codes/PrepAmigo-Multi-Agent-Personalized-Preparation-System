@@ -2,7 +2,6 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageBackground } from '../components/ui/PageBackground';
-import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { Mascot } from '../components/ui/Mascot';
 import { GoogleLogin } from "@react-oauth/google";

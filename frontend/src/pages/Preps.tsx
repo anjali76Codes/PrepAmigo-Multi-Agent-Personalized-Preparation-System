@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { Reveal, RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
