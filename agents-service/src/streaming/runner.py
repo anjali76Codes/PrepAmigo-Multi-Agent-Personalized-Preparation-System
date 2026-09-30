@@ -110,6 +110,10 @@ async def execute_agent_stream(
     thread_id: Optional[str] = None,
     user_id: Optional[str] = None,
     use_dummy: Optional[bool] = None,
+    workflow_mode: Optional[str] = None,
+    workflow_input: Optional[Dict[str, Any]] = None,
+    workflow_text_input: Optional[str] = None,
+    resume_input: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Executes the agent workflow. Uses dummy simulation if configured or
     if LLM is unavailable. The real path is agent-agnostic: whichever
@@ -122,21 +126,43 @@ async def execute_agent_stream(
 
     if use_dummy is None:
         use_dummy = os.getenv("USE_DUMMY_STREAM", "true").strip().lower() in {"true", "1", "yes"}
+    if workflow_mode == "interview_prep":
+        use_dummy = False
 
+    if workflow_mode == "interview_prep" and graph is None:
+        await pub.emit_event(
+            run_id=run_id,
+            event_type=EventType.FAILED,
+            payload={"status": "failed", "detail": "The interview-preparation workflow is unavailable."},
+        )
+        return
     if use_dummy or graph is None:
         await run_dummy_agent_stream(run_id=run_id, query=query, publisher=pub, thread_id=tid)
         return
 
     from langchain_core.messages import HumanMessage
+    from langgraph.types import Command
 
     from graph.errors import friendly_error_detail
     from streaming.langgraph_bridge import bridge_graph_turn
 
     logger.info("Starting LangGraph streaming run %s (thread: %s, user: %s)", run_id, tid, user_id or "anonymous")
-    inputs: Dict[str, Any] = {"messages": [HumanMessage(content=query)]}
-    if user_id:
-        inputs["user_id"] = user_id
     config = {"configurable": {"thread_id": tid}}
+    if resume_input is not None:
+        inputs: Any = Command(resume=resume_input)
+    else:
+        inputs = {
+            "messages": [HumanMessage(content=query)],
+            "workflow_mode": workflow_mode,
+            "workflow_input": workflow_input or {},
+            "workflow_text_input": workflow_text_input,
+            "interview_prep_input": {},
+            "workflow_clarification_rounds": 0,
+        }
+        if workflow_mode == "interview_prep":
+            inputs["workflow_input"] = workflow_input or {}
+        if user_id:
+            inputs["user_id"] = user_id
 
     await pub.emit_event(
         run_id=run_id,

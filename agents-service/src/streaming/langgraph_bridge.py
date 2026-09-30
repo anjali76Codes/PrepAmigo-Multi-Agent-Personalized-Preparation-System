@@ -58,12 +58,26 @@ async def bridge_graph_turn(graph: Any, inputs: dict, config: dict) -> AsyncIter
     async for item in stream_turn(graph, inputs, config, tokens=False):
         if item["type"] == "route":
             yield EventType.CALLING_AGENT, {"agent": item["agent"], "message": f"Routed to {item['agent']}"}
+        elif item["type"] == "waiting":
+            payload = dict(item.get("payload", {}))
+            question = payload.get("question")
+            if isinstance(question, str):
+                payload["question"] = {"question": question}
+            yield EventType.WAITING, {**payload, "status": "awaiting_input"}
         elif item["type"] == "step":
             event = item["event"]
             payload = {"agent": event["agent"], "step": event["step"], **event["payload"]}
             yield (EventType.FAILED if event["status"] == "failed" else _event_type_for_step(event["step"])), payload
         elif item["type"] == "final":
-            if item["agent"] == "interview_intelligence":
+            if item["agent"] == "interview_prep":
+                event_type = EventType.FAILED if item.get("status") == "failed" else EventType.COMPLETED
+                yield event_type, {
+                    "agent": item["agent"],
+                    "status": item.get("status", "partial"),
+                    "message": item["content"],
+                    "result": item.get("result"),
+                }
+            elif item["agent"] == "interview_intelligence":
                 yield EventType.COMPLETED, {"message": item["content"]}
             else:
                 yield EventType.COMPLETED, {

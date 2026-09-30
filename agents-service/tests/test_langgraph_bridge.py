@@ -106,3 +106,58 @@ def test_a_failed_step_becomes_failed():
 
     failed = next(payload for kind, payload in events if kind == EventType.FAILED)
     assert failed == {"agent": "chat", "step": "guardrail_check", "error": "blocked"}
+
+
+def test_waiting_interrupt_is_forwarded_as_a_waiting_event(monkeypatch):
+    async def fake_stream_turn(_graph, _inputs, _config, tokens=False):
+        assert tokens is False
+        yield {
+            "type": "waiting",
+            "payload": {
+                "question": "Which role are you targeting at Acme?",
+                "missing_fields": ["role"],
+            },
+        }
+
+    monkeypatch.setattr("streaming.langgraph_bridge.stream_turn", fake_stream_turn)
+
+    events = collect(object())
+
+    assert events == [(
+        EventType.WAITING,
+        {
+            "question": {"question": "Which role are you targeting at Acme?"},
+            "missing_fields": ["role"],
+            "status": "awaiting_input",
+        },
+    )]
+
+
+def test_partial_interview_prep_result_is_a_completed_event():
+    async def fake_stream_turn(_graph, _inputs, _config, tokens=False):
+        yield {
+            "type": "final",
+            "agent": "interview_prep",
+            "content": "One source returned useful data.",
+            "status": "partial",
+            "result": {"status": "partial"},
+        }
+
+    import pytest
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr("streaming.langgraph_bridge.stream_turn", fake_stream_turn)
+    try:
+        events = collect(object())
+    finally:
+        monkeypatch.undo()
+
+    assert events == [(
+        EventType.COMPLETED,
+        {
+            "agent": "interview_prep",
+            "status": "partial",
+            "message": "One source returned useful data.",
+            "result": {"status": "partial"},
+        },
+    )]
