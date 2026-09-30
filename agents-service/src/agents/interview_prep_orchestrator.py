@@ -12,7 +12,7 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field, ValidationError
 from typing_extensions import TypedDict
 
-from agents.company_research_agent import CompanyResearchAgent
+from agents.company_research_node import CompanyResearchNode
 from agents import interview_prep_fields as workflow_fields
 from agents.job_intelligence_agent import JobIntelligenceAgent, JobIntelligenceInput
 from config import get_llm, settings
@@ -48,7 +48,7 @@ class CompanyBranchState(TypedDict, total=False):
 
 def _build_company_branch():
     graph = StateGraph(CompanyBranchState)
-    graph.add_node("company_research", CompanyResearchAgent())
+    graph.add_node("company_research", CompanyResearchNode())
     graph.add_node("cr_guardrails", run_guardrails)
     graph.add_node("cr_tools", ToolNode(COMPANY_RESEARCH_TOOLS, handle_tool_errors=True))
     graph.add_edge(START, "company_research")

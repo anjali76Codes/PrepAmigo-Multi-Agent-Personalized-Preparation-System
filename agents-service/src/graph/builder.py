@@ -30,7 +30,7 @@ step events arrive on stream_mode="custom".
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
-from agents.company_research_agent import CompanyResearchAgent
+from agents.company_research_node import CompanyResearchNode
 from agents.interview_prep_orchestrator import (
     InterviewPrepOrchestrator,
     route_after_evaluate,
@@ -70,7 +70,7 @@ def build_graph():
     # company_research: a tool-calling loop, not a single node, so it isn't
     # auto-wired above (see agents/registry.py); its END still lands on
     # save_memory like every other specialist
-    graph.add_node("company_research", CompanyResearchAgent())
+    graph.add_node("company_research", CompanyResearchNode())
     graph.add_node("cr_guardrails", run_guardrails)
     graph.add_node("cr_tools", ToolNode(COMPANY_RESEARCH_TOOLS, handle_tool_errors=True))
     graph.add_conditional_edges("company_research", route_after_agent, {"tools": "cr_guardrails", END: "save_memory"})

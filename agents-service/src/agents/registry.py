@@ -42,6 +42,12 @@ def _interview_intelligence():
     return InterviewIntelligenceNode()
 
 
+def _company_research():
+    from agents.company_research_node import CompanyResearchNode
+
+    return CompanyResearchNode()
+
+
 SPECIALISTS: tuple[Specialist, ...] = (
     Specialist(
         name="interview_intelligence",
