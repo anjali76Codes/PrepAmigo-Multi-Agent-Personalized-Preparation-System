@@ -1,0 +1,1132 @@
+{
+  "company": "Company X",
+  "role": "Software Engineer",
+  "total_days": 45,
+  "start_date": "2024-06-01",
+  "end_date": "2024-07-15",
+  "user_id": "000000000000000000000001",
+  "plan_name": "Company X Software Engineer Preparation Plan",
+  "sprints": [
+    {
+      "sprint_number": 1,
+      "sprint_name": "DSA Fundamentals",
+      "start_date": "2024-06-01",
+      "end_date": "2024-07-15",
+      "total_days": 7,
+      "sprint_days": [
+        {
+          "day_number": 1,
+          "scheduled_date": "2024-06-01",
+          "topic_title": "Arrays and Hashing",
+          "topic_description": "Learn array traversal, two pointers, and hash maps.",
+          "objectives": [
+            "Understand time complexity",
+            "Solve 5 LeetCode easy problems"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "video",
+              "title": "Arrays 101",
+              "is_required": true,
+              "url": "https://youtube.com/arrays101",
+              "source": "YouTube",
+              "description": "Arrays 101"
+            },
+            {
+              "type": "article",
+              "title": "Hash Map Guide",
+              "is_required": false,
+              "url": "https://medium.com/hashmaps",
+              "source": "Medium",
+              "description": "Hash Map Guide"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 2,
+          "scheduled_date": "2024-06-02",
+          "topic_title": "Two Pointers",
+          "topic_description": "Master the two-pointer technique for sorted arrays.",
+          "objectives": [
+            "Solve 3 medium LeetCode problems"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Two Pointers Pattern",
+              "is_required": true,
+              "url": "https://leetcode.com/two-pointers",
+              "source": "LeetCode",
+              "description": "Two Pointers Pattern"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 3,
+          "scheduled_date": "2024-06-03",
+          "topic_title": "Sliding Window",
+          "topic_description": "Use fixed and variable windows to process contiguous ranges efficiently.",
+          "objectives": [
+            "Implement fixed-size and variable-size windows",
+            "Solve 3 sliding-window problems"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Sliding Window Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/sliding-window/",
+              "source": "LeetCode",
+              "description": "Sliding Window Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 4,
+          "scheduled_date": "2024-06-04",
+          "topic_title": "Prefix Sums",
+          "topic_description": "Build prefix sums to answer range queries and identify subarrays.",
+          "objectives": [
+            "Implement prefix-sum arrays",
+            "Solve 3 range-sum or subarray problems"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Prefix Sum Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/prefix-sum/",
+              "source": "LeetCode",
+              "description": "Prefix Sum Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 5,
+          "scheduled_date": "2024-06-05",
+          "topic_title": "Hashing Patterns",
+          "topic_description": "Apply sets and maps to frequency counting and lookup problems.",
+          "objectives": [
+            "Compare set and map operations and their complexity",
+            "Solve 4 frequency-counting problems"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Hash Table Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/hash-table/",
+              "source": "LeetCode",
+              "description": "Hash Table Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 6,
+          "scheduled_date": "2024-06-06",
+          "topic_title": "Arrays Practice Set",
+          "topic_description": "Combine array traversal, hashing, prefix sums, and two pointers.",
+          "objectives": [
+            "Solve 4 mixed easy and medium problems",
+            "Write down the invariant used in each solution"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Array Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/array/",
+              "source": "LeetCode",
+              "description": "Array Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 7,
+          "scheduled_date": "2024-06-07",
+          "topic_title": "Sprint 1 Review",
+          "topic_description": "Consolidate the week's patterns and revisit problems that took the longest.",
+          "objectives": [
+            "Re-solve 2 previously missed problems without notes",
+            "Record complexity and takeaways for each core pattern"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "article",
+              "title": "Big-O Cheat Sheet",
+              "is_required": false,
+              "url": "https://www.bigocheatsheet.com/",
+              "source": "Article",
+              "description": "Big-O Cheat Sheet"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    },
+    {
+      "sprint_number": 2,
+      "sprint_name": "Linked Lists",
+      "start_date": "2024-06-01",
+      "end_date": "2024-07-15",
+      "total_days": 45,
+      "sprint_days": [
+        {
+          "day_number": 8,
+          "scheduled_date": "2024-06-08",
+          "topic_title": "Singly Linked Lists",
+          "topic_description": "Implement a singly linked list from scratch.",
+          "objectives": [
+            "Understand node structures",
+            "Implement insertion, deletion, and traversal"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "article",
+              "title": "Linked List Guide",
+              "is_required": true,
+              "url": "https://medium.com/linkedlists",
+              "source": "Medium",
+              "description": "Required reading"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 9,
+          "scheduled_date": "2024-06-09",
+          "topic_title": "Fast and Slow Pointers",
+          "topic_description": "Use two pointers moving at different speeds to detect list structure.",
+          "objectives": [
+            "Find a list's midpoint",
+            "Detect a cycle and identify its entry point"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Linked List Cycle",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/linked-list-cycle/",
+              "source": "LeetCode",
+              "description": "Problem description"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 10,
+          "scheduled_date": "2024-06-10",
+          "topic_title": "Reversing Linked Lists",
+          "topic_description": "Reverse linked lists iteratively and recursively.",
+          "objectives": [
+            "Explain the previous, current, and next pointer invariant",
+            "Solve the reverse linked list problem in both styles"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Reverse Linked List",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/reverse-linked-list/",
+              "source": "LeetCode",
+              "description": "Problem description"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 11,
+          "scheduled_date": "2024-06-11",
+          "topic_title": "Merge and Reorder Lists",
+          "topic_description": "Manipulate links to merge sorted lists and reorder nodes.",
+          "objectives": [
+            "Merge two sorted linked lists",
+            "Reorder a list using splitting, reversing, and merging"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Merge Two Sorted Lists",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/merge-two-sorted-lists/",
+              "source": "LeetCode",
+              "description": "Problem description"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 12,
+          "scheduled_date": "2024-06-12",
+          "topic_title": "Doubly Linked Lists",
+          "topic_description": "Study bidirectional links and their tradeoffs for updates.",
+          "objectives": [
+            "Implement a doubly linked list with safe insert and remove operations",
+            "Explain when a doubly linked list is preferable"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "documentation",
+              "title": "Doubly Linked List",
+              "is_required": false,
+              "url": "https://www.geeksforgeeks.org/dsa/doubly-linked-list/",
+              "source": "GeeksforGeeks",
+              "description": "Optional reading"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 13,
+          "scheduled_date": "2024-06-13",
+          "topic_title": "Linked List Problem Set",
+          "topic_description": "Practice pointer manipulation across common linked-list tasks.",
+          "objectives": [
+            "Solve 3 medium linked-list problems",
+            "Test edge cases for empty and single-node lists"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Linked List Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/linked-list/",
+              "source": "LeetCode",
+              "description": "Problem set"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 14,
+          "scheduled_date": "2024-06-14",
+          "topic_title": "Sprint 2 Review",
+          "topic_description": "Review pointer invariants and compare list operations with arrays.",
+          "objectives": [
+            "Re-solve one cycle problem and one reversal problem",
+            "Summarize operation complexity for singly and doubly linked lists"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Linked List Problems",
+              "is_required": false,
+              "url": "https://leetcode.com/tag/linked-list/",
+              "source": "LeetCode",
+              "description": "Optional review"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    },
+    {
+      "sprint_number": 3,
+      "sprint_name": "Stacks, Queues, and Intervals",
+      "start_date": "2024-06-01",
+      "end_date": "2024-07-15",
+      "total_days": 45,
+      "sprint_days": [
+        {
+          "day_number": 15,
+          "scheduled_date": "2024-06-15",
+          "topic_title": "Stack Fundamentals",
+          "topic_description": "Use last-in-first-out behavior to process nested and reversed data.",
+          "objectives": [
+            "Implement stack operations and state their complexity",
+            "Solve 3 valid-parentheses variations"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Valid Parentheses",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/valid-parentheses/",
+              "source": "LeetCode",
+              "description": "Valid Parentheses"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 16,
+          "scheduled_date": "2024-06-16",
+          "topic_title": "Queues and Deques",
+          "topic_description": "Apply first-in-first-out queues and double-ended queues.",
+          "objectives": [
+            "Compare queue, deque, and stack operations",
+            "Solve a queue-based simulation problem"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Queue Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/queue/",
+              "source": "LeetCode",
+              "description": "Queue Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 17,
+          "scheduled_date": "2024-06-17",
+          "topic_title": "Monotonic Stacks",
+          "topic_description": "Maintain a monotonic stack to find next greater or smaller values.",
+          "objectives": [
+            "Identify when a monotonic stack reduces repeated scanning",
+            "Solve 2 next-greater-element problems"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Daily Temperatures",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/daily-temperatures/",
+              "source": "LeetCode",
+              "description": "Daily Temperatures"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 18,
+          "scheduled_date": "2024-06-18",
+          "topic_title": "Min Stack and Expression Parsing",
+          "topic_description": "Track auxiliary state while evaluating or parsing expressions.",
+          "objectives": [
+            "Design a stack that returns its minimum in constant time",
+            "Evaluate a basic postfix expression"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Min Stack",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/min-stack/",
+              "source": "LeetCode",
+              "description": "Min Stack"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 19,
+          "scheduled_date": "2024-06-19",
+          "topic_title": "Interval Sorting and Merging",
+          "topic_description": "Sort interval endpoints and combine overlapping ranges.",
+          "objectives": [
+            "Merge overlapping intervals",
+            "Explain the sort-and-scan invariant"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Merge Intervals",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/merge-intervals/",
+              "source": "LeetCode",
+              "description": "Merge Intervals"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 20,
+          "scheduled_date": "2024-06-20",
+          "topic_title": "Stack and Queue Practice",
+          "topic_description": "Solve mixed problems using the right linear data structure.",
+          "objectives": [
+            "Complete 3 stack or queue problems",
+            "Explain the selected data structure before coding"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Stack Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/stack/",
+              "source": "LeetCode",
+              "description": "Stack Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 21,
+          "scheduled_date": "2024-06-21",
+          "topic_title": "Sprint 3 Review",
+          "topic_description": "Review stack, queue, monotonic-stack, and interval patterns.",
+          "objectives": [
+            "Re-solve one previously missed problem",
+            "Write a short pattern-selection checklist"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Queue Problems",
+              "is_required": false,
+              "url": "https://leetcode.com/tag/queue/",
+              "source": "LeetCode",
+              "description": "Queue Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    },
+    {
+      "sprint_number": 4,
+      "sprint_name": "Binary Search and Sorting",
+      "start_date": "2024-06-01",
+      "end_date": "2024-07-15",
+      "total_days": 45,
+      "sprint_days": [
+        {
+          "day_number": 22,
+          "scheduled_date": "2024-06-22",
+          "topic_title": "Binary Search Fundamentals",
+          "topic_description": "Search sorted arrays while maintaining a precise search interval.",
+          "objectives": [
+            "Implement iterative binary search",
+            "State the loop invariant and termination condition"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Binary Search",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/binary-search/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 23,
+          "scheduled_date": "2024-06-23",
+          "topic_title": "Lower and Upper Bounds",
+          "topic_description": "Find insertion positions and first or last matching values.",
+          "objectives": [
+            "Implement lower-bound and upper-bound searches",
+            "Solve 3 boundary-focused problems"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Search Insert Position",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/search-insert-position/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 24,
+          "scheduled_date": "2024-06-24",
+          "topic_title": "Binary Search on the Answer",
+          "topic_description": "Search a numeric answer space using a monotonic feasibility check.",
+          "objectives": [
+            "Identify a monotonic predicate",
+            "Solve one capacity or minimum-rate problem"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Koko Eating Bananas",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/koko-eating-bananas/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 25,
+          "scheduled_date": "2024-06-25",
+          "topic_title": "Rotated Arrays and Matrix Search",
+          "topic_description": "Adapt binary search when sorted regions are rotated or multidimensional.",
+          "objectives": [
+            "Search a rotated sorted array",
+            "Explain which half can be discarded at each step"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Search in Rotated Sorted Array",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/search-in-rotated-sorted-array/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 26,
+          "scheduled_date": "2024-06-26",
+          "topic_title": "Sorting and Comparators",
+          "topic_description": "Review comparison sorting, stability, and custom sort keys.",
+          "objectives": [
+            "Compare common sorting algorithms and their complexity",
+            "Sort records using a custom comparator or key"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "article",
+              "title": "Sorting Algorithm",
+              "is_required": false,
+              "url": "https://www.geeksforgeeks.org/dsa/sorting-algorithms/",
+              "source": "GeeksforGeeks",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 27,
+          "scheduled_date": "2024-06-27",
+          "topic_title": "Sorting-Based Problems",
+          "topic_description": "Use sorting to simplify duplicate, selection, and interval problems.",
+          "objectives": [
+            "Solve 3 sorting-based problems",
+            "Explain the cost and benefit of sorting each input"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Sorting Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/sorting/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 28,
+          "scheduled_date": "2024-06-28",
+          "topic_title": "Sprint 4 Review",
+          "topic_description": "Consolidate binary-search templates and sorting choices.",
+          "objectives": [
+            "Re-solve one boundary problem and one answer-space problem",
+            "Record edge cases for empty, singleton, and duplicate inputs"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Binary Search Problems",
+              "is_required": false,
+              "url": "https://leetcode.com/tag/binary-search/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    },
+    {
+      "sprint_number": 5,
+      "sprint_name": "Trees and Heaps",
+      "start_date": "2024-06-29",
+      "end_date": "2024-07-05",
+      "total_days": 7,
+      "sprint_days": [
+        {
+          "day_number": 29,
+          "scheduled_date": "2024-06-29",
+          "topic_title": "Tree Structure and Traversals",
+          "topic_description": "Traverse binary trees recursively and iteratively.",
+          "objectives": [
+            "Implement preorder, inorder, and postorder traversals",
+            "Explain recursion state and base cases"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Binary Tree Traversal - LeetCode",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/tree/",
+              "source": "LeetCode",
+              "description": "Binary Tree Traversal"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 30,
+          "scheduled_date": "2024-06-30",
+          "topic_title": "Breadth-First Search on Trees",
+          "topic_description": "Process tree nodes level by level with a queue.",
+          "objectives": [
+            "Implement level-order traversal",
+            "Solve a tree-depth or level-aggregation problem"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Binary Tree Level Order Traversal - LeetCode",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/binary-tree-level-order-traversal/",
+              "source": "LeetCode",
+              "description": "Binary Tree Level Order Traversal"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 31,
+          "scheduled_date": "2024-07-01",
+          "topic_title": "Binary Search Trees",
+          "topic_description": "Use the ordering invariant of binary search trees.",
+          "objectives": [
+            "Validate a binary search tree",
+            "Find a lowest common ancestor in a BST"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Validate Binary Search Tree - LeetCode",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/validate-binary-search-tree/",
+              "source": "LeetCode",
+              "description": "Validate Binary Search Tree"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 32,
+          "scheduled_date": "2024-07-02",
+          "topic_title": "Tree Paths and Recursion",
+          "topic_description": "Track path state and aggregate results through recursive tree walks.",
+          "objectives": [
+            "Solve a root-to-leaf path problem",
+            "Distinguish global results from values returned by recursion"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Path Sum - LeetCode",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/path-sum/",
+              "source": "LeetCode",
+              "description": "Path Sum"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 33,
+          "scheduled_date": "2024-07-03",
+          "topic_title": "Heaps and Priority Queues",
+          "topic_description": "Maintain an efficient minimum or maximum element with a heap.",
+          "objectives": [
+            "Explain heap push and pop complexity",
+            "Solve a top-K elements problem"
+          ],
+          "estimated_minutes": 100,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Kth Largest Element in an Array - LeetCode",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/kth-largest-element-in-an-array/",
+              "source": "LeetCode",
+              "description": "Kth Largest Element in an Array"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 34,
+          "scheduled_date": "2024-07-04",
+          "topic_title": "Tree and Heap Practice",
+          "topic_description": "Apply traversal, ordering, and priority-queue patterns in timed practice.",
+          "objectives": [
+            "Complete 3 medium tree or heap problems",
+            "Revisit any solution with unclear complexity"
+          ],
+          "estimated_minutes": 130,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Heap Problems - LeetCode",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/heap-priority-queue/",
+              "source": "LeetCode",
+              "description": "Heap Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 35,
+          "scheduled_date": "2024-07-05",
+          "topic_title": "Sprint 5 Review",
+          "topic_description": "Review tree traversal templates, BST invariants, and heap use cases.",
+          "objectives": [
+            "Re-implement one traversal and one heap operation from memory",
+            "Summarize when to use a heap instead of sorting"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "article",
+              "title": "Tree Problems - LeetCode",
+              "is_required": false,
+              "url": "https://leetcode.com/tag/tree/",
+              "source": "LeetCode",
+              "description": "Tree Problems"
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    },
+    {
+      "sprint_number": 6,
+      "sprint_name": "Graphs and Dynamic Programming",
+      "start_date": "2024-07-06",
+      "end_date": "2024-07-12",
+      "total_days": 7,
+      "sprint_days": [
+        {
+          "day_number": 36,
+          "scheduled_date": "2024-07-06",
+          "topic_title": "Graph Representations and BFS",
+          "topic_description": "Represent graphs with adjacency lists and traverse them with BFS.",
+          "objectives": [
+            "Build an adjacency list from edges",
+            "Solve a shortest-path-in-an-unweighted-graph problem"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Graph Problems",
+              "is_required": true,
+              "url": "https://leetcode.com/tag/graph/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 37,
+          "scheduled_date": "2024-07-07",
+          "topic_title": "Depth-First Search and Components",
+          "topic_description": "Use DFS to explore connected components and grid regions.",
+          "objectives": [
+            "Implement recursive or iterative DFS",
+            "Solve a connected-components or island-counting problem"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Number of Islands",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/number-of-islands/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 38,
+          "scheduled_date": "2024-07-08",
+          "topic_title": "Topological Sorting",
+          "topic_description": "Order tasks in a directed acyclic graph using indegrees or DFS.",
+          "objectives": [
+            "Detect whether a course dependency graph has a cycle",
+            "Produce a valid topological ordering when possible"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Course Schedule",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/course-schedule/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 39,
+          "scheduled_date": "2024-07-09",
+          "topic_title": "Shortest Paths and Union-Find",
+          "topic_description": "Select a graph strategy for connectivity and weighted path problems.",
+          "objectives": [
+            "Implement disjoint-set union with path compression",
+            "Compare BFS and Dijkstra use cases"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "documentation",
+              "title": "Graph Algorithms",
+              "is_required": false,
+              "url": "https://cp-algorithms.com/graph/",
+              "source": "CP Algorithms",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 40,
+          "scheduled_date": "2024-07-10",
+          "topic_title": "Dynamic Programming Foundations",
+          "topic_description": "Define states and transitions for overlapping subproblems.",
+          "objectives": [
+            "Convert a simple recurrence into memoized and tabulated solutions",
+            "Solve a climbing-stairs variation"
+          ],
+          "estimated_minutes": 110,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Climbing Stairs",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/climbing-stairs/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 41,
+          "scheduled_date": "2024-07-11",
+          "topic_title": "One-Dimensional Dynamic Programming",
+          "topic_description": "Build one-dimensional DP solutions and identify their base cases.",
+          "objectives": [
+            "Solve a house-robber-style problem",
+            "Reduce space when only prior states are needed"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "House Robber",
+              "is_required": true,
+              "url": "https://leetcode.com/problems/house-robber/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 42,
+          "scheduled_date": "2024-07-12",
+          "topic_title": "Sprint 6 Review",
+          "topic_description": "Review graph traversal and introductory DP under a short time limit.",
+          "objectives": [
+            "Complete one graph problem and one DP problem",
+            "State each solution's time and space complexity"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "Dynamic Programming Problems",
+              "is_required": false,
+              "url": "https://leetcode.com/tag/dynamic-programming/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    },
+    {
+      "sprint_number": 7,
+      "sprint_name": "Final Review and Interview Simulation",
+      "start_date": "2024-06-01",
+      "end_date": "2024-07-15",
+      "total_days": 45,
+      "sprint_days": [
+        {
+          "day_number": 43,
+          "scheduled_date": "2024-07-13",
+          "topic_title": "Mixed DSA Assessment",
+          "topic_description": "Complete a timed set spanning arrays, lists, trees, graphs, and DP.",
+          "objectives": [
+            "Solve 3 unseen problems in a 90-minute session",
+            "Classify missed problems by pattern and root cause"
+          ],
+          "estimated_minutes": 120,
+          "references": [
+            {
+              "type": "problem",
+              "title": "LeetCode Problem Set",
+              "is_required": true,
+              "url": "https://leetcode.com/problemset/",
+              "source": "LeetCode",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 44,
+          "scheduled_date": "2024-07-14",
+          "topic_title": "Mock Technical Interview",
+          "topic_description": "Practice explaining and implementing solutions aloud under interview conditions.",
+          "objectives": [
+            "Complete one 45-minute mock interview",
+            "Ask clarifying questions and discuss complexity before coding"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "course",
+              "title": "Pramp",
+              "is_required": false,
+              "url": "https://www.pramp.com/",
+              "source": "Pramp",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        },
+        {
+          "day_number": 45,
+          "scheduled_date": "2024-07-15",
+          "topic_title": "Final Review and Next Steps",
+          "topic_description": "Revisit key notes, resolve remaining gaps, and set a continued practice plan.",
+          "objectives": [
+            "Re-solve 2 high-value missed problems",
+            "Write a short review of strengths and next learning goals"
+          ],
+          "estimated_minutes": 90,
+          "references": [
+            {
+              "type": "documentation",
+              "title": "Interview Preparation Kit",
+              "is_required": false,
+              "url": "https://www.hackerrank.com/interview/interview-preparation-kit",
+              "source": "HackerRank",
+              "description": null
+            }
+          ],
+          "status": "pending",
+          "completed_at": null
+        }
+      ],
+      "completion_percent": 0.0,
+      "status": "pending"
+    }
+  ],
+  "completion_percent": 0.0,
+  "status": "pending"
+}
