@@ -39,10 +39,30 @@ DIM, RESET = "\033[2m", "\033[0m"
 # ---------------------------------------------------------------------------
 
 def show_step(event: dict) -> None:
-    if event["status"] == "running":
-        return
-    mark = "done" if event["status"] == "completed" else f"failed: {event['payload'].get('error', '')}"
-    print(f"{DIM}  · {event['agent']}: {event['step']} {mark}{RESET}", flush=True)
+    from streaming.langgraph_bridge import _event_type_for_step
+
+    event_type = _event_type_for_step(event.get("step", "")).value.upper()
+    status = event.get("status", "running")
+    payload = event.get("payload", {})
+    message = payload.get("message") or f"{event.get('agent')}: {event.get('step')}"
+
+    CYAN = "\033[36m"
+    GREEN = "\033[32m"
+    RED = "\033[31m"
+    YELLOW = "\033[33m"
+    MAGENTA = "\033[35m"
+    DIM = "\033[2m"
+    RESET = "\033[0m"
+
+    color = CYAN if event_type == "RESEARCHING" else (MAGENTA if event_type == "STRUCTURING" else (YELLOW if event_type == "PROCESSING" else GREEN))
+
+    if status == "running":
+        print(f"  {color}[SSE: {event_type} - RUNNING]{RESET} {message}", flush=True)
+    elif status == "completed":
+        print(f"  {GREEN}[SSE: {event_type} - COMPLETED]{RESET} {message}", flush=True)
+    elif status == "failed":
+        err = payload.get("error", "")
+        print(f"  {RED}[SSE: {event_type} - FAILED]{RESET} {message} {DIM}({err}){RESET}", flush=True)
 
 
 async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
@@ -54,7 +74,7 @@ async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
     replying = False
     async for item in stream_turn(graph, inputs, config):
         if item["type"] == "route":
-            print(f"{DIM}  → {item['agent']}{RESET}", flush=True)
+            print(f"\033[33m  [SSE: CALLING_AGENT] → {item['agent']}\033[0m", flush=True)
         elif item["type"] == "step":
             show_step(item["event"])
         elif item["type"] == "token":
@@ -62,6 +82,9 @@ async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
                 print("Agent: ", end="", flush=True)
                 replying = True
             print(item["content"], end="", flush=True)
+        elif item["type"] == "final":
+            if replying:
+                print("\n\033[32m  [SSE: COMPLETED] Turn complete.\033[0m", flush=True)
     print("\n")
 
 
@@ -141,16 +164,41 @@ async def run_company_research(company_name: str, role: str | None = None):
         )
 
     print(f"Query: {query}\n")
-    print("Researching... (this may take 30-60 seconds depending on your LLM)\n")
+    print("Executing Company Research Agent with live SSE stream telemetry...\n")
 
     thread_config = {"configurable": {"thread_id": f"cr-{company_name.lower().replace(' ', '-')}"}}
-    result = await graph.ainvoke({"messages": [HumanMessage(content=query)]}, config=thread_config)
+    replying = False
+    profile_data = {}
 
-    print(f"\n{'='*60}")
-    print("  COMPANY DOSSIER")
+    async for item in stream_turn(graph, {"messages": [HumanMessage(content=query)]}, config=thread_config, tokens=True):
+        if item["type"] == "step":
+            show_step(item["event"])
+        elif item["type"] == "token":
+            if not replying:
+                print(f"\n{'='*60}")
+                print("  [SSE: STRUCTURING] Streaming Dossier Output")
+                print(f"{'='*60}\n")
+                replying = True
+            print(item["content"], end="", flush=True)
+        elif item["type"] == "final":
+            profile_data = (item.get("task_context") or {}).get("company_profile", {})
+
+    print(f"\n\n{'='*60}")
+    print("  [SSE: COMPLETED] Research Complete")
+    print(f"{'='*60}")
+    if profile_data:
+        print(f"  Company      : {profile_data.get('name', company_name)}")
+        if profile_data.get("industry"):
+            print(f"  Industry     : {profile_data.get('industry')}")
+        if profile_data.get("website"):
+            print(f"  Website      : {profile_data.get('website')}")
+        kg = profile_data.get("knowledge_graph") or {}
+        if kg.get("headquarters"):
+            print(f"  Headquarters : {kg.get('headquarters')}")
+        organic = profile_data.get("organic_results") or []
+        news = profile_data.get("recent_developments") or []
+        print(f"  Evidence     : {len(organic)} tech/culture sources, {len(news)} news articles.")
     print(f"{'='*60}\n")
-    print(result["messages"][-1].content)
-    print(f"\n{'='*60}\n")
 
 
 # ---------------------------------------------------------------------------
