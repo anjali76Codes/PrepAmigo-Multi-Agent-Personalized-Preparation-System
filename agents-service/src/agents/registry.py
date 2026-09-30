@@ -48,6 +48,12 @@ def _company_research():
     return CompanyResearchNode()
 
 
+def _skill_gap():
+    from agents.skill_gap_node import SkillGapNode
+
+    return SkillGapNode()
+
+
 SPECIALISTS: tuple[Specialist, ...] = (
     Specialist(
         name="interview_intelligence",

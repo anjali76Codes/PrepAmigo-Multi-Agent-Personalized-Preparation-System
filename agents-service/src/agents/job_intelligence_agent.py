@@ -66,7 +66,7 @@ def get_db():
         from pymongo import MongoClient
 
         mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-        _mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=1500)
+        _mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=500)
     return _mongo_client["prepamigo"]
 
 
@@ -75,13 +75,28 @@ def fetch_google_jobs(query: str, location: str) -> dict[str, Any]:
         return {"error": "SERPAPI_API_KEY is not configured in environment.", "jobs_results": []}
 
     try:
-        params = {
-            "engine": "google_jobs",
-            "q": query,
-            "location": location,
-            "hl": "en",
-            "gl": "us",
-        }
+        clean_loc = (location or "").strip()
+        clean_query = query.strip()
+
+        # "Remote" is a work modality, not a geographic location on Google Jobs.
+        # Passing location="Remote" makes Google search for "Remote, Oregon" (0 results).
+        if clean_loc.lower() == "remote":
+            if "remote" not in clean_query.lower():
+                clean_query = f"{clean_query} remote"
+            params = {
+                "engine": "google_jobs",
+                "q": clean_query,
+                "hl": "en",
+                "gl": "us",
+            }
+        else:
+            params = {
+                "engine": "google_jobs",
+                "q": clean_query,
+                "location": clean_loc,
+                "hl": "en",
+                "gl": "us",
+            }
         return serpapi_search(params)
     except Exception as exc:
         logger.warning("[JobIntelligence] SerpApi request failed: %s", exc)
@@ -102,7 +117,7 @@ def deduplicate_jobs(postings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return deduped
 
 
-async def extract_with_llm(postings: list[dict[str, Any]]) -> dict[str, Any]:
+async def extract_with_llm(postings: list[dict[str, Any]], role: str = "", company: str = "") -> dict[str, Any]:
     empty = {
         "skills": [],
         "seniorityDistribution": {},
@@ -112,6 +127,33 @@ async def extract_with_llm(postings: list[dict[str, Any]]) -> dict[str, Any]:
         "coverage": "low",
     }
     if not postings:
+        if not role:
+            return empty
+        # Baseline role requirement synthesis if no online postings were found
+        fallback_prompt = f"""No live online job postings were retrieved for the role '{role}' at '{company or 'technology companies'}'.
+Generate the standard, typical technical and industry requirements for this role.
+Respond only with valid JSON containing:
+- skills: array of skill objects with "name" (e.g. "Python", "Distributed Systems", "SQL", "APIs"), "category", "priority" ("must_have" | "nice_to_have")
+- seniorityDistribution: object with levels
+- employmentTypes: object with types
+- commonResponsibilities: array of strings
+- commonQualifications: array of strings
+- coverage: "medium"
+"""
+        try:
+            resp = await asyncio.wait_for(
+                get_llm().ainvoke(fallback_prompt, config=INTERNAL_LLM_CONFIG), timeout=25
+            )
+            raw = str(resp.content).strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            data = json.loads(raw.strip())
+            if isinstance(data, dict) and isinstance(data.get("skills"), list):
+                return {**empty, **data, "coverage": "medium"}
+        except Exception:
+            logger.warning("[JobIntelligence] Baseline role synthesis unavailable", exc_info=True)
         return empty
 
     payload = "\n\n".join(
@@ -184,8 +226,10 @@ async def get_job_intelligence_profile(
     if db is None and cache_enabled:
         try:
             db = get_db()
+            db.client.admin.command("ping")
         except Exception:
-            logger.warning("Job Intelligence cache unavailable; continuing without cache", exc_info=True)
+            logger.info("Job Intelligence cache (MongoDB) is unavailable; continuing without cache")
+            db = None
 
     collection = db.job_intelligence_profiles if db is not None else None
     if collection is not None and cache_enabled and not request.force_refresh:
@@ -194,7 +238,7 @@ async def get_job_intelligence_profile(
             if cached:
                 return JobIntelligenceProfile.model_validate(cached).model_dump(mode="json")
         except Exception:
-            logger.warning("Job Intelligence cache read failed; fetching fresh data", exc_info=True)
+            logger.info("Job Intelligence cache read failed; fetching fresh data")
 
     custom_terms = [
         str(value).strip()
@@ -222,15 +266,15 @@ async def get_job_intelligence_profile(
         raw_data = fallback_data
 
     deduped = deduplicate_jobs(postings)
-    extraction = await extract_with_llm(deduped)
+    extraction = await extract_with_llm(deduped, role=request.role, company=request.company)
     now = datetime.utcnow()
     profile = JobIntelligenceProfile.model_validate({
         "normalizedQueryKey": cache_key,
         "company": request.company or "General",
         "role": request.role.strip(),
         "location": request.location.strip(),
-        "isFallback": is_fallback,
-        "fallbackReason": fallback_reason,
+        "isFallback": is_fallback or (not deduped),
+        "fallbackReason": fallback_reason or ("Synthesized standard industry role requirements." if not deduped else None),
         "coverage": extraction.get("coverage")
         if extraction.get("coverage") in {"high", "medium", "low", "none"}
         else ("medium" if deduped else "none"),
@@ -256,7 +300,7 @@ async def get_job_intelligence_profile(
                 upsert=True,
             )
         except Exception:
-            logger.warning("Job Intelligence cache write failed", exc_info=True)
+            logger.info("Job Intelligence cache write skipped (MongoDB unavailable)")
     return profile_data
 
 

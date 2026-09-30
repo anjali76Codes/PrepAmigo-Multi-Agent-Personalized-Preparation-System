@@ -83,7 +83,12 @@ def build_graph():
         {"pause": "interview_prep_pause", "run": "interview_prep_run", "stop": "save_memory"},
     )
     graph.add_edge("interview_prep_pause", "interview_prep")
-    graph.add_edge("interview_prep_run", "interview_prep_evaluate")
+    # Pipeline chain: company+job (parallel) → skill gap → research → evaluate
+    graph.add_node("interview_prep_skill_gap", interview_prep.run_skill_gap)
+    graph.add_node("interview_prep_research", interview_prep.run_research)
+    graph.add_edge("interview_prep_run",       "interview_prep_skill_gap")
+    graph.add_edge("interview_prep_skill_gap", "interview_prep_research")
+    graph.add_edge("interview_prep_research",  "interview_prep_evaluate")
     graph.add_conditional_edges(
         "interview_prep_evaluate",
         route_after_evaluate,

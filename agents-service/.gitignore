@@ -59,3 +59,6 @@ Thumbs.db
 .data/
 graph_db.json
 *.local.json
+
+*.pdf
+*.txt
