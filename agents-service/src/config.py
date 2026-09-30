@@ -19,6 +19,12 @@ class Settings:
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
     serpapi_api_key: str = os.getenv("SERPAPI_API_KEY", "").strip()
+    serpapi_enabled: bool = os.getenv("SERPAPI_ENABLED", "true").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+    serpapi_dummy_data_path: str = os.getenv(
+        "SERPAPI_DUMMY_DATA_PATH", ".data/serpapi_fixtures.json"
+    ).strip()
     log_level: str = os.getenv("LOG_LEVEL", "INFO").strip().upper()
     # rotating log file for inspection (step/tool timings, errors); empty
     # disables file logging and keeps console-only output. Always under
