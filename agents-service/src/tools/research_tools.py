@@ -47,6 +47,7 @@ from langchain_core.tools import tool
 
 from config import settings
 from tools.cache import get_response_cache
+from tools.serpapi_client import serpapi_search, using_dummy_data
 
 logger = logging.getLogger(__name__)
 
@@ -103,25 +104,29 @@ def _valid_http_url(value: Any) -> bool:
 
 
 def _use_mock() -> bool:
+    if not settings.serpapi_enabled:
+        return False
     if not settings.serpapi_api_key:
         logger.warning("SERPAPI_API_KEY not configured; research tools returning mock results")
         return True
     return False
 
 
+def _source_name() -> str:
+    return "dummy" if using_dummy_data() else "serpapi"
+
+
 def _serpapi(params: dict[str, Any], *, use_cache: bool = True) -> dict[str, Any]:
     """One SerpApi call, transparently cached by its exact params."""
-    cache = get_response_cache()
+    cache = get_response_cache() if not using_dummy_data() else None
     if use_cache and cache is not None:
         cached = cache.get("serpapi", params)
         if cached is not None:
             logger.info("serpapi cache hit engine=%s", params.get("engine"))
             return cached
 
-    from serpapi import GoogleSearch
-
     try:
-        results = GoogleSearch({**params, "api_key": settings.serpapi_api_key}).get_dict()
+        results = serpapi_search(params)
     except Exception as exc:
         raise RuntimeError("Research search provider unavailable") from exc
     if results.get("error"):
@@ -156,9 +161,10 @@ def search_technical_docs(query: str, limit: int = 5) -> dict:
     if _use_mock():
         return _mock(query, "documentation", f"https://www.google.com/search?q={quote_plus(query)}")
     raw = _serpapi({"engine": "google", "q": f"{query} documentation OR guide OR tutorial"})
+    source = _source_name()
     return {
         "query": query,
-        "source": "serpapi",
+        "source": source,
         "results": [
             {
                 "title": item.get("title", ""),
@@ -183,7 +189,7 @@ def search_books(topic: str, limit: int = 3) -> dict:
     raw = _serpapi({"engine": "google", "q": f"best books to learn {topic}"})
     return {
         "query": topic,
-        "source": "serpapi",
+        "source": _source_name(),
         "results": [
             {
                 "title": item.get("title", ""),
@@ -209,7 +215,7 @@ def search_academic_papers(topic: str, limit: int = 3) -> dict:
     raw = _serpapi({"engine": "google_scholar", "q": topic})
     return {
         "query": topic,
-        "source": "serpapi",
+        "source": _source_name(),
         "results": [
             {
                 "title": item.get("title", ""),
@@ -234,7 +240,7 @@ def search_youtube_tutorials(query: str, limit: int = 4) -> dict:
     raw = _serpapi({"engine": "youtube", "search_query": query})
     return {
         "query": query,
-        "source": "serpapi",
+        "source": _source_name(),
         "results": [
             {
                 "title": item.get("title", ""),
@@ -285,7 +291,7 @@ def search_google_interview_sources(query: str, limit: int = 5) -> dict:
     overview = _normalize_ai_overview(raw.get("ai_overview") or {})
     return {
         "query": query,
-        "source": "serpapi",
+        "source": _source_name(),
         "results": results,
         "ai_overview": overview,
     }
@@ -307,7 +313,7 @@ def search_google_ai_overview(page_token: str) -> dict:
     if not overview["text"] and not overview["references"]:
         raise RuntimeError("Google AI Overview returned no usable summary or references")
     return {
-        "source": "serpapi",
+        "source": _source_name(),
         "text": overview["text"],
         "results": overview["references"],
     }
@@ -382,7 +388,7 @@ def search_google_related_questions(query: str, limit: int = 5) -> dict:
         for item in raw.get("related_questions", [])[: _clamp_limit(limit)]
         if item.get("question")
     ]
-    return {"query": query, "source": "serpapi", "results": results}
+    return {"query": query, "source": _source_name(), "results": results}
 
 
 @tool
@@ -409,7 +415,7 @@ def search_google_news(query: str, limit: int = 5) -> dict:
             "date": item.get("iso_date") or item.get("date", ""),
             "resource_type": "news",
         })
-    return {"query": query, "source": "serpapi", "results": results}
+    return {"query": query, "source": _source_name(), "results": results}
 
 
 @tool

@@ -4,12 +4,15 @@ import types
 import pytest
 
 import tools.research_tools as research_tools
+import tools.serpapi_client as serpapi_client
 from config import Settings
 
 
 @pytest.fixture
 def no_serpapi(monkeypatch):
-    monkeypatch.setattr(research_tools, "settings", Settings(serpapi_api_key=""))
+    live_settings = Settings(serpapi_api_key="", serpapi_enabled=True)
+    monkeypatch.setattr(research_tools, "settings", live_settings)
+    monkeypatch.setattr(serpapi_client, "settings", live_settings)
 
 
 @pytest.fixture
@@ -19,7 +22,9 @@ def fake_serpapi(monkeypatch):
     wording), with caching disabled: these tests are about response
     parsing, not caching (see test_cache.py and the dedicated caching
     tests below)."""
-    monkeypatch.setattr(research_tools, "settings", Settings(serpapi_api_key="test-key"))
+    live_settings = Settings(serpapi_api_key="test-key", serpapi_enabled=True)
+    monkeypatch.setattr(research_tools, "settings", live_settings)
+    monkeypatch.setattr(serpapi_client, "settings", live_settings)
     monkeypatch.setattr(research_tools, "get_response_cache", lambda: None)
     responses = {
         "google": {
@@ -161,7 +166,9 @@ def test_interview_search_and_ai_overview_use_expected_serpapi_engines(monkeypat
             return {"related_questions": [{"question": "What are the interview rounds?", "snippet": "Candidate question"}]}
         return {}
 
-    monkeypatch.setattr(research_tools, "settings", Settings(serpapi_api_key="test-key"))
+    live_settings = Settings(serpapi_api_key="test-key", serpapi_enabled=True)
+    monkeypatch.setattr(research_tools, "settings", live_settings)
+    monkeypatch.setattr(serpapi_client, "settings", live_settings)
     monkeypatch.setattr(research_tools, "_serpapi", fake_search)
 
     search = research_tools.search_google_interview_sources.invoke({"query": "Acme SWE interview experience"})
@@ -196,7 +203,9 @@ def test_is_low_quality_matches_domain_not_substring(url, expected):
 
 
 def test_search_provider_errors_surface_as_runtime_errors(monkeypatch):
-    monkeypatch.setattr(research_tools, "settings", Settings(serpapi_api_key="k"))
+    live_settings = Settings(serpapi_api_key="k", serpapi_enabled=True)
+    monkeypatch.setattr(research_tools, "settings", live_settings)
+    monkeypatch.setattr(serpapi_client, "settings", live_settings)
     monkeypatch.setattr(research_tools, "get_response_cache", lambda: None)
 
     class FailingSearch:
@@ -268,7 +277,9 @@ def test_fetch_transcript_wraps_provider_failures(monkeypatch):
 def cache_dir(tmp_path, monkeypatch):
     from tools.cache import ResponseCache
 
-    monkeypatch.setattr(research_tools, "settings", Settings(serpapi_api_key="test-key"))
+    live_settings = Settings(serpapi_api_key="test-key", serpapi_enabled=True)
+    monkeypatch.setattr(research_tools, "settings", live_settings)
+    monkeypatch.setattr(serpapi_client, "settings", live_settings)
     cache = ResponseCache(tmp_path)
     monkeypatch.setattr(research_tools, "get_response_cache", lambda: cache)
     return tmp_path

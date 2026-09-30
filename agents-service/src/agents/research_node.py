@@ -55,7 +55,7 @@ def format_module_reply(module: dict[str, Any]) -> str:
     section already cites every link, and the user won't read a second one."""
     reply = module["content_markdown"].rstrip()
     if module.get("uses_mock_sources"):
-        reply += "\n\n_Search ran in mock mode (no SERPAPI_API_KEY): sources above are search-page links, not curated results._"
+        reply += "\n\n_Search ran in mock mode using placeholders or local JSON fixtures, not live research._"
     return reply
 
 

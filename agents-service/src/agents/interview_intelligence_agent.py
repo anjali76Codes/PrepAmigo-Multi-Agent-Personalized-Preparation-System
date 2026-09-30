@@ -287,7 +287,7 @@ class InterviewIntelligenceAgent:
             "video_transcripts": context["transcripts"],
             "source_providers": context["providers"],
             "source_errors": context["errors"],
-            "uses_mock_sources": any(source == "mock" for source in context["providers"].values()),
+            "uses_mock_sources": any(source in {"mock", "dummy"} for source in context["providers"].values()),
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
         context["brief"] = brief

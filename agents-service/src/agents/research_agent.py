@@ -422,7 +422,7 @@ class ContentResearchAgent:
                 {k: t[k] for k in ("video_id", "title", "url", "truncated", "total_chars") if k in t}
                 for t in ctx["transcripts"]
             ],
-            "uses_mock_sources": any(source == "mock" for source in ctx["sources"].values()),
+            "uses_mock_sources": any(source in {"mock", "dummy"} for source in ctx["sources"].values()),
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
         ctx["module"] = module

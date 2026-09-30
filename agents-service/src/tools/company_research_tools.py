@@ -19,6 +19,7 @@ from typing import Any, Optional
 from langchain_core.tools import tool
 
 from config import settings
+from tools.serpapi_client import serpapi_search, using_dummy_data
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def _serpapi_search(params: dict) -> dict:
     Fails gracefully by returning an error dictionary if the request fails
     or if SerpApi reports an error, ensuring the graph node does not crash.
     """
-    if not settings.serpapi_api_key:
+    if settings.serpapi_enabled and not settings.serpapi_api_key:
         logger.error("[CompanyResearchTools] SERPAPI_API_KEY is not configured.")
         return {
             "search_metadata": {"status": "Error"},
@@ -38,10 +39,7 @@ def _serpapi_search(params: dict) -> dict:
         }
 
     try:
-        from serpapi import GoogleSearch  # type: ignore
-
-        params["api_key"] = settings.serpapi_api_key
-        result = GoogleSearch(params).get_dict()
+        result = serpapi_search(params)
     except Exception as exc:
         logger.error("[CompanyResearchTools] SerpApi request exception: %s", exc)
         return {
@@ -62,6 +60,8 @@ def _serpapi_search(params: dict) -> dict:
             "error": err_msg,
         }
 
+    if using_dummy_data():
+        result.setdefault("search_metadata", {})["source"] = "dummy"
     return result
 
 
