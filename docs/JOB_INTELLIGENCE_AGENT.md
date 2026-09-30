@@ -73,12 +73,14 @@ The **Job Intelligence Agent** is a core service in the PrepAmigo platform. It f
 ### `POST /api/agents/job-intelligence`
 
 **Headers:**
+
 ```http
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "company": "Google",
@@ -88,6 +90,7 @@ Content-Type: application/json
 ```
 
 **Response (`200 OK`):**
+
 ```json
 {
   "success": true,
@@ -154,12 +157,12 @@ Content-Type: application/json
 
 ## Error Handling & Status Codes
 
-| Status Code | Reason / Description | Response Format |
-|---|---|---|
-| `400 Bad Request` | Missing required fields (`role` or `location`). | `{"success": false, "error": "Missing required field..."}` |
-| `401 Unauthorized` | Missing or invalid auth token / session cookie. | `{"success": false, "error": "Authentication required"}` |
-| `429 Too Many Requests` | Per-user rate limit exceeded or SerpApi quota reached. | `{"success": false, "error": "Rate limit exceeded..."}` |
-| `500 Internal Server Error` | Unrecoverable internal error (no stack trace leaked). | `{"success": false, "error": "An unexpected error occurred..."}` |
+| Status Code                 | Reason / Description                                   | Response Format                                                  |
+| --------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `400 Bad Request`           | Missing required fields (`role` or `location`).        | `{"success": false, "error": "Missing required field..."}`       |
+| `401 Unauthorized`          | Missing or invalid auth token / session cookie.        | `{"success": false, "error": "Authentication required"}`         |
+| `429 Too Many Requests`     | Per-user rate limit exceeded or SerpApi quota reached. | `{"success": false, "error": "Rate limit exceeded..."}`          |
+| `500 Internal Server Error` | Unrecoverable internal error (no stack trace leaked).  | `{"success": false, "error": "An unexpected error occurred..."}` |
 
 ---
 
@@ -181,3 +184,17 @@ npm run test:job-intel
 ```
 
 This runs a sample query (`Google`, `Software Engineer`, `Mountain View, CA`), displays the normalized output, and immediately re-runs the identical query to demonstrate **instant cache retrieval** without making extra SerpApi calls.
+
+---
+
+## Python LangGraph Integration
+
+The Python Job Intelligence implementation is available as `agents.job_intelligence_agent.JobIntelligenceAgent`, a reusable graph node. It accepts a validated `{company, role, location}` request from the orchestration state, reuses the normalized-query MongoDB cache and existing SerpApi/LLM fallback behavior, and writes its result only to `job_intelligence_result`. The existing Python HTTP routes are compatibility adapters to the same service. The separate Express/TypeScript endpoint remains unchanged.
+
+The `interview_prep` specialist runs this node alongside the Company Research tool-loop subgraph. Branch outputs are isolated until the join, where the ReAct evaluator returns `complete`, `partial`, or `failed`. One failed or timed-out branch does not discard the other branch's output. The evaluator makes one bounded decision and never retries agents automatically. If required input is missing, or the evaluator identifies an ambiguity that requires user input, LangGraph interrupts the current thread and resumes it after clarification; at most three clarification rounds are allowed.
+
+Required workflow fields and their recipients are configured in `agents-service/src/agents/interview_prep_fields.py`. The same schema drives LLM extraction, clarification questions, the dynamic frontend form, and routing to each agent. Add a field definition there and list its recipient agents; update a specialist if it needs domain-specific interpretation of a new field.
+
+To run SerpApi-backed Python tools offline, set `SERPAPI_ENABLED=false` and `SERPAPI_DUMMY_DATA_PATH` to a provider-shaped JSON file. `agents-service/serpapi_fixtures.example.json` demonstrates fixtures for Google Search/News/Jobs/Scholar, YouTube, Google AI Overview, and Google Flights. Outputs identify fixture data as dummy; `USE_DUMMY_STREAM` only controls the scripted SSE demo.
+
+For an end-to-end frontend exercise, open `/app/interview-prep`. The Node gateway routes are `POST /api/agent/interview-prep` to start and `POST /api/agent/interview-prep/resume` to resume. Both require authentication and an idempotency key. Read progress and results from `GET /api/agent/stream/:runId`; a `waiting` SSE event carries `question` and `missing_fields` and closes that run's stream. Resume using the same `threadId` with the newly supplied fields or an `answer`. Completed events include both branch results and a `complete`/`partial` status. Checkpoints currently use process-local `MemorySaver`, so paused workflows cannot survive a Python process restart.
