@@ -9,6 +9,9 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().default(3000),
   LOG_LEVEL: z.enum(["error", "warn", "info", "http", "debug"]).default("info"),
+  ENABLE_AUTH: z.string().optional().transform((value) =>
+    value === undefined ? undefined : ["true", "1", "yes", "on"].includes(value.trim().toLowerCase()),
+  ),
   MONGODB_URI: z.string(),
   GOOGLE_CLIENT_ID: z.string(),
   JWT_SECRET: z.string(),
@@ -28,6 +31,11 @@ const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
   console.error("Invalid environment variables:", _env.error.format());
+  process.exit(1);
+}
+
+if ((_env.data.ENABLE_AUTH || _env.data.NODE_ENV === "production") && !_env.data.JWT_SECRET.trim()) {
+  console.error("JWT_SECRET must be set when authentication is enabled or NODE_ENV=production.");
   process.exit(1);
 }
 

@@ -7,15 +7,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set this flag to True to require authentication for all agents, 
-# or False to bypass authentication (useful for development/testing)
-ENABLE_AUTH = False
+# Set ENABLE_AUTH=true in .env to require JWT auth in development.
+# Production always requires authentication even if the flag is omitted or false.
+ENABLE_AUTH = os.getenv("ENABLE_AUTH", "false").strip().lower() in {"1", "true", "yes", "on"}
+if os.getenv("ENVIRONMENT", "development").strip().lower() == "production":
+    ENABLE_AUTH = True
 
 # This should match the JWT_SECRET in your backend/.env
 JWT_SECRET = os.getenv("JWT_SECRET")
 
 if not JWT_SECRET:
     print("WARNING: JWT_SECRET environment variable is not set!")
+    if ENABLE_AUTH:
+        raise RuntimeError("JWT_SECRET must be configured when ENABLE_AUTH is enabled")
 
 ALGORITHM = "HS256"
 

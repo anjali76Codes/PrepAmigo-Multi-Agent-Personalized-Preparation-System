@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../auth/middleware.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 import {
 	resumeInterviewPrepHandler,
 	interviewPrepFieldsHandler,

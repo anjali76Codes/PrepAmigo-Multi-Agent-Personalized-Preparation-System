@@ -229,7 +229,10 @@ export function InterviewPrep() {
     const message = chatInput.trim();
     if (!message || busy) return;
     setChatInput("");
-    setChatTurns((previous) => [...previous, { speaker: "user", text: message }]);
+    setChatTurns((previous) => [
+      ...previous,
+      { speaker: "user", text: message },
+    ]);
     void submit(status === "awaiting_input", message);
   };
 
@@ -274,9 +277,7 @@ export function InterviewPrep() {
         </header>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]">
-          <section
-            className="rounded-card border border-border bg-white p-5 shadow-card md:p-6"
-          >
+          <section className="rounded-card border border-border bg-white p-5 shadow-card md:p-6">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-control bg-forest-100 text-forest-800">
                 <Icon name="briefcase-outline" className="text-xl" />
@@ -289,14 +290,19 @@ export function InterviewPrep() {
               </div>
             </div>
 
-            <div className="mb-5 inline-flex rounded-control border border-border bg-bg p-1" role="group" aria-label="Input mode">
+            <div
+              className="mb-5 inline-flex rounded-control border border-border bg-bg p-1"
+              role="group"
+              aria-label="Input mode"
+            >
               <button
                 type="button"
                 aria-pressed={inputMode === "chat"}
                 onClick={() => setInputMode("chat")}
                 className={`rounded-control px-3 py-2 text-sm font-semibold ${inputMode === "chat" ? "bg-white text-carbon-900 shadow-card" : "text-carbon-500"}`}
               >
-                <Icon name="chatbubble-ellipses-outline" className="mr-1" /> Chat
+                <Icon name="chatbubble-ellipses-outline" className="mr-1" />{" "}
+                Chat
               </button>
               <button
                 type="button"
@@ -309,48 +315,69 @@ export function InterviewPrep() {
             </div>
 
             {inputMode === "fields" ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {fields.map((field) => (
-                <label key={field.name} className="space-y-1.5">
-                  <span className="flex items-center gap-1 text-xs font-bold uppercase text-carbon-500">
-                    {field.label}
-                    {field.required && <span aria-label="required">*</span>}
-                  </span>
-                  <input
-                    value={values[field.name] || ""}
-                    onChange={(event) =>
-                      setValues((current) => ({
-                        ...current,
-                        [field.name]: event.target.value,
-                      }))
-                    }
-                    maxLength={field.maxLength}
-                    placeholder={field.description}
-                    aria-required={field.required}
-                    className="w-full rounded-control border border-border bg-bg px-3 py-2.5 text-sm outline-none focus:border-forest-700"
-                  />
-                  <span className="block text-[11px] text-carbon-500">
-                    Used by{" "}
-                    {field.recipients
-                      .map((recipient) => recipient.replaceAll("_", " "))
-                      .join(" and ")}
-                  </span>
-                </label>
-              ))}
-            </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {fields.map((field) => (
+                  <label key={field.name} className="space-y-1.5">
+                    <span className="flex items-center gap-1 text-xs font-bold uppercase text-carbon-500">
+                      {field.label}
+                      {field.required && <span aria-label="required">*</span>}
+                    </span>
+                    <input
+                      value={values[field.name] || ""}
+                      onChange={(event) =>
+                        setValues((current) => ({
+                          ...current,
+                          [field.name]: event.target.value,
+                        }))
+                      }
+                      maxLength={field.maxLength}
+                      placeholder={field.description}
+                      aria-required={field.required}
+                      className="w-full rounded-control border border-border bg-bg px-3 py-2.5 text-sm outline-none focus:border-forest-700"
+                    />
+                    <span className="block text-[11px] text-carbon-500">
+                      Used by{" "}
+                      {field.recipients
+                        .map((recipient) => recipient.replaceAll("_", " "))
+                        .join(" and ")}
+                    </span>
+                  </label>
+                ))}
+              </div>
             ) : (
               <div className="space-y-4">
-                <div className="max-h-72 space-y-3 overflow-y-auto rounded-control border border-border bg-bg p-3" aria-live="polite">
+                <div
+                  className="max-h-72 space-y-3 overflow-y-auto rounded-control border border-border bg-bg p-3"
+                  aria-live="polite"
+                >
                   {chatTurns.length === 0 ? (
-                    <p className="text-sm text-carbon-500">Tell me what you know so far. I’ll ask directly for any required details that are missing.</p>
-                  ) : chatTurns.map((turn, index) => (
-                    <div key={`${turn.speaker}-${index}`} className={`max-w-[90%] rounded-control px-3 py-2 text-sm ${turn.speaker === "user" ? "ml-auto bg-forest-800 text-white" : "mr-auto border border-border bg-white text-carbon-900"}`}>
-                      {turn.text}
-                    </div>
-                  ))}
-                  {busy && <p className="text-xs text-carbon-500">Reading your message…</p>}
+                    <p className="text-sm text-carbon-500">
+                      Tell me what you know so far. I’ll ask directly for any
+                      required details that are missing.
+                    </p>
+                  ) : (
+                    chatTurns.map((turn, index) => (
+                      <div
+                        key={`${turn.speaker}-${index}`}
+                        className={`max-w-[90%] rounded-control px-3 py-2 text-sm ${turn.speaker === "user" ? "ml-auto bg-forest-800 text-white" : "mr-auto border border-border bg-white text-carbon-900"}`}
+                      >
+                        {turn.text}
+                      </div>
+                    ))
+                  )}
+                  {busy && (
+                    <p className="text-xs text-carbon-500">
+                      Reading your message…
+                    </p>
+                  )}
                 </div>
-                <form onSubmit={(event) => { event.preventDefault(); sendChatMessage(); }} className="flex items-end gap-2">
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    sendChatMessage();
+                  }}
+                  className="flex items-end gap-2"
+                >
                   <textarea
                     value={chatInput}
                     onChange={(event) => setChatInput(event.target.value)}
@@ -360,7 +387,21 @@ export function InterviewPrep() {
                     aria-label="Tell the orchestrator about your interview"
                     className="min-w-0 flex-1 resize-y rounded-control border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-forest-700"
                   />
-                  <button type="submit" disabled={busy || !chatInput.trim()} aria-label={status === "awaiting_input" ? "Answer question" : "Send message"} title={status === "awaiting_input" ? "Answer question" : "Send message"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-forest-800 text-white disabled:opacity-50">
+                  <button
+                    type="submit"
+                    disabled={busy || !chatInput.trim()}
+                    aria-label={
+                      status === "awaiting_input"
+                        ? "Answer question"
+                        : "Send message"
+                    }
+                    title={
+                      status === "awaiting_input"
+                        ? "Answer question"
+                        : "Send message"
+                    }
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-forest-800 text-white disabled:opacity-50"
+                  >
                     <Icon name="send-outline" />
                   </button>
                 </form>
@@ -409,18 +450,20 @@ export function InterviewPrep() {
               </p>
             )}
 
-            {inputMode === "fields" && <div className="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex items-center gap-2 rounded-control bg-forest-800 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Icon name="flash-outline" /> Run both agents
-              </button>
-              <span className="text-xs text-carbon-500">
-                Blank fields pause the workflow for clarification.
-              </span>
-            </div>}
+            {inputMode === "fields" && (
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-control bg-forest-800 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="flash-outline" /> Run both agents
+                </button>
+                <span className="text-xs text-carbon-500">
+                  Blank fields pause the workflow for clarification.
+                </span>
+              </div>
+            )}
           </section>
 
           <section
