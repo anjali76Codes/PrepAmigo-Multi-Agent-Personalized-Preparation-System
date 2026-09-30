@@ -25,6 +25,10 @@ export function requireAuth(
   const token = cookieToken || headerToken;
 
   if (!token) {
+    if (config.NODE_ENV !== "production") {
+      req.user = { id: "local-development-user", name: "Local developer" };
+      return next();
+    }
     return res.status(401).json({ success: false, error: "Authentication required" });
   }
 

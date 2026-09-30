@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
+import { AuthenticatedRequest } from "../auth/middleware.js";
 import { config } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 import { redisClient, createRedisSubscriber } from "../config/redis.js";
-import { AgentStreamEvent, RunAgentRequestBody } from "./types.js";
+import { AgentStreamEvent, InterviewPrepField, InterviewPrepRequestBody, RunAgentRequestBody } from "./types.js";
 
 /** Helper to format and write SSE messages compliant with standard SSE protocol */
 function sendSSEMessage(res: Response, event: AgentStreamEvent): void {
@@ -100,6 +101,200 @@ export async function runAgentHandler(
   }
 }
 
+type WorkflowRun = { runId: string; threadId: string };
+type WorkflowReservation = { run: WorkflowRun; created: boolean };
+
+function optionalInput(value: unknown, field: string): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || value.length > 200) {
+    throw new Error(`${field} must be a string of at most 200 characters.`);
+  }
+  return value.trim() || undefined;
+}
+
+function workflowInput(body: InterviewPrepRequestBody): Record<string, string> {
+  const fields: Record<string, string> = {};
+  if (body.fields !== undefined && (!body.fields || typeof body.fields !== "object" || Array.isArray(body.fields))) {
+    throw new Error("fields must be an object of string values.");
+  }
+  for (const [key, value] of Object.entries(body.fields || {})) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(key)) throw new Error("Invalid workflow field name.");
+    const normalized = optionalInput(value, key);
+    if (normalized) fields[key] = normalized;
+  }
+  for (const field of ["company", "role", "location"] as const) {
+    const normalized = optionalInput(body[field], field);
+    if (normalized) fields[field] = normalized;
+  }
+  return fields;
+}
+
+function pythonAuthHeaders(req: AuthenticatedRequest): Record<string, string> {
+  const sessionToken = (req as any).cookies?.session;
+  const bearerToken = req.headers.authorization || (sessionToken ? `Bearer ${sessionToken}` : undefined);
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (bearerToken) headers.Authorization = bearerToken;
+  return headers;
+}
+
+async function reserveWorkflowRun(
+  userId: string,
+  idempotencyKey: string,
+  threadId: string,
+): Promise<WorkflowReservation> {
+  const key = `agent:workflow:idempotency:${encodeURIComponent(userId)}:${encodeURIComponent(idempotencyKey)}`;
+  const run = { runId: uuidv4(), threadId };
+  const reserved = await redisClient.set(key, JSON.stringify(run), "EX", 86400, "NX");
+  if (reserved === "OK") return { run, created: true };
+
+  const existing = await redisClient.get(key);
+  if (existing) return { run: JSON.parse(existing) as WorkflowRun, created: false };
+  throw new Error("A workflow request with this idempotency key is already being registered.");
+}
+
+function triggerInterviewPrep(
+  req: AuthenticatedRequest,
+  run: WorkflowRun,
+  userId: string,
+  input: Record<string, string>,
+  resume = false,
+  userMessage?: string,
+): void {
+  const query = resume
+    ? userMessage || "Continue my interview preparation request with the clarification provided."
+    : userMessage ||
+      `Prepare interview research for ${[
+        input.company && `company ${input.company}`,
+        input.role && `role ${input.role}`,
+        input.location && `location ${input.location}`,
+      ].filter(Boolean).join(", ") || "my next role"}.`;
+  fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/execute`, {
+    method: "POST",
+    headers: pythonAuthHeaders(req),
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({
+      runId: run.runId,
+      query,
+      thread_id: run.threadId,
+      user_id: userId,
+      workflow_mode: "interview_prep",
+      workflow_input: resume ? {} : input,
+      workflow_text_input: resume ? null : userMessage || null,
+      resume_input: resume ? input : null,
+    }),
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        logger.error("Python interview-prep trigger failed", { runId: run.runId, status: response.status });
+        await emitFailureToRedis(run.runId, "The interview-preparation service could not start this request.");
+      }
+    })
+    .catch(async (err) => {
+      logger.error("Python interview-prep service is unreachable", { runId: run.runId, error: err?.message });
+      await emitFailureToRedis(run.runId, "The interview-preparation service is currently unavailable.");
+    });
+}
+
+function validateIdempotencyKey(value: unknown): string {
+  if (typeof value !== "string" || !value.trim() || value.length > 128) {
+    throw new Error("idempotencyKey is required and must be at most 128 characters.");
+  }
+  return value.trim();
+}
+
+function validateWorkflowMessage(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || value.length > 4000) {
+    throw new Error("message must be a string of at most 4000 characters.");
+  }
+  return value.trim() || undefined;
+}
+
+export async function startInterviewPrepHandler(
+  req: AuthenticatedRequest & { body: InterviewPrepRequestBody },
+  res: Response,
+): Promise<void> {
+  try {
+    const userId = req.user?.id || req.user?.sub;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Authentication required" });
+      return;
+    }
+    const input = workflowInput(req.body || {});
+    const message = validateWorkflowMessage(req.body?.message);
+    const idempotencyKey = validateIdempotencyKey(req.body?.idempotencyKey);
+    const candidateThreadId = `interview-prep-${encodeURIComponent(userId)}-${uuidv4()}`;
+    const reservation = await reserveWorkflowRun(userId, idempotencyKey, candidateThreadId);
+    if (reservation.created) triggerInterviewPrep(req, reservation.run, userId, input, false, message);
+    res.status(202).json({ success: true, ...reservation.run });
+  } catch (error: any) {
+    const status = error?.message?.includes("required")
+      || error?.message?.includes("must be a string")
+      || error?.message?.includes("fields must")
+      || error?.message?.includes("Invalid workflow field") ? 400 : 503;
+    logger.warn("Could not start interview-prep workflow", { error: error?.message });
+    res.status(status).json({ success: false, error: status === 400 ? error.message : "Could not register the workflow request." });
+  }
+}
+
+export async function resumeInterviewPrepHandler(
+  req: AuthenticatedRequest & { body: InterviewPrepRequestBody },
+  res: Response,
+): Promise<void> {
+  try {
+    const userId = req.user?.id || req.user?.sub;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Authentication required" });
+      return;
+    }
+    const threadId = req.body?.threadId;
+    const threadPrefix = `interview-prep-${encodeURIComponent(userId)}-`;
+    if (typeof threadId !== "string" || !threadId.startsWith(threadPrefix) || threadId.length > 128) {
+      res.status(404).json({ success: false, error: "Workflow thread was not found." });
+      return;
+    }
+    const input = workflowInput(req.body || {});
+    const answer = validateWorkflowMessage(req.body?.answer);
+    if (answer) input.answer = answer;
+    const message = validateWorkflowMessage(req.body?.message);
+    if (message) input.answer = message;
+    if (!Object.keys(input).length) {
+      res.status(400).json({ success: false, error: "Provide at least one clarification field or answer." });
+      return;
+    }
+    const idempotencyKey = validateIdempotencyKey(req.body?.idempotencyKey);
+    const reservation = await reserveWorkflowRun(userId, idempotencyKey, threadId);
+    if (reservation.created) triggerInterviewPrep(req, reservation.run, userId, input, true, message);
+    res.status(202).json({ success: true, ...reservation.run });
+  } catch (error: any) {
+    const status = error?.message?.includes("required")
+      || error?.message?.includes("must be a string")
+      || error?.message?.includes("fields must")
+      || error?.message?.includes("Invalid workflow field") ? 400 : 503;
+    logger.warn("Could not resume interview-prep workflow", { error: error?.message });
+    res.status(status).json({ success: false, error: status === 400 ? error.message : "Could not register the workflow resume." });
+  }
+}
+
+export async function interviewPrepFieldsHandler(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const response = await fetch(`${config.AGENTS_SERVICE_URL}/api/interview-prep/fields`, {
+      headers: pythonAuthHeaders(req),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new Error(`Python service returned ${response.status}`);
+    const payload = await response.json() as { fields?: InterviewPrepField[] };
+    if (!Array.isArray(payload.fields)) throw new Error("Python service returned an invalid field schema");
+    res.status(200).json({ success: true, fields: payload.fields });
+  } catch (error: any) {
+    logger.warn("Could not load interview-prep field schema", { error: error?.message });
+    res.status(503).json({ success: false, error: "Interview-preparation fields are temporarily unavailable." });
+  }
+}
+
 /**
  * GET /api/agent/stream/:runId
  * Resilient SSE endpoint supporting history replay, multiplexed subscriptions,
@@ -136,7 +331,7 @@ export async function streamAgentHandler(
   let heartbeatTimer: NodeJS.Timeout | null = null;
   let inactivityTimer: NodeJS.Timeout | null = null;
 
-  const MAX_INACTIVITY_MS = 35000; // If no events for 35s, assume worker crashed/dead
+  const MAX_INACTIVITY_MS = 90000; // Covers bounded parallel branches plus final evaluation.
   const subscriber = createRedisSubscriber();
 
   // Resets the worker inactivity watchdog
@@ -229,7 +424,7 @@ export async function streamAgentHandler(
             shouldSend = true;
           }
 
-          if (event.type === "completed" || event.type === "failed") {
+          if (event.type === "completed" || event.type === "failed" || event.type === "waiting") {
             hasTerminalEvent = true;
           }
         } catch (parseErr) {
@@ -263,7 +458,7 @@ export async function streamAgentHandler(
         }
 
         // Terminal event boundary
-        if (event.type === "completed" || event.type === "failed") {
+        if (event.type === "completed" || event.type === "failed" || event.type === "waiting") {
           logger.info(`[Agent Gateway] Terminal event received. Cleaning up stream for runId ${runId}`);
           cleanup();
         }

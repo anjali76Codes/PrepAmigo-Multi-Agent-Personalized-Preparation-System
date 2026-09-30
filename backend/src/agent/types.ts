@@ -25,3 +25,23 @@ export interface RunAgentRequestBody {
 export interface RunAgentResponse {
   runId: string;
 }
+
+export interface InterviewPrepRequestBody {
+  company?: string;
+  role?: string;
+  location?: string;
+  threadId?: string;
+  idempotencyKey?: string;
+  answer?: string;
+  message?: string;
+  fields?: Record<string, string>;
+}
+
+export interface InterviewPrepField {
+  name: string;
+  label: string;
+  description: string;
+  required: boolean;
+  recipients: string[];
+  maxLength: number;
+}
