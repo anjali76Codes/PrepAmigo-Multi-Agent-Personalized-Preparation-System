@@ -20,6 +20,7 @@ Two modes for local development and testing:
 
 import argparse
 import asyncio
+import time
 
 from langchain_core.messages import HumanMessage
 
@@ -39,10 +40,30 @@ DIM, RESET = "\033[2m", "\033[0m"
 # ---------------------------------------------------------------------------
 
 def show_step(event: dict) -> None:
-    if event["status"] == "running":
-        return
-    mark = "done" if event["status"] == "completed" else f"failed: {event['payload'].get('error', '')}"
-    print(f"{DIM}  · {event['agent']}: {event['step']} {mark}{RESET}", flush=True)
+    from streaming.langgraph_bridge import _event_type_for_step
+
+    event_type = _event_type_for_step(event.get("step", "")).value.upper()
+    status = event.get("status", "running")
+    payload = event.get("payload", {})
+    message = payload.get("message") or f"{event.get('agent')}: {event.get('step')}"
+
+    CYAN = "\033[36m"
+    GREEN = "\033[32m"
+    RED = "\033[31m"
+    YELLOW = "\033[33m"
+    MAGENTA = "\033[35m"
+    DIM = "\033[2m"
+    RESET = "\033[0m"
+
+    color = CYAN if event_type == "RESEARCHING" else (MAGENTA if event_type == "STRUCTURING" else (YELLOW if event_type == "PROCESSING" else GREEN))
+
+    if status == "running":
+        print(f"  {color}[SSE: {event_type} - RUNNING]{RESET} {message}", flush=True)
+    elif status == "completed":
+        print(f"  {GREEN}[SSE: {event_type} - COMPLETED]{RESET} {message}", flush=True)
+    elif status == "failed":
+        err = payload.get("error", "")
+        print(f"  {RED}[SSE: {event_type} - FAILED]{RESET} {message} {DIM}({err}){RESET}", flush=True)
 
 
 async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
@@ -54,7 +75,7 @@ async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
     replying = False
     async for item in stream_turn(graph, inputs, config):
         if item["type"] == "route":
-            print(f"{DIM}  → {item['agent']}{RESET}", flush=True)
+            print(f"\033[33m  [SSE: CALLING_AGENT] → {item['agent']}\033[0m", flush=True)
         elif item["type"] == "step":
             show_step(item["event"])
         elif item["type"] == "token":
@@ -62,6 +83,9 @@ async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
                 print("Agent: ", end="", flush=True)
                 replying = True
             print(item["content"], end="", flush=True)
+        elif item["type"] == "final":
+            if replying:
+                print("\n\033[32m  [SSE: COMPLETED] Turn complete.\033[0m", flush=True)
     print("\n")
 
 
@@ -141,16 +165,271 @@ async def run_company_research(company_name: str, role: str | None = None):
         )
 
     print(f"Query: {query}\n")
-    print("Researching... (this may take 30-60 seconds depending on your LLM)\n")
+    print("Executing Company Research Agent with live SSE stream telemetry...\n")
 
     thread_config = {"configurable": {"thread_id": f"cr-{company_name.lower().replace(' ', '-')}"}}
-    result = await graph.ainvoke({"messages": [HumanMessage(content=query)]}, config=thread_config)
+    replying = False
+    profile_data = {}
+    start_time = time.perf_counter()
 
-    print(f"\n{'='*60}")
-    print("  COMPANY DOSSIER")
+    async for item in stream_turn(graph, {"messages": [HumanMessage(content=query)]}, config=thread_config, tokens=True):
+        if item["type"] == "step":
+            show_step(item["event"])
+        elif item["type"] == "token":
+            if not replying:
+                print(f"\n{'='*60}")
+                print("  [SSE: STRUCTURING] Streaming Dossier Output")
+                print(f"{'='*60}\n")
+                replying = True
+            print(item["content"], end="", flush=True)
+        elif item["type"] == "final":
+            profile_data = (item.get("task_context") or {}).get("company_profile", {})
+
+    elapsed_sec = time.perf_counter() - start_time
+    print(f"\n\n{'='*60}")
+    print("  [SSE: COMPLETED] Research Complete")
+    print(f"{'='*60}")
+    if profile_data:
+        print(f"  Company      : {profile_data.get('name', company_name)}")
+        if profile_data.get("industry"):
+            print(f"  Industry     : {profile_data.get('industry')}")
+        if profile_data.get("website"):
+            print(f"  Website      : {profile_data.get('website')}")
+        kg = profile_data.get("knowledge_graph") or {}
+        if kg.get("headquarters"):
+            print(f"  Headquarters : {kg.get('headquarters')}")
+        organic = profile_data.get("organic_results") or []
+        news = profile_data.get("recent_developments") or []
+        print(f"  Evidence     : {len(organic)} tech/culture sources, {len(news)} news articles.")
+    print(f"  Time Elapsed : {elapsed_sec:.2f}s")
     print(f"{'='*60}\n")
-    print(result["messages"][-1].content)
-    print(f"\n{'='*60}\n")
+
+
+# ---------------------------------------------------------------------------
+# Full Pipeline Runner (--prep mode: orchestrator → skill gap → research)
+# ---------------------------------------------------------------------------
+
+DUMMY_RESUME = """
+John Doe — Software Engineer
+
+Skills: Python, JavaScript, REST APIs, Git, Docker, PostgreSQL
+
+Experience:
+- Backend Engineer at StartupXYZ (2 years): Built REST APIs in Python/FastAPI,
+  maintained PostgreSQL databases, deployed services on AWS EC2.
+- Junior Developer at AgencyABC (1 year): Frontend work in JavaScript/React.
+
+Projects:
+- URL Shortener: Python + FastAPI + Redis. Deployed on AWS.
+- Personal Portfolio: React + Tailwind CSS.
+
+Education: B.Sc. Computer Science, State University (2021)
+"""
+
+
+def _resource_type_counts(resources: list[dict]) -> str:
+    """Summarize resource counts by type for display."""
+    counts: dict[str, int] = {}
+    for r in resources:
+        rt = r.get("resource_type", "other")
+        counts[rt] = counts.get(rt, 0) + 1
+    return ", ".join(f"{c} {t}s" for t, c in sorted(counts.items()) if c)
+
+
+async def run_full_prep(company: str, role: str, location: str, resume_text: str):
+    """
+    Runs the full interview prep pipeline in silent mode (no SSE noise printed).
+    All state passes internally between agents. Displays only the final
+    research output — exactly what the Planner Agent would receive as input.
+
+    Uses a minimal isolated graph (no supervisor / memory nodes) so this
+    test runs the orchestration chain directly.
+    """
+    from agents.interview_prep_orchestrator import (
+        InterviewPrepOrchestrator,
+        route_after_evaluate,
+        route_after_prepare,
+    )
+    from graph.state import AgentState
+    from langgraph.graph import StateGraph, START, END
+    from memory.store import get_checkpointer
+
+    W = 68
+    BOLD, GREEN, YELLOW, RED, CYAN, DIM, RESET = (
+        "\033[1m", "\033[32m", "\033[33m", "\033[31m", "\033[36m", "\033[2m", "\033[0m"
+    )
+
+    print(f"\n{'═'*W}")
+    print(f"  {BOLD}PrepAmigo — Full Pipeline Test{RESET}")
+    print(f"  Company  : {BOLD}{company}{RESET}  │  Role : {role}  │  Location : {location}")
+    has_resume = bool(resume_text.strip())
+    print(f"  Resume   : {'provided — gap analysis will run' if has_resume else 'none — gap step will be skipped'}")
+    serpapi_mode = f"{GREEN}live API (SERPAPI_ENABLED=true){RESET}" if settings.serpapi_enabled else f"{DIM}dummy fixtures (SERPAPI_ENABLED=false){RESET}"
+    print(f"  SerpApi  : {serpapi_mode}")
+    print(f"{'═'*W}")
+    print(f"\n  {CYAN}Running pipeline...{RESET} All state passes internally between agents.\n")
+
+    # Minimal isolated graph: no supervisor, no memory nodes
+    # Wired identically to builder.py's interview_prep section
+    interview_prep = InterviewPrepOrchestrator()
+    g = StateGraph(AgentState)
+    g.add_node("prep",          interview_prep.prepare)
+    g.add_node("prep_run",      interview_prep.run_parallel)
+    g.add_node("prep_skill_gap",interview_prep.run_skill_gap)
+    g.add_node("prep_research", interview_prep.run_research)
+    g.add_node("prep_evaluate", interview_prep.evaluate)
+    g.add_edge(START, "prep")
+    g.add_conditional_edges(
+        "prep", route_after_prepare,
+        {"run": "prep_run", "pause": END, "stop": END},
+    )
+    g.add_edge("prep_run",       "prep_skill_gap")
+    g.add_edge("prep_skill_gap", "prep_research")
+    g.add_edge("prep_research",  "prep_evaluate")
+    g.add_conditional_edges(
+        "prep_evaluate", route_after_evaluate,
+        {"save": END, "pause": END},
+    )
+    graph = g.compile(checkpointer=get_checkpointer())
+
+    inputs = {
+        "messages": [HumanMessage(content=f"Prepare me for {role} at {company} in {location}")],
+        "user_id": "cli-prep-test",
+        "interview_prep_input": {"company": company, "role": role, "location": location},
+        "task_context": {"candidate_resume_text": resume_text},
+    }
+    thread_config = {"configurable": {"thread_id": f"prep-{company.lower().replace(' ', '-')}"}}
+
+    start_time = time.perf_counter()
+    try:
+        state = await graph.ainvoke(inputs, config=thread_config)
+    except Exception as exc:
+        elapsed = time.perf_counter() - start_time
+        print(f"\n  {RED}Pipeline failed after {elapsed:.2f}s: {exc}{RESET}\n")
+        return
+    elapsed_sec = time.perf_counter() - start_time
+
+    tc = state.get("task_context") or {}
+    cp = tc.get("company_profile") or {}
+    ji = tc.get("job_intelligence") or {}
+    sg = tc.get("skill_gap") or {}
+    materials = state.get("researched_materials") or []
+
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    print(f"\n{'═'*W}")
+    print(f"  {BOLD}RESEARCH OUTPUT → What the Planner Agent Would Receive{RESET}")
+    print(f"{'═'*W}")
+
+    # ── STAGE 1: Company + Job Intelligence ──────────────────────────────────
+    print(f"\n  {BOLD}STAGE 1 — COMPANY + JOB INTELLIGENCE{RESET}")
+    if cp:
+        print(f"    {GREEN}✓{RESET} Company Profile  : {cp.get('name', company)}", end="")
+        if cp.get("industry"):
+            print(f" ({cp['industry']})", end="")
+        print()
+        org_count = len(cp.get("organic_results") or [])
+        news_count = len(cp.get("recent_developments") or [])
+        print(f"      Sources collected : {org_count} tech/culture, {news_count} news articles")
+    else:
+        print(f"    {YELLOW}○{RESET} Company Profile  : not available (fixture may not cover this company)")
+
+    if ji:
+        skills = ji.get("skills") or []
+        top_skills = [s.get("name", "") for s in skills[:8] if s.get("name")]
+        print(f"    {GREEN}✓{RESET} Required Skills  : {len(skills)} identified")
+        if top_skills:
+            print(f"      Top skills        : {', '.join(top_skills)}")
+        cov = ji.get("coverage", "")
+        if cov:
+            print(f"      Coverage          : {cov}")
+    else:
+        print(f"    {YELLOW}○{RESET} Job Intelligence  : not available (fixture may not cover this role)")
+
+    # ── STAGE 2: Skill Gap Analysis ───────────────────────────────────────────
+    print(f"\n  {BOLD}STAGE 2 — SKILL GAP ANALYSIS{RESET}")
+    if sg.get("no_resume"):
+        print(f"    {YELLOW}○{RESET} Skipped — no resume provided")
+        print(f"      {DIM}The planner would receive an empty gap list and build a general prep plan.{RESET}")
+    elif sg:
+        score = sg.get("readiness_score", 0)
+        score_color = GREEN if score >= 70 else (YELLOW if score >= 40 else RED)
+        print(f"    {GREEN}✓{RESET} Readiness Score  : {score_color}{BOLD}{score}%{RESET}  ({sg.get('coverage', 'unknown')} coverage)")
+        gaps = sg.get("priority_gaps") or []
+        matched = sg.get("matched_skills") or []
+        print(f"      Total gaps        : {len(gaps)} ({len([g for g in gaps if g.get('status')=='missing'])} missing, "
+              f"{len([g for g in gaps if g.get('status')=='partial'])} partial)")
+        if matched:
+            matched_names = [m.get("skill_name", "") for m in matched[:5] if m.get("skill_name")]
+            print(f"      Already strong    : {', '.join(matched_names)}" + (" ..." if len(matched) > 5 else ""))
+        if gaps:
+            print(f"\n    {'Skill':<28} {'Status':<10} {'Effort'}")
+            print(f"    {'─'*28} {'─'*10} {'─'*6}")
+            for gap in gaps:
+                color = RED if gap.get("effort") == "High" else YELLOW
+                print(f"    {gap.get('skill','?'):<28} {gap.get('status','?'):<10} {color}{gap.get('effort','?')}{RESET}")
+    else:
+        print(f"    {RED}✗{RESET} Analysis failed or unavailable")
+
+    # ── STAGE 3: Research Modules (Planner's primary input) ──────────────────
+    print(f"\n  {BOLD}STAGE 3 — RESEARCH MODULES  {DIM}(Planner builds roadmap from these){RESET}")
+    if not materials:
+        if not sg.get("priority_gaps"):
+            print(f"    {YELLOW}○{RESET} No modules — no gaps identified (or no resume provided)")
+        else:
+            print(f"    {RED}✗{RESET} No modules produced — research stage may have failed")
+    else:
+        print(f"    {GREEN}✓{RESET} {len(materials)} learning module(s) produced\n")
+        for i, m in enumerate(materials, 1):
+            resources = m.get("resources") or []
+            is_mock = m.get("uses_mock_sources", False)
+            preview = m.get("content_markdown", "")[:180].replace("\n", " ").strip()
+            print(f"    {BOLD}Module {i}: \"{m.get('topic', '?')}\"{RESET}")
+            print(f"      Depth     : {m.get('depth', '?')}")
+            print(f"      Resources : {len(resources)} total  ({_resource_type_counts(resources) or 'none categorized'})")
+            print(f"      Sources   : {'mock/fixture (SERPAPI_ENABLED=false)' if is_mock else 'live'}")
+            if preview:
+                print(f"      Preview   : {DIM}{preview}...{RESET}")
+            print()
+
+    # ── DATA FLOW STATUS ─────────────────────────────────────────────────────
+    print(f"  {BOLD}DATA FLOW STATUS  {DIM}(did state pass between agents correctly?){RESET}")
+    def flow_check(label: str, ok: bool, note: str = ""):
+        sym = f"{GREEN}✓{RESET}" if ok else f"{RED}✗{RESET}"
+        suffix = f"  {DIM}{note}{RESET}" if note else ""
+        print(f"    {sym}  {label}{suffix}")
+
+    flow_check(
+        f"Company Research  → Skill Gap",
+        bool(cp and sg and not sg.get("error")),
+        f"company_profile passed" if cp else "company_profile missing"
+    )
+    flow_check(
+        f"Job Intelligence  → Skill Gap",
+        bool(ji and sg and not sg.get("error")),
+        f"{len(ji.get('skills') or [])} skills passed" if ji else "job_intelligence missing"
+    )
+    gap_topics = state.get("skill_gaps") or []
+    flow_check(
+        f"Skill Gap         → Research",
+        bool(gap_topics or sg.get("no_resume")),
+        f"{len(gap_topics)} gap(s) passed" if gap_topics else ("no resume — 0 gaps" if sg.get("no_resume") else "gaps missing")
+    )
+    flow_check(
+        f"Research          → Planner  {DIM}[when built]{RESET}",
+        bool(materials or sg.get("no_resume")),
+        f"{len(materials)} module(s) in state[\"researched_materials\"]" if materials else "0 modules (no gaps to research)"
+    )
+
+    time_str = f"{elapsed_sec:.2f}s"
+    if elapsed_sec >= 60:
+        mins = int(elapsed_sec // 60)
+        secs = elapsed_sec % 60
+        time_str += f" ({mins}m {secs:.1f}s)"
+
+    print(f"\n  {BOLD}TOTAL PIPELINE TIME{RESET} : {CYAN}{BOLD}{time_str}{RESET}")
+    print(f"\n{'═'*W}\n")
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +448,10 @@ Examples:
   # Standalone Company Research Agent (bypasses supervisor)
   uv run python src/cli.py --company "Datadog"
   uv run python src/cli.py --company "Stripe" --role "Backend Engineer"
+
+  # Full pipeline test: company+job → skill gap → research → evaluate
+  uv run python src/cli.py --prep --company "Stripe" --role "Backend Engineer" --location "San Francisco"
+  uv run python src/cli.py --prep --company "Anthropic" --role "ML Engineer" --location "Remote" --resume-file resume.txt
         """,
     )
     parser.add_argument("--user", default="demo-user", help="user id that keys long-term memory (REPL mode)")
@@ -178,14 +461,37 @@ Examples:
         default=settings.stream_responses,
         help="print the reply as it is generated (default: STREAM_RESPONSES; REPL mode)",
     )
-    parser.add_argument("--company", default=None, help="run the Company Research Agent standalone for this company")
-    parser.add_argument("--role", default=None, help="(optional) target role, used with --company")
+    parser.add_argument("--company", default=None, help="company name (company research mode or prep mode)")
+    parser.add_argument("--role", default=None, help="target role (used with --company or --prep)")
+    parser.add_argument("--location", default="Remote", help="job location (prep mode)")
+    parser.add_argument("--prep", action="store_true", help="run full pipeline: company+job → skill gap → research")
+    parser.add_argument("--resume-file", default=None, help="path to plain-text resume file (prep mode)")
+    parser.add_argument("--resume-text", default=None, help="inline resume text string (prep mode)")
 
     args = parser.parse_args()
-    if args.company:
+
+    if args.prep:
+        if not args.company or not args.role:
+            parser.error("--prep requires --company and --role")
+        # Resolve resume text: file > inline > dummy
+        resume_text = DUMMY_RESUME
+        if args.resume_file:
+            try:
+                import pathlib
+                resume_text = pathlib.Path(args.resume_file).read_text(encoding="utf-8")
+                print(f"Using resume from: {args.resume_file}")
+            except Exception as exc:
+                print(f"Warning: could not read resume file ({exc}). Using dummy resume.")
+        elif args.resume_text:
+            resume_text = args.resume_text
+        else:
+            print("No --resume-file or --resume-text provided. Using built-in dummy resume for connectivity test.")
+        asyncio.run(run_full_prep(args.company, args.role, args.location, resume_text))
+    elif args.company:
         asyncio.run(run_company_research(args.company, args.role))
     else:
         asyncio.run(run_repl(args.user, args.stream))
+
 
 
 if __name__ == "__main__":

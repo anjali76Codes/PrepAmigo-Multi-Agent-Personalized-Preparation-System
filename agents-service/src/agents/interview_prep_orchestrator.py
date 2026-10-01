@@ -12,9 +12,11 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field, ValidationError
 from typing_extensions import TypedDict
 
-from agents.company_research_agent import CompanyResearchAgent
+from agents.company_research_node import CompanyResearchNode
 from agents import interview_prep_fields as workflow_fields
 from agents.job_intelligence_agent import JobIntelligenceAgent, JobIntelligenceInput
+from agents.skill_gap_agent import SkillGapAgent
+from agents.research_agent import ContentResearchAgent
 from config import get_llm, settings
 from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, make_event
 from graph.router import route_after_agent
@@ -48,7 +50,7 @@ class CompanyBranchState(TypedDict, total=False):
 
 def _build_company_branch():
     graph = StateGraph(CompanyBranchState)
-    graph.add_node("company_research", CompanyResearchAgent())
+    graph.add_node("company_research", CompanyResearchNode())
     graph.add_node("cr_guardrails", run_guardrails)
     graph.add_node("cr_tools", ToolNode(COMPANY_RESEARCH_TOOLS, handle_tool_errors=True))
     graph.add_edge(START, "company_research")
@@ -117,9 +119,18 @@ def _clarification_question(missing: list[Any], values: dict[str, str]) -> str:
 class InterviewPrepOrchestrator:
     name = "interview_prep"
 
-    def __init__(self, company_graph: Any | None = None, job_agent: Any | None = None):
+    def __init__(
+        self,
+        company_graph: Any | None = None,
+        job_agent: Any | None = None,
+        skill_gap_agent: SkillGapAgent | None = None,
+        research_agent: ContentResearchAgent | None = None,
+    ):
         self.company_graph = company_graph or _build_company_branch()
         self.job_agent = job_agent or JobIntelligenceAgent()
+        self.skill_gap_agent = skill_gap_agent or SkillGapAgent()
+        self.research_agent = research_agent or ContentResearchAgent()
+
 
     async def _extract_fields(self, state: dict[str, Any], text: str | None = None) -> dict[str, str]:
         messages = state.get("messages", [])
@@ -321,7 +332,124 @@ class InterviewPrepOrchestrator:
             "workflow_status": "evaluating",
         }
 
+    async def run_skill_gap(self, state: dict[str, Any]) -> dict[str, Any]:
+        """
+        Stage 2 of the pipeline: skill gap analysis.
+
+        Reads company_research_result + job_intelligence_result from state
+        (written by run_parallel), runs SkillGapAgent, and writes:
+          - task_context["company_profile"]   (moved here from evaluate)
+          - task_context["job_intelligence"]  (moved here from evaluate)
+          - task_context["target_role"]       (for ContentResearchAgent)
+          - task_context["target_company"]    (for ContentResearchAgent)
+          - task_context["skill_gap"]         (full gap report)
+          - state["skill_gaps"]               (list[str] for ContentResearchAgent)
+        """
+        values = workflow_fields.normalize_workflow_fields(state.get("interview_prep_input") or {})
+        company_result = state.get("company_research_result") or {}
+        job_result = state.get("job_intelligence_result") or {}
+
+        company_profile = (company_result.get("data") or {}).get("profile") or {}
+        job_intelligence = job_result.get("data") or {}
+
+        company = values.get("company", "") or company_profile.get("name", "")
+        role = values.get("role", "")
+        resume_text = (state.get("task_context") or {}).get("candidate_resume_text", "")
+
+        # Merge upstream results into task_context so downstream nodes can read them
+        task_context = dict(state.get("task_context") or {})
+        if company_profile:
+            task_context["company_profile"] = company_profile
+        if job_intelligence:
+            task_context["job_intelligence"] = job_intelligence
+        # ContentResearchAgent reads these top-level keys
+        task_context["target_role"] = role
+        task_context["target_company"] = company
+
+        await dispatch_event(
+            make_event("interview_prep", "skill_gap_analysis", "running", {
+                "message": f"Analyzing skill gaps for {role} at {company}...",
+                "has_resume": bool(resume_text.strip()),
+            }),
+            None,
+        )
+
+        try:
+            gap_report = await asyncio.wait_for(
+                self.skill_gap_agent.analyze(company_profile, job_intelligence, resume_text, company, role),
+                timeout=BRANCH_TIMEOUT_SECONDS,
+            )
+            task_context["skill_gap"] = gap_report
+            skill_gaps = [g["skill"] for g in gap_report.get("priority_gaps", []) if g.get("skill")]
+        except Exception as exc:
+            logger.warning("Skill Gap analysis failed: %s", exc)
+            task_context["skill_gap"] = {"error": str(exc), "priority_gaps": [], "readiness_score": 0, "no_resume": False}
+            skill_gaps = []
+
+        await dispatch_event(
+            make_event("interview_prep", "skill_gap_analysis", "completed", {
+                "gaps_count": len(skill_gaps),
+                "readiness_score": task_context.get("skill_gap", {}).get("readiness_score", 0),
+            }),
+            None,
+        )
+
+        return {
+            "task_context": task_context,
+            "skill_gaps": skill_gaps,
+            "workflow_status": "researching",
+        }
+
+    async def run_research(self, state: dict[str, Any]) -> dict[str, Any]:
+        """
+        Stage 3 of the pipeline: research each skill gap.
+
+        Delegates to ContentResearchAgent.__call__ which already loops over
+        state["skill_gaps"] and reads task_context["target_role/company"].
+        Skips gracefully if no gaps were identified.
+        """
+        skill_gaps = state.get("skill_gaps") or []
+        if not skill_gaps:
+            logger.info("No skill gaps to research — skipping research stage.")
+            await dispatch_event(
+                make_event("interview_prep", "research_stage", "completed", {
+                    "message": "No skill gaps to research — research stage skipped.",
+                    "modules_produced": 0,
+                }),
+                None,
+            )
+            return {"researched_materials": [], "workflow_status": "evaluating"}
+
+        await dispatch_event(
+            make_event("interview_prep", "research_stage", "running", {
+                "message": f"Researching {len(skill_gaps)} skill gap(s)...",
+                "gaps": skill_gaps,
+            }),
+            None,
+        )
+
+        try:
+            result = await self.research_agent(state)
+        except Exception as exc:
+            logger.warning("Research stage failed: %s", exc)
+            result = {"researched_materials": [], "execution_events": [], "handoffs": []}
+
+        materials = result.get("researched_materials") or []
+        await dispatch_event(
+            make_event("interview_prep", "research_stage", "completed", {
+                "message": f"Research complete. {len(materials)} learning module(s) produced.",
+                "modules_produced": len(materials),
+            }),
+            None,
+        )
+
+        return {
+            **result,
+            "workflow_status": "evaluating",
+        }
+
     async def evaluate(self, state: dict[str, Any]) -> dict[str, Any]:
+
         company_result = state.get("company_research_result") or {"status": "failed", "data": None}
         job_result = state.get("job_intelligence_result") or {"status": "failed", "data": None}
         profiles = {"company_research": company_result, "job_intelligence": job_result}
