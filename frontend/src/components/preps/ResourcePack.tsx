@@ -10,7 +10,7 @@ export function ResourcePack({ pack }: ResourcePackProps) {
   return (
     <Card variant="default" className="p-6">
       <h3 className="text-xl font-bold text-carbon-900 mb-6 flex items-center gap-2">
-        <Icon name="folder-open-outline" className="text-navy-700" />
+        <Icon name="folder-open-outline" className="text-chrome" />
         {pack.topic}
       </h3>
       <div className="space-y-8">
@@ -22,9 +22,9 @@ export function ResourcePack({ pack }: ResourcePackProps) {
             <div className="grid gap-4">
               {group.items.map(item => (
                 <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="block group">
-                  <div className="p-4 rounded-card border border-border bg-bg group-hover:border-navy-700/40 transition-colors">
+                  <div className="p-4 rounded-card border border-border bg-bg group-hover:border-chrome-border/40 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <div className="font-medium text-carbon-900 group-hover:text-navy-700 transition-colors flex items-center gap-2">
+                      <div className="font-medium text-carbon-900 group-hover:text-chrome transition-colors flex items-center gap-2">
                         <Icon name={item.type === 'video' ? 'play-circle-outline' : item.type === 'article' ? 'document-text-outline' : 'book-outline'} />
                         {item.title}
                       </div>

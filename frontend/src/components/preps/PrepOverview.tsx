@@ -28,7 +28,7 @@ export function PrepOverview({ context }: PrepOverviewProps) {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-lavender-100 rounded-[2rem] p-8 shadow-pop border border-chrome-border">
           <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-            <Icon name="list" className="text-chrome-accent" />
+            <Icon name="list" className="text-chrome" />
             Job Requirements
           </h3>
           <ul className="space-y-4">

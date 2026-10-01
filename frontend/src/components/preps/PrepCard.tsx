@@ -18,10 +18,10 @@ export function PrepCard({ prep, onClick }: PrepCardProps) {
     >
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-2xl font-bold text-carbon-900 group-hover:text-chrome-accent transition-colors">{learningContext.companyInfo.name}</h3>
+          <h3 className="text-2xl font-bold text-carbon-900 group-hover:text-chrome transition-colors">{learningContext.companyInfo.name}</h3>
           <p className="text-carbon-500 font-medium">{learningContext.targetRole}</p>
         </div>
-        <div className="bg-navy-500 text-chrome-accent px-4 py-1.5 rounded-full text-sm font-bold">
+        <div className="bg-navy-500 text-chrome px-4 py-1.5 rounded-full text-sm font-bold">
           {durationDays} Days Left
         </div>
       </div>

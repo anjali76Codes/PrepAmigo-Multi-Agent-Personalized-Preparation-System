@@ -62,9 +62,13 @@ export function PrepDetails() {
         );
       case 'skill-gaps':
         return (
-          <div className="space-y-6 max-w-4xl">
-            <SkillGapMap gaps={prep.learningContext.knowledgeGaps} skills={prep.learningContext.candidateSkills} />
-            <AffectedTopics topics={['System Design', 'Graphs']} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+            <div className="md:col-span-2 space-y-6">
+              <SkillGapMap gaps={prep.learningContext.knowledgeGaps} skills={prep.learningContext.candidateSkills} />
+            </div>
+            <div className="md:col-span-1 space-y-6">
+              <AffectedTopics topics={['System Design', 'Graphs']} />
+            </div>
           </div>
         );
       case 'roadmap':
@@ -80,7 +84,15 @@ export function PrepDetails() {
         );
       case 'calendar':
         return (
-          <PlanCalendar entries={prep.calendarEntries} />
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <Button onClick={() => navigate('/dashboard/calendar')} className="flex items-center gap-2">
+                <Icon name="calendar-outline" />
+                View Full Calendar
+              </Button>
+            </div>
+            <PlanCalendar entries={prep.calendarEntries} />
+          </div>
         );
       case 'resources':
         return (
@@ -92,7 +104,7 @@ export function PrepDetails() {
         );
       case 'assessments':
         return (
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-carbon-900 mb-4">Weekly Quizzes</h3>
               {prep.assessments.quizzes.map(quiz => (
@@ -122,18 +134,18 @@ export function PrepDetails() {
           <div>
             <h1 className="text-4xl font-extrabold text-carbon-900 tracking-tight mb-2">{prep.title}</h1>
             <p className="text-lg text-carbon-500 font-medium">
-              <span className="text-chrome-accent">{prep.durationDays} Days</span> • {prep.learningContext.targetRole}
+              <span className="text-chrome">{prep.durationDays} Days</span> • {prep.learningContext.targetRole}
             </p>
           </div>
         </div>
 
-        <div className="flex overflow-x-auto hide-scrollbar gap-8">
+        <div className="flex w-full overflow-x-auto hide-scrollbar border-b border-transparent">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setTab(tab.id)}
-              className={`flex items-center gap-2 py-4 border-b-4 font-bold text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
-                ? 'border-chrome-accent text-chrome-accent'
+              className={`flex-1 flex justify-center items-center gap-2 py-4 border-b-4 font-bold text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
+                ? 'border-chrome text-chrome'
                 : 'border-transparent text-carbon-500 hover:text-carbon-900'
                 }`}
             >

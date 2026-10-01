@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate, useTransform } from 'framer-motion';
 import { Icon } from '../ui/Icon';
-import { Mascot } from '../ui/Mascot'; // adjust path if needed
+import { Mascot } from '../ui/Mascot';
 import { cn } from '../../lib/utils';
+import { VIEW_W, VIEW_H, PATH_D, NODE_IMG, NODE_POSITIONS } from './AgentJourneyConstants';
 
 export interface JourneyStep {
     agent: string;
@@ -28,18 +29,9 @@ interface AgentJourneyProps {
     className?: string;
 }
 
-const NODE = 36;
-const MASCOT = 56;
-const TOP_PAD = MASCOT + 22;
-const BOTTOM_PAD = 34;
-const ACTION_EXTRA = 48;       // NEW: extra room under the last node for the button
-const ACTION_TOP_GAP = 24;     // NEW: distance from node bottom to button top
-const SIDE_PAD = 40;
+const NODE_SIZE = 70;
+const MASCOT_SIZE = 56;
 const BUBBLE_GAP = 8;
-const MAX_ROW = 100;
-const CARD_PAD = 24;
-
-const WIGGLE = [0.08, 0.55, 0.95, 0.5, 0.06, 0.5];
 
 export function AgentJourney({
     steps,
@@ -47,14 +39,14 @@ export function AgentJourney({
     autoPlay = false,
     stepDuration = 1800,
     finishText = 'All done! ',
-    maxHeight = '70vh',
+    maxHeight = '65vh',
     finalAction,
     onComplete,
     className,
 }: AgentJourneyProps) {
     const [internal, setInternal] = useState(0);
-    const [size, setSize] = useState({ w: 320, h: 380 });
-    const mapRef = useRef<HTMLDivElement>(null);
+    const pathRef = useRef<SVGPathElement>(null);
+    const [pointsPct, setPointsPct] = useState<{ x: number, y: number }[]>([]);
 
     const controlled = activeIndex !== undefined;
     const current = controlled ? activeIndex! : internal;
@@ -62,14 +54,26 @@ export function AgentJourney({
     const finished = current >= total;
 
     useLayoutEffect(() => {
-        const el = mapRef.current;
-        if (!el) return;
-        const update = () => setSize({ w: el.clientWidth, h: el.clientHeight });
-        update();
-        const ro = new ResizeObserver(update);
-        ro.observe(el);
-        return () => ro.disconnect();
-    }, []);
+        if (!pathRef.current) return;
+        const len = pathRef.current.getTotalLength();
+        const pts = steps.map((_, i) => {
+            // The SVG is a traced outline (a loop), so the visual "end" of the path is at exactly 50% (0.5) of the total length.
+            const baseFraction = NODE_POSITIONS[i] ?? Math.min(i / Math.max(steps.length - 1, 1), 1);
+            const fraction = baseFraction * 0.5; // Scale down to max 0.5
+            const p = pathRef.current!.getPointAtLength(fraction * len);
+
+            // Apply the transform values from the original SVG path
+            // (No transform needed for this new SVG)
+            const transformedX = p.x;
+            const transformedY = p.y;
+
+            return {
+                x: (transformedX / VIEW_W) * 100,
+                y: (transformedY / VIEW_H) * 100
+            };
+        });
+        setPointsPct(pts);
+    }, [steps.length]);
 
     useEffect(() => {
         if (controlled || !autoPlay || internal >= total) return;
@@ -82,47 +86,45 @@ export function AgentJourney({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [finished]);
 
-    const { w: width, h: height } = size;
+    // calculate current path fraction for progress, capped at 0.5 because it's a loop
+    const baseCurrentFraction = finished ? 1 : (NODE_POSITIONS[current] ?? Math.min(current / Math.max(total - 1, 1), 1));
+    const currentFraction = baseCurrentFraction * 0.5;
 
-    const bottomPad = BOTTOM_PAD + (finalAction ? ACTION_EXTRA : 0);
-    const rows = Math.max(total - 1, 1);
-    const ROW = Math.min(MAX_ROW, Math.max((height - TOP_PAD - bottomPad) / rows, 34));
-    const naturalHeight = TOP_PAD + rows * MAX_ROW + bottomPad + CARD_PAD;
+    const mascotX = useMotionValue(50);
+    const mascotY = useMotionValue(0);
+    const mascotLeft = useTransform(mascotX, (v) => `${v}%`);
+    const mascotTop = useTransform(mascotY, (v) => `${v}%`);
 
-    const usable = Math.max(width - SIDE_PAD * 2, 1);
-    const points = steps.map((_, i) => ({
-        x: SIDE_PAD + WIGGLE[i % WIGGLE.length] * usable,
-        y: TOP_PAD + i * ROW,
-    }));
-
-    const segment = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-        const k = ROW * 0.6;
-        return `M ${a.x} ${a.y} C ${a.x} ${a.y + k}, ${b.x} ${b.y - k}, ${b.x} ${b.y}`;
-    };
+    useEffect(() => {
+        if (!pathRef.current) return;
+        const len = pathRef.current.getTotalLength();
+        const controls = animate(mascotX.get() === 50 && mascotY.get() === 0 ? 0 : currentFraction, currentFraction, {
+            duration: 0.8,
+            ease: 'easeInOut',
+            onUpdate: (v) => {
+                const p = pathRef.current!.getPointAtLength(v * len);
+                mascotX.set((p.x / VIEW_W) * 100);
+                mascotY.set((p.y / VIEW_H) * 100);
+            }
+        });
+        return controls.stop;
+    }, [currentFraction]);
 
     const mascotIndex = Math.min(Math.max(current, 0), total - 1);
-    const mp = points[mascotIndex] ?? { x: 0, y: 0 };
-    const mascotX = Math.min(Math.max(mp.x - MASCOT / 2, 0), Math.max(width - MASCOT, 0));
-    const mascotY = mp.y - 10 - MASCOT;
-    const bubbleSide: 'left' | 'right' = mp.x > width / 2 ? 'left' : 'right';
-    const spaceRight = width - (mascotX + MASCOT + BUBBLE_GAP) - 4;
-    const spaceLeft = mascotX - BUBBLE_GAP - 4;
-    const bubbleMax = Math.max(Math.min(bubbleSide === 'right' ? spaceRight : spaceLeft, 210), 90);
+    const mp = pointsPct[mascotIndex] ?? { x: 50, y: 0 };
+    const bubbleSide: 'left' | 'right' = mp.x > 50 ? 'left' : 'right';
 
     const mood = finished ? 'cheer' : current < 0 ? 'idle' : 'think';
     const bubbleText = finished ? finishText : steps[mascotIndex]?.text ?? '';
     const showBubble = current >= 0 || finished;
 
-    // NEW: button position under the last node (clamped so it never overflows)
-    const last = points[total - 1];
-    const actionX = last ? Math.min(Math.max(last.x, 80), Math.max(width - 80, 80)) : 0;
-    const actionY = last ? last.y + NODE / 2 + ACTION_TOP_GAP : 0;
+    const last = pointsPct[total - 1];
 
     const actionClasses = cn(
         'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-300',
         finished
-            ? 'bg-navy-700 text-white shadow-md hover:bg-navy-700/90 cursor-pointer'
-            : 'bg-carbon-500/10 text-carbon-500/50 border border-carbon-500/20 pointer-events-none'
+            ? 'bg-navy-700 text-white shadow-md hover:bg-navy-800 cursor-pointer'
+            : 'bg-muted text-muted-foreground border border-border pointer-events-none'
     );
 
     const actionContent = (
@@ -134,95 +136,95 @@ export function AgentJourney({
 
     return (
         <div
-            className={cn('w-full flex flex-col bg-surface border border-border rounded-card p-3', className)}
-            style={{ height: `min(${maxHeight}, ${naturalHeight}px)` }}
+            className={cn('w-full flex justify-center items-center bg-surface border border-border rounded-card p-4 overflow-hidden', className)}
         >
-            <div ref={mapRef} className="relative w-full flex-1 min-h-0">
-                {/* Winding pathway */}
-                <svg className="absolute inset-0 pointer-events-none" width={width} height={height}>
-                    {points.slice(0, -1).map((p, i) => {
-                        const d = segment(p, points[i + 1]);
-                        return (
-                            <g key={i}>
-                                <path
-                                    d={d}
-                                    fill="none"
-                                    strokeWidth={4}
-                                    strokeLinecap="round"
-                                    strokeDasharray="2 10"
-                                    className="text-carbon-500/40"
-                                    stroke="currentColor"
-                                />
-                                <motion.path
-                                    d={d}
-                                    fill="none"
-                                    strokeWidth={4}
-                                    strokeLinecap="round"
-                                    stroke="currentColor"
-                                    className="text-navy-700"
-                                    initial={{ pathLength: 0 }}
-                                    animate={{ pathLength: i < current ? 1 : 0 }}
-                                    transition={{ duration: 0.8, ease: 'easeInOut' }}
-                                />
-                            </g>
-                        );
-                    })}
+            <div className="relative w-full" style={{ height: maxHeight, minHeight: '300px' }}>
+                {/* Winding pathway SVG */}
+                <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+                    preserveAspectRatio="none"
+                >
+                    {/* Background path (capped to 0.5 so it only draws the forward line of the outline loop) */}
+                    <motion.path
+                        ref={pathRef}
+                        d={PATH_D}
+                        fill="none"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        className="text-navy-700/20"
+                        stroke="currentColor"
+                        initial={{ pathLength: 0.5 }}
+                    />
+                    {/* Progress path */}
+                    <motion.path
+                        d={PATH_D}
+                        fill="none"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        className="text-navy-700"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: currentFraction }}
+                        transition={{ duration: 0.8, ease: 'easeInOut' }}
+                    />
                 </svg>
 
                 {/* Nodes + labels */}
-                {steps.map((step, i) => {
-                    const p = points[i];
+                {pointsPct.map((p, i) => {
                     const isActive = i === current;
                     const isDone = i < current || finished;
 
                     return (
-                        <div key={step.agent + i}>
-                            <div
-                                className="absolute"
-                                style={{ left: p.x - NODE / 2, top: p.y - NODE / 2, width: NODE, height: NODE }}
-                            >
+                        <div
+                            key={steps[i]?.agent + i}
+                            className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                        >
+                            <div className="relative flex items-center justify-center" style={{ width: NODE_SIZE, height: NODE_SIZE }}>
                                 {isActive && (
                                     <motion.div
                                         className="absolute inset-0 rounded-full bg-navy-700/30"
-                                        animate={{ scale: [1, 1.7], opacity: [0.6, 0] }}
+                                        animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
                                         transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
                                     />
                                 )}
-                                <motion.div
-                                    animate={{ scale: isActive ? 1.1 : 1 }}
+                                <motion.img
+                                    src={NODE_IMG}
+                                    alt="Node"
+                                    animate={{ scale: isActive ? 1.2 : 1 }}
                                     className={cn(
-                                        'relative w-full h-full rounded-full border-2 flex items-center justify-center transition-colors duration-300 shadow-[0_4px_0_0_rgba(0,0,0,0.12)]',
-                                        isDone && 'bg-navy-700 border-navy-700 text-white',
-                                        isActive && 'bg-white border-navy-700 text-navy-700',
-                                        !isDone && !isActive && 'bg-carbon-500/10 border-carbon-500/20 text-carbon-500/50'
+                                        'relative w-full h-full object-contain transition-all duration-300',
+                                        isDone && 'opacity-100 grayscale-0',
+                                        isActive && 'opacity-100 grayscale-0',
+                                        !isDone && !isActive && 'opacity-40 grayscale'
                                     )}
-                                >
-                                    {isDone ? (
-                                        <Icon name="checkmark-outline" />
-                                    ) : (
-                                        <span className="text-xs font-bold">{i + 1}</span>
-                                    )}
-                                </motion.div>
+                                />
+                                {isDone && (
+                                    <div className="absolute top-0 right-0 bg-chrome-accent text-white rounded-full p-0.5 z-10 shadow-sm translate-x-1/4 -translate-y-1/4">
+                                        <Icon name="checkmark-outline" className="w-4 h-4 px-1" />
+                                    </div>
+                                )}
                             </div>
-
                             <div
                                 className={cn(
-                                    'absolute text-[10px] font-semibold text-center leading-tight truncate transition-colors duration-300',
-                                    isActive ? 'text-carbon-900' : isDone ? 'text-navy-700' : 'text-carbon-500/50'
+                                    'absolute text-[11px] font-bold text-center leading-tight whitespace-nowrap transition-colors duration-300',
+                                    'bg-surface border border-border px-2.5 py-1 rounded-full shadow-sm',
+                                    isActive ? 'text-foreground' : isDone ? 'text-navy-700' : 'text-muted-foreground'
                                 )}
-                                style={{ left: p.x - 55, width: 110, top: p.y + NODE / 2 + 6 }}
+                                style={{ top: '100%', marginTop: 3 }}
                             >
-                                {step.agent}
+                                {steps[i]?.agent}
                             </div>
                         </div>
                     );
                 })}
 
-                {/* NEW: action button on the 6th node */}
+                {/* Action button on the last node */}
                 {finalAction && last && (
                     <motion.div
-                        className="absolute z-10"
-                        style={{ left: actionX, top: actionY, x: '-50%' }}
+                        className="absolute z-10 flex justify-center -translate-x-1/2 mt-[68px]"
+                        style={{ left: `${last.x}%`, top: `${last.y}%` }}
                         animate={finished ? { scale: [1, 1.08, 1] } : { scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
                     >
@@ -250,60 +252,58 @@ export function AgentJourney({
                 )}
 
                 {/* Mascot + its bubble */}
-                <motion.div
-                    className="absolute top-0 left-0 z-10"
-                    style={{ width: MASCOT, height: MASCOT }}
-                    initial={false}
-                    animate={{ x: mascotX, y: mascotY }}
-                    transition={{ type: 'spring', stiffness: 80, damping: 15 }}
-                >
+                {pointsPct.length > 0 && (
                     <motion.div
-                        animate={finished ? { y: [0, -8, 0] } : { rotate: [-4, 4, -4] }}
-                        transition={{ duration: finished ? 0.6 : 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute z-10 -translate-x-1/2 -translate-y-full mb-6"
+                        style={{ left: mascotLeft, top: mascotTop, width: MASCOT_SIZE, height: MASCOT_SIZE }}
                     >
-                        <Mascot size="md" mood={mood} className="shadow-sm" style={{ width: MASCOT, height: MASCOT }} />
-                    </motion.div>
+                        <motion.div
+                            animate={finished ? { y: [0, -8, 0] } : { rotate: [-4, 4, -4] }}
+                            transition={{ duration: finished ? 0.6 : 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                            className="w-full h-full flex justify-center items-center"
+                        >
+                            <Mascot size="md" mood={mood} className="shadow-sm" style={{ width: MASCOT_SIZE, height: MASCOT_SIZE }} />
+                        </motion.div>
 
-                    <AnimatePresence mode="wait">
-                        {showBubble && (
-                            <motion.div
-                                key={`${mascotIndex}-${finished}`}
-                                initial={{ opacity: 0, scale: 0.85 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
-                                transition={{ duration: 0.25, delay: 0.45 }}
-                                className="absolute w-max bg-navy-100 text-navy-700 text-xs font-medium px-3 py-2 rounded-card border border-navy-700/10 shadow-sm"
-                                style={{
-                                    top: 4,
-                                    maxWidth: bubbleMax,
-                                    ...(bubbleSide === 'right'
-                                        ? { left: MASCOT + BUBBLE_GAP, transformOrigin: 'left center' }
-                                        : { right: MASCOT + BUBBLE_GAP, transformOrigin: 'right center' }),
-                                }}
-                            >
-                                <span
-                                    className={cn(
-                                        'absolute top-4 w-2 h-2 rotate-45 bg-navy-100 border-navy-700/10',
-                                        bubbleSide === 'right' ? '-left-1 border-l border-b' : '-right-1 border-r border-t'
+                        <AnimatePresence mode="wait">
+                            {showBubble && (
+                                <motion.div
+                                    key={`${mascotIndex}-${finished}`}
+                                    initial={{ opacity: 0, scale: 0.85 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
+                                    transition={{ duration: 0.25, delay: 0.45 }}
+                                    className="absolute w-max max-w-[210px] bg-navy-700 text-white text-xs font-medium px-3 py-2 rounded-card shadow-sm top-0"
+                                    style={{
+                                        ...(bubbleSide === 'right'
+                                            ? { left: '100%', marginLeft: BUBBLE_GAP, transformOrigin: 'left center' }
+                                            : { right: '100%', marginRight: BUBBLE_GAP, transformOrigin: 'right center' }),
+                                    }}
+                                >
+                                    <span
+                                        className={cn(
+                                            'absolute top-4 w-2 h-2 rotate-45 bg-navy-700',
+                                            bubbleSide === 'right' ? '-left-1 border-l border-b' : '-right-1 border-r border-t'
+                                        )}
+                                    />
+                                    {bubbleText}
+                                    {!finished && (
+                                        <span className="inline-flex ml-1 gap-0.5 align-middle">
+                                            {[0, 1, 2].map((d) => (
+                                                <motion.span
+                                                    key={d}
+                                                    className="w-1 h-1 rounded-full bg-white"
+                                                    animate={{ opacity: [0.2, 1, 0.2] }}
+                                                    transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }}
+                                                />
+                                            ))}
+                                        </span>
                                     )}
-                                />
-                                {bubbleText}
-                                {!finished && (
-                                    <span className="inline-flex ml-1 gap-0.5 align-middle">
-                                        {[0, 1, 2].map((d) => (
-                                            <motion.span
-                                                key={d}
-                                                className="w-1 h-1 rounded-full bg-navy-700"
-                                                animate={{ opacity: [0.2, 1, 0.2] }}
-                                                transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }}
-                                            />
-                                        ))}
-                                    </span>
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
             </div>
         </div>
     );
