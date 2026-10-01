@@ -6,26 +6,25 @@
   --color-surface-muted: #EFECE4;
   --color-border: #DEDACF;
   --color-navy-900: #18122B;
+  --color-navy-800: #261C40;
   --color-navy-700: #393053;
   --color-navy-500: #443C68;
-  --color-navy-100: #635985;
-  --color-forest-700: #4A6B57;
-  --color-forest-800: #3B5646;
-  --color-forest-100: #E1EBE4;
-  --color-amber-600: #B7791F;
-  --color-amber-100: #F7ECD5;
+  --color-navy-300: #8579be;
+  --color-navy-100: #EBE8F4;
+  --color-beige-600: #B7791F;
+  --color-beige-100: #F7ECD5;
   --color-danger-600: #B4534B;
   --color-danger-100: #F6E3E1;
   --color-carbon-900: #18122B;
   --color-carbon-700: #393053;
   --color-carbon-500: #443C68;
-  --color-sunny-500: #E5B84B;
-  --color-sunny-100: #FBF1D6;
+  --color-beige-500: #E5B84B;
+  --color-beige-100: #FBF1D6;
   --color-coral-500: #DD7A62;
   --color-coral-100: #F9E4DD;
   --color-sky-500: #6FA8C9;
   --color-sky-100: #E0EEF6;
-  
+
   --color-chrome: #393053;
   --color-chrome-hover: #463D63;
   --color-chrome-border: #4E4570;
@@ -52,7 +51,7 @@
     --border-width: 0px;
     --shadow-card: 0 10px 15px -3px rgba(43, 54, 80, 0.1);
   }
-  
+
   html[data-style="solid"] {
     /* previous default preset */
     --radius-control: 0.5rem;
@@ -66,7 +65,8 @@
     --radius-card: 0.75rem;
     --border-width: 1.5px;
     --shadow-card: none;
-    --color-border: #E3E7F0; /* navy-tinted */
+    --color-border: #E3E7F0;
+    /* navy-tinted */
   }
 
   html[data-style="crisp"] {
@@ -83,7 +83,7 @@
   }
 
   *:focus-visible {
-    outline: 2px solid var(--color-forest-700);
+    outline: 2px solid var(--color-navy-700);
     outline-offset: 2px;
   }
 }

@@ -26,7 +26,7 @@ async function handleGoogleAuth(
 
     const data = await res.json();
     if (res.ok) {
-      navigate("/app/chat");
+      navigate("/dashboard/chat");
     } else {
       setError(data.error || "Google authentication failed");
     }
@@ -127,7 +127,7 @@ export function Auth() {
       const data = await res.json();
 
       if (res.ok) {
-        navigate("/app/chat");
+        navigate("/dashboard/chat");
       } else {
         setFormError(data.error || (isLogin ? "Login failed" : "Signup failed"));
       }

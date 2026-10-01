@@ -5,6 +5,7 @@ import { Logo } from "../ui/Logo";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { PageBackground } from "../ui/PageBackground";
+import { SearchBar } from "./SearchBar";
 
 import { useAuth } from "../../lib/useAuth";
 
@@ -27,37 +28,35 @@ export function AppLayout() {
   };
 
   const navItems = [
-    { to: "/app", icon: "home-outline", label: "Home", exact: true },
-    { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
+    { to: "/dashboard", icon: "home-outline", label: "Home", exact: true },
+    { to: "/dashboard/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
     {
-      to: "/app/interview-prep",
+      to: "/dashboard/interview-prep",
       icon: "briefcase-outline",
       label: "Interview Prep",
     },
-    { to: "/app/preps", icon: "map-outline", label: "Preps" },
-    { to: "/app/calendar", icon: "calendar-outline", label: "Calendar" },
-    { to: "/app/roadmap", icon: "git-network-outline", label: "Roadmap" },
-    { to: "/app/progress", icon: "bar-chart-outline", label: "Progress" },
+    { to: "/dashboard/preps", icon: "map-outline", label: "Preps" },
+    { to: "/dashboard/calendar", icon: "calendar-outline", label: "Calendar" },
+    { to: "/dashboard/roadmap", icon: "git-network-outline", label: "Roadmap" },
+    { to: "/dashboard/progress", icon: "bar-chart-outline", label: "Progress" },
     {
-      to: "/app/notifications",
+      to: "/dashboard/notifications",
       icon: "notifications-outline",
       label: "Notifications",
     },
   ];
 
   return (
-    <div className="flex h-screen bg-bg text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
-      <PageBackground />
-
+    <div className="flex h-screen bg-carbon-900 text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
       {/* Desktop Sidebar */}
       <motion.aside
         initial={{ width: 256 }}
         animate={{ width: isSidebarOpen ? 256 : 80 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="hidden md:flex flex-col border-r border-chrome-border bg-chrome text-on-chrome relative overflow-hidden"
+        className="hidden md:flex flex-col bg-carbon-900 text-on-chrome relative overflow-hidden z-10"
       >
         <div
-          className={`h-16 flex items-center border-b border-chrome-border shrink-0 transition-all ${isSidebarOpen ? "px-6 justify-between" : "justify-center"}`}
+          className={`h-16 flex items-center shrink-0 transition-all ${isSidebarOpen ? "px-6 justify-between" : "justify-center"}`}
         >
           {isSidebarOpen && (
             <div className="overflow-hidden transition-opacity">
@@ -80,10 +79,9 @@ export function AppLayout() {
               end={item.exact}
               title={!isSidebarOpen ? item.label : undefined}
               className={({ isActive }) =>
-                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${
-                  isActive
-                    ? "text-on-chrome font-medium"
-                    : "text-on-chrome-muted hover:text-on-chrome"
+                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${isActive
+                  ? "text-on-chrome font-medium"
+                  : "text-on-chrome-muted hover:text-on-chrome"
                 } ${isSidebarOpen ? "px-3" : "justify-center"}`
               }
             >
@@ -116,15 +114,14 @@ export function AppLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-chrome-border flex flex-col gap-2 shrink-0">
+        <div className="p-4 flex flex-col gap-2 shrink-0">
           <NavLink
-            to="/app/settings"
+            to="/dashboard/settings"
             title={!isSidebarOpen ? "Settings" : undefined}
             className={({ isActive }) =>
-              `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${
-                isActive
-                  ? "text-on-chrome font-medium"
-                  : "text-on-chrome-muted hover:text-on-chrome"
+              `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${isActive
+                ? "text-on-chrome font-medium"
+                : "text-on-chrome-muted hover:text-on-chrome"
               } ${isSidebarOpen ? "px-3" : "justify-center"}`
             }
           >
@@ -180,68 +177,72 @@ export function AppLayout() {
       </motion.aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 relative bg-transparent">
-        <header className="md:hidden h-16 border-b border-chrome-border bg-chrome text-on-chrome flex items-center justify-between px-4 z-10">
-          <div className="flex items-center">
-            <Logo compact tone="inverse" />
-          </div>
+      <div className="flex-1 flex flex-col min-w-0 relative md:pl-0">
+        <SearchBar />
+        <div className="flex-1 flex flex-col bg-bg md:rounded-t-[2rem] overflow-hidden relative shadow-2xl border border-black/5">
+          <PageBackground />
 
-          <div className="flex items-center gap-2">
-            <NavLink
-              to="/app/notifications"
-              className="focus-visible:outline-chrome-accent rounded-control"
-            >
-              <IconButton
-                icon="notifications-outline"
-                variant="ghost"
-                tone="inverse"
-              />
-            </NavLink>
-
-            {/* Mobile Logout */}
-            <div className="focus-visible:outline-chrome-accent rounded-control">
-              <IconButton
-                icon="log-out-outline"
-                variant="ghost"
-                onClick={handleLogout}
-                tone="inverse"
-              />
+          <header className="md:hidden h-16 border-b border-white/5 bg-carbon-900 text-on-chrome flex items-center justify-between px-4 z-10 relative">
+            <div className="flex items-center">
+              <Logo compact tone="inverse" />
             </div>
-          </div>
-        </header>
 
-        <main className="flex-1 overflow-hidden flex flex-col z-10 relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              className="flex-1 overflow-y-auto w-full h-full"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
+            <div className="flex items-center gap-2">
+              <NavLink
+                to="/dashboard/notifications"
+                className="focus-visible:outline-chrome-accent rounded-control"
+              >
+                <IconButton
+                  icon="notifications-outline"
+                  variant="ghost"
+                  tone="inverse"
+                />
+              </NavLink>
+
+              {/* Mobile Logout */}
+              <div className="focus-visible:outline-chrome-accent rounded-control">
+                <IconButton
+                  icon="log-out-outline"
+                  variant="ghost"
+                  onClick={handleLogout}
+                  tone="inverse"
+                />
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-hidden flex flex-col z-10 relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                className="flex-1 overflow-y-auto w-full h-full"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-chrome-border bg-chrome flex items-center justify-around px-2 z-50 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-white/5 bg-carbon-900 flex items-center justify-around px-2 z-50 safe-area-bottom">
         {[
-          { to: "/app", icon: "home-outline", label: "Home", exact: true },
-          { to: "/app/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
+          { to: "/dashboard", icon: "home-outline", label: "Home", exact: true },
+          { to: "/dashboard/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
           {
-            to: "/app/interview-prep",
+            to: "/dashboard/interview-prep",
             icon: "briefcase-outline",
             label: "Interview Prep",
           },
-          { to: "/app/preps", icon: "map-outline", label: "Preps" },
-          { to: "/app/calendar", icon: "calendar-outline", label: "Calendar" },
+          { to: "/dashboard/preps", icon: "map-outline", label: "Preps" },
+          { to: "/dashboard/calendar", icon: "calendar-outline", label: "Calendar" },
         ].map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.exact}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 p-2 rounded-control transition-colors min-w-[64px] focus-visible:outline-chrome-accent ${
-                isActive ? "text-on-chrome" : "text-on-chrome-muted"
+              `flex flex-col items-center justify-center gap-1 p-2 rounded-control transition-colors min-w-[64px] focus-visible:outline-chrome-accent ${isActive ? "text-on-chrome" : "text-on-chrome-muted"
               }`
             }
           >

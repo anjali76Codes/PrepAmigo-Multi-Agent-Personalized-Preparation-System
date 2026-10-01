@@ -52,7 +52,7 @@ export function Settings() {
                   <div className="flex gap-2">
                     {['M','T','W','T','F','S','S'].map((day, i) => (
                       <button key={i} className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                        i < 5 ? 'bg-forest-100 text-forest-700' : 'bg-surface text-carbon-500 border border-border'
+                        i < 5 ? 'bg-navy-100 text-navy-700' : 'bg-surface text-carbon-500 border border-border'
                       }`}>
                         {day}
                       </button>
@@ -104,7 +104,7 @@ export function Settings() {
             <div className="space-y-6">
               <div>
                 <h4 className="font-medium text-carbon-900 mb-2">Resume</h4>
-                <div className="border-2 border-dashed border-border rounded-card p-6 text-center hover:border-forest-700/50 transition-colors cursor-pointer bg-bg">
+                <div className="border-2 border-dashed border-border rounded-card p-6 text-center hover:border-navy-700/50 transition-colors cursor-pointer bg-bg">
                   <Icon name="cloud-upload-outline" className="text-3xl text-carbon-500 mb-2" />
                   <p className="text-carbon-900 font-medium">Re-upload Resume</p>
                   <p className="text-xs text-carbon-500 mt-1">PDF or DOCX up to 5MB</p>
@@ -114,7 +114,7 @@ export function Settings() {
               <div>
                 <h4 className="font-medium text-carbon-900 mb-2">Self Assessment</h4>
                 <textarea 
-                  className="w-full h-32 bg-bg border border-border rounded-card p-4 text-sm text-carbon-900 resize-none focus:outline-none focus:border-forest-700"
+                  className="w-full h-32 bg-bg border border-border rounded-card p-4 text-sm text-carbon-900 resize-none focus:outline-none focus:border-navy-700"
                   defaultValue="I have 5 years of frontend experience heavily focused on React and Node.js. Lacking formalized DSA and large-scale system design practice."
                 />
               </div>

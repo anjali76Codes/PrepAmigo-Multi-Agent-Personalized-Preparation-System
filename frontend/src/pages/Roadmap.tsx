@@ -316,9 +316,9 @@ export function Roadmap() {
   const getDifficultyBadge = (diff: 'Basic' | 'Core' | 'Pro') => {
     switch (diff) {
       case 'Basic':
-        return 'bg-forest-100 text-forest-800 border-forest-200';
+        return 'bg-navy-100 text-navy-800 border-navy-200';
       case 'Core':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
+        return 'bg-beige-100 text-beige-800 border-beige-200';
       case 'Pro':
         return 'bg-coral-100 text-coral-800 border-coral-200';
     }
@@ -332,7 +332,7 @@ export function Roadmap() {
           
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs font-semibold text-carbon-400">
-            <Link to="/app" className="hover:text-carbon-900 transition-colors">Prep Hub</Link>
+            <Link to="/dashboard" className="hover:text-carbon-900 transition-colors">Prep Hub</Link>
             <span>/</span>
             <span className="text-carbon-800">Striver's A2Z DSA Sheet</span>
           </div>
@@ -350,8 +350,8 @@ export function Roadmap() {
               </p>
 
               <div className="flex items-center gap-4 text-xs font-semibold text-carbon-400">
-                <span className="flex items-center gap-1.5 text-forest-700">
-                  <span className="w-2 h-2 rounded-full bg-forest-700 inline-block animate-pulse" />
+                <span className="flex items-center gap-1.5 text-navy-700">
+                  <span className="w-2 h-2 rounded-full bg-navy-700 inline-block animate-pulse" />
                   7,642 online
                 </span>
                 <span>•</span>
@@ -373,9 +373,9 @@ export function Roadmap() {
                   </button>
                 )}
 
-                <Link to="/app/chat">
-                  <button className="px-4 py-2 bg-forest-100 hover:bg-forest-100/80 text-forest-800 border border-forest-700/30 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
-                    <Icon name="sparkles" className="text-xs text-forest-700" />
+                <Link to="/dashboard/chat">
+                  <button className="px-4 py-2 bg-navy-100 hover:bg-navy-100/80 text-navy-800 border border-navy-700/30 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                    <Icon name="sparkles" className="text-xs text-navy-700" />
                     <span>Plan with PrepAmigo →</span>
                   </button>
                 </Link>
@@ -386,7 +386,7 @@ export function Roadmap() {
             <div className="bg-bg/80 border border-border rounded-2xl p-5 md:p-6 w-full lg:w-96 shrink-0 space-y-4">
               <div className="flex items-center justify-between text-xs font-bold text-carbon-500">
                 <span>Overall Progress</span>
-                <Icon name="ribbon" className="text-lg text-amber-500" />
+                <Icon name="ribbon" className="text-lg text-beige-500" />
               </div>
 
               <div className="flex items-baseline gap-3">
@@ -409,16 +409,16 @@ export function Roadmap() {
                 <div className="space-y-1">
                   <div className="text-[11px] font-bold text-carbon-400">Basic</div>
                   <div className="text-xs font-extrabold text-carbon-800">{basicSolved} / {basicProblems.length}</div>
-                  <div className="h-1 w-full bg-forest-700/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-forest-700 rounded-full" style={{ width: `${basicProblems.length ? (basicSolved / basicProblems.length) * 100 : 0}%` }} />
+                  <div className="h-1 w-full bg-navy-700/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-navy-700 rounded-full" style={{ width: `${basicProblems.length ? (basicSolved / basicProblems.length) * 100 : 0}%` }} />
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <div className="text-[11px] font-bold text-carbon-400">Core</div>
                   <div className="text-xs font-extrabold text-carbon-800">{coreSolved} / {coreProblems.length}</div>
-                  <div className="h-1 w-full bg-amber-500/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${coreProblems.length ? (coreSolved / coreProblems.length) * 100 : 0}%` }} />
+                  <div className="h-1 w-full bg-beige-500/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-beige-500 rounded-full" style={{ width: `${coreProblems.length ? (coreSolved / coreProblems.length) * 100 : 0}%` }} />
                   </div>
                 </div>
 
@@ -477,7 +477,7 @@ export function Roadmap() {
                 <option value="All">All Status</option>
                 <option value="Solved">Solved Only</option>
                 <option value="Unsolved">Unsolved Only</option>
-                <option value="Bookmarked">Bookmarked ★</option>
+                <option value="Bookmarked">Bookmarked </option>
               </select>
 
               {/* Expand / Collapse All */}
@@ -559,7 +559,7 @@ export function Roadmap() {
                                   <span className="text-[11px] font-bold text-carbon-400">{subSolved} / {subTotal}</span>
                                   <div className="w-12 h-1 rounded-full bg-surface-muted overflow-hidden">
                                     <div
-                                      className="h-full bg-forest-700 rounded-full"
+                                      className="h-full bg-navy-700 rounded-full"
                                       style={{ width: `${subTotal ? (subSolved / subTotal) * 100 : 0}%` }}
                                     />
                                   </div>
@@ -615,7 +615,7 @@ export function Roadmap() {
                                           onClick={() => setActiveNotesProblem(problem)}
                                           className={cn(
                                             "p-1.5 rounded-lg text-carbon-400 hover:text-carbon-900 hover:bg-surface-muted transition-colors",
-                                            problem.notes && "text-amber-600 font-bold"
+                                            problem.notes && "text-beige-600 font-bold"
                                           )}
                                           title={problem.notes ? "View revision notes" : "Add note"}
                                         >
@@ -638,7 +638,7 @@ export function Roadmap() {
                                           href={`https://leetcode.com/problemset/all/?search=${encodeURIComponent(problem.title)}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 rounded-lg text-carbon-400 hover:text-forest-700 hover:bg-forest-100/60 transition-colors"
+                                          className="p-1.5 rounded-lg text-carbon-400 hover:text-navy-700 hover:bg-navy-100/60 transition-colors"
                                           title="Practice on LeetCode"
                                         >
                                           <Icon name="code-slash" className="text-sm" />
@@ -688,7 +688,7 @@ export function Roadmap() {
             >
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
-                  <Icon name="document-text" className="text-amber-600 text-lg" />
+                  <Icon name="document-text" className="text-beige-600 text-lg" />
                   <h3 className="font-bold text-base text-carbon-900">Problem Notes</h3>
                 </div>
                 <button 

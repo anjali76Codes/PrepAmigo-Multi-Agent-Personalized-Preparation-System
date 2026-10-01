@@ -10,7 +10,7 @@ export function BadgeGrid({ badges }: { badges: Badge[] }) {
         <div className="grid grid-cols-3 gap-4">
           {badges.map(badge => (
             <div key={badge.id} className="flex flex-col items-center text-center p-3 rounded-card bg-bg border border-border">
-              <div className="w-12 h-12 rounded-full bg-forest-100 text-forest-700 flex items-center justify-center mb-2">
+              <div className="w-12 h-12 rounded-full bg-navy-100 text-navy-700 flex items-center justify-center mb-2">
                 <Icon name={badge.icon} className="text-2xl" />
               </div>
               <span className="text-xs font-medium text-carbon-900">{badge.name}</span>

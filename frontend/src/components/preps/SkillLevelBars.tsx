@@ -6,7 +6,7 @@ export function SkillLevelBars({ skills, velocity }: { skills: Skill[], velocity
     <Card variant="default" className="p-6">
       <div className="flex justify-between items-start mb-6">
         <h3 className="text-lg font-bold text-carbon-900">Skill Levels</h3>
-        <span className="text-xs font-medium bg-navy-100 text-forest-700 px-3 py-1 rounded-full">
+        <span className="text-xs font-medium bg-navy-100 text-navy-700 px-3 py-1 rounded-full">
           Velocity: {velocity}
         </span>
       </div>
@@ -20,7 +20,7 @@ export function SkillLevelBars({ skills, velocity }: { skills: Skill[], velocity
             </div>
             <div className="h-2 bg-bg rounded-full overflow-hidden border border-border">
               <div 
-                className="h-full bg-forest-700 rounded-full transition-all duration-1000"
+                className="h-full bg-navy-700 rounded-full transition-all duration-1000"
                 style={{ width: `${skill.level}%` }}
               />
             </div>

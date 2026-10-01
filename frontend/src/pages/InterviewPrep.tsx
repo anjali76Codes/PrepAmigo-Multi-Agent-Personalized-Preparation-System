@@ -29,14 +29,6 @@ type WorkflowResult = {
     error?: string;
   };
 };
-type WorkflowField = {
-  name: string;
-  label: string;
-  description: string;
-  required: boolean;
-  recipients: string[];
-  maxLength: number;
-};
 type ChatTurn = { speaker: "user" | "assistant"; text: string };
 
 const API_URL = (
@@ -44,46 +36,17 @@ const API_URL = (
 ).replace(/\/$/, "");
 
 export function InterviewPrep() {
-  const [inputMode, setInputMode] = useState<"chat" | "fields">("chat");
-  const [fields, setFields] = useState<WorkflowField[]>([]);
-  const [values, setValues] = useState<Record<string, string>>({});
   const [answer, setAnswer] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
   const [status, setStatus] = useState<WorkflowStatus>("idle");
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [question, setQuestion] = useState("");
   const [events, setEvents] = useState<string[]>([]);
   const [result, setResult] = useState<WorkflowResult | null>(null);
   const [error, setError] = useState("");
   const sourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/agent/interview-prep/fields`, {
-      credentials: "include",
-    })
-      .then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok)
-          throw new Error(payload.error || "Could not load workflow fields.");
-        const loadedFields = payload.fields as WorkflowField[];
-        setFields(loadedFields);
-        setValues((current) =>
-          Object.fromEntries(
-            loadedFields.map((field) => [
-              field.name,
-              current[field.name] || "",
-            ]),
-          ),
-        );
-      })
-      .catch((cause) =>
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Could not load workflow fields.",
-        ),
-      );
     return () => sourceRef.current?.close();
   }, []);
 
@@ -121,7 +84,6 @@ export function InterviewPrep() {
           : questionPayload?.question) ||
         parsed.payload?.message ||
         "I still need a required detail before I can start the agents.";
-      setQuestion(clarification);
       setChatTurns((previous) => [
         ...previous,
         { speaker: "assistant", text: clarification },
@@ -136,7 +98,6 @@ export function InterviewPrep() {
       const payload = parsed.payload || {};
       setResult(payload.result || null);
       setStatus(payload.status === "partial" ? "partial" : "complete");
-      setQuestion("");
       setAnswer("");
       if (payload.message) {
         setChatTurns((previous) => [
@@ -184,7 +145,6 @@ export function InterviewPrep() {
     setEvents([]);
     if (!resume) {
       setResult(null);
-      setQuestion("");
       setThreadId(null);
       setAnswer("");
     }
@@ -198,7 +158,7 @@ export function InterviewPrep() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fields: values,
+          fields: {},
           ...(resume ? { threadId } : {}),
           ...(resume && (userMessage || answer.trim())
             ? { answer: userMessage || answer.trim() }
@@ -257,20 +217,19 @@ export function InterviewPrep() {
       <div className="mx-auto max-w-6xl space-y-6 pb-24">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-forest-700">
-              Research workspace
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-navy-700">
+              Your Personal Researcher
             </p>
             <h1 className="text-3xl font-extrabold text-carbon-900">
-              Interview intelligence
+              Get ready for your interview
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-carbon-500">
-              Company context and live role-market signals, gathered at the same
-              time.
+              Let's gather some deep context about the company and market signals so you feel completely prepared.
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-control border border-border bg-white px-3 py-2 text-sm font-semibold">
             <span
-              className={`h-2 w-2 rounded-full ${status === "failed" ? "bg-danger-600" : status === "complete" ? "bg-forest-700" : busy ? "bg-sunny-500 animate-pulse" : status === "awaiting_input" ? "bg-coral-500" : "bg-carbon-500/40"}`}
+              className={`h-2 w-2 rounded-full ${status === "failed" ? "bg-danger-600" : status === "complete" ? "bg-navy-700" : busy ? "bg-beige-500 animate-pulse" : status === "awaiting_input" ? "bg-coral-500" : "bg-carbon-500/40"}`}
             />
             {statusLabel}
           </div>
@@ -279,73 +238,18 @@ export function InterviewPrep() {
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]">
           <section className="rounded-card border border-border bg-white p-5 shadow-card md:p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-control bg-forest-100 text-forest-800">
-                <Icon name="briefcase-outline" className="text-xl" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender-100 text-navy-800">
+                <Icon name="chatbubbles-outline" className="text-xl" />
               </div>
               <div>
-                <h2 className="font-bold text-carbon-900">Interview details</h2>
+                <h2 className="font-bold text-carbon-900">Let's chat about the role</h2>
                 <p className="text-xs text-carbon-500">
-                  Required details are collected before the agents start.
+                  Just tell me what you're applying for, and I'll ask for anything else I need.
                 </p>
               </div>
             </div>
 
-            <div
-              className="mb-5 inline-flex rounded-control border border-border bg-bg p-1"
-              role="group"
-              aria-label="Input mode"
-            >
-              <button
-                type="button"
-                aria-pressed={inputMode === "chat"}
-                onClick={() => setInputMode("chat")}
-                className={`rounded-control px-3 py-2 text-sm font-semibold ${inputMode === "chat" ? "bg-white text-carbon-900 shadow-card" : "text-carbon-500"}`}
-              >
-                <Icon name="chatbubble-ellipses-outline" className="mr-1" />{" "}
-                Chat
-              </button>
-              <button
-                type="button"
-                aria-pressed={inputMode === "fields"}
-                onClick={() => setInputMode("fields")}
-                className={`rounded-control px-3 py-2 text-sm font-semibold ${inputMode === "fields" ? "bg-white text-carbon-900 shadow-card" : "text-carbon-500"}`}
-              >
-                <Icon name="list-outline" className="mr-1" /> Defined inputs
-              </button>
-            </div>
-
-            {inputMode === "fields" ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {fields.map((field) => (
-                  <label key={field.name} className="space-y-1.5">
-                    <span className="flex items-center gap-1 text-xs font-bold uppercase text-carbon-500">
-                      {field.label}
-                      {field.required && <span aria-label="required">*</span>}
-                    </span>
-                    <input
-                      value={values[field.name] || ""}
-                      onChange={(event) =>
-                        setValues((current) => ({
-                          ...current,
-                          [field.name]: event.target.value,
-                        }))
-                      }
-                      maxLength={field.maxLength}
-                      placeholder={field.description}
-                      aria-required={field.required}
-                      className="w-full rounded-control border border-border bg-bg px-3 py-2.5 text-sm outline-none focus:border-forest-700"
-                    />
-                    <span className="block text-[11px] text-carbon-500">
-                      Used by{" "}
-                      {field.recipients
-                        .map((recipient) => recipient.replaceAll("_", " "))
-                        .join(" and ")}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div
                   className="max-h-72 space-y-3 overflow-y-auto rounded-control border border-border bg-bg p-3"
                   aria-live="polite"
@@ -359,7 +263,7 @@ export function InterviewPrep() {
                     chatTurns.map((turn, index) => (
                       <div
                         key={`${turn.speaker}-${index}`}
-                        className={`max-w-[90%] rounded-control px-3 py-2 text-sm ${turn.speaker === "user" ? "ml-auto bg-forest-800 text-white" : "mr-auto border border-border bg-white text-carbon-900"}`}
+                        className={`max-w-[90%] rounded-control px-3 py-2 text-sm ${turn.speaker === "user" ? "ml-auto bg-navy-800 text-white" : "mr-auto border border-border bg-white text-carbon-900"}`}
                       >
                         {turn.text}
                       </div>
@@ -385,7 +289,7 @@ export function InterviewPrep() {
                     rows={2}
                     placeholder="For example: I’m looking for an SDE role in Seattle"
                     aria-label="Tell the orchestrator about your interview"
-                    className="min-w-0 flex-1 resize-y rounded-control border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-forest-700"
+                    className="min-w-0 flex-1 resize-y rounded-control border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-navy-700"
                   />
                   <button
                     type="submit"
@@ -400,122 +304,72 @@ export function InterviewPrep() {
                         ? "Answer question"
                         : "Send message"
                     }
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-forest-800 text-white disabled:opacity-50"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-navy-800 text-white disabled:opacity-50"
                   >
                     <Icon name="send-outline" />
                   </button>
                 </form>
+                {error && (
+                  <p
+                    className="mt-4 rounded-control bg-danger-100 px-3 py-2 text-sm text-danger-600"
+                    role="alert"
+                  >
+                    {error}
+                  </p>
+                )}
               </div>
-            )}
-
-            {inputMode === "fields" && status === "awaiting_input" && (
-              <div
-                className="mt-5 rounded-control border-l-4 border-coral-500 bg-coral-100 p-4"
-                role="status"
-              >
-                <p className="text-sm font-semibold text-carbon-900">
-                  {question}
-                </p>
-                <label className="mt-3 block space-y-1.5">
-                  <span className="text-xs font-bold uppercase text-carbon-500">
-                    Clarification
-                  </span>
-                  <textarea
-                    value={answer}
-                    onChange={(event) => setAnswer(event.target.value)}
-                    maxLength={200}
-                    rows={2}
-                    placeholder="Add a short clarification if the fields above do not capture it"
-                    className="w-full resize-y rounded-control border border-border bg-white px-3 py-2 text-sm text-carbon-900 outline-none focus:border-coral-500"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => void submit(true)}
-                  disabled={busy}
-                  className="mt-3 inline-flex items-center gap-2 rounded-control bg-carbon-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  <Icon name="return-down-forward-outline" /> Continue with
-                  these details
-                </button>
-              </div>
-            )}
-
-            {error && (
-              <p
-                className="mt-4 rounded-control bg-danger-100 px-3 py-2 text-sm text-danger-600"
-                role="alert"
-              >
-                {error}
-              </p>
-            )}
-
-            {inputMode === "fields" && (
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="inline-flex items-center gap-2 rounded-control bg-forest-800 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Icon name="flash-outline" /> Run both agents
-                </button>
-                <span className="text-xs text-carbon-500">
-                  Blank fields pause the workflow for clarification.
-                </span>
-              </div>
-            )}
           </section>
 
           <section
-            className="rounded-card border border-border bg-carbon-900 p-5 text-white md:p-6"
+            className="rounded-card border border-border bg-white p-5 text-carbon-900 md:p-6 shadow-sm"
             aria-live="polite"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-sunny-500">
-                  Execution
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-navy-500">
+                  Behind the scenes
                 </p>
-                <h2 className="mt-1 text-lg font-bold">Parallel agent run</h2>
+                <h2 className="mt-1 text-lg font-bold">Research Progress</h2>
               </div>
               <Icon
                 name={busy ? "sync-outline" : "git-compare-outline"}
-                className={`text-2xl text-sky-500 ${busy ? "animate-spin" : ""}`}
+                className={`text-2xl text-navy-500 ${busy ? "animate-spin" : ""}`}
               />
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-control border border-white/15 bg-white/5 p-3">
-                <p className="text-[11px] font-bold uppercase text-sky-500">
+              <div className="rounded-control border border-border bg-lavender-100 p-3">
+                <p className="text-[11px] font-bold uppercase text-navy-700">
                   Company Research
                 </p>
-                <p className="mt-1 text-sm">
+                <p className="mt-1 text-sm font-medium">
                   {result?.company_research?.status ||
-                    (busy ? "Working" : "Waiting")}
+                    (busy ? "Working..." : "Waiting")}
                 </p>
               </div>
-              <div className="rounded-control border border-white/15 bg-white/5 p-3">
-                <p className="text-[11px] font-bold uppercase text-sunny-500">
+              <div className="rounded-control border border-border bg-chrome-accent p-3">
+                <p className="text-[11px] font-bold uppercase text-navy-900">
                   Job Intelligence
                 </p>
-                <p className="mt-1 text-sm">
+                <p className="mt-1 text-sm font-medium">
                   {result?.job_intelligence?.status ||
-                    (busy ? "Working" : "Waiting")}
+                    (busy ? "Working..." : "Waiting")}
                 </p>
               </div>
             </div>
             <ol
-              className="mt-5 max-h-44 space-y-2 overflow-y-auto text-sm text-white/80"
+              className="mt-5 max-h-44 space-y-2 overflow-y-auto text-sm text-carbon-600 font-medium"
               aria-label="Workflow events"
             >
               {events.length ? (
                 events.map((item, index) => (
                   <li key={`${item}-${index}`} className="flex gap-2">
-                    <span className="text-sky-500">•</span>
+                    <span className="text-navy-500">•</span>
                     <span>{item}</span>
                   </li>
                 ))
               ) : (
-                <li className="text-white/50">
-                  Progress events will appear here.
+                <li className="text-carbon-400">
+                  Progress updates will appear here once we start.
                 </li>
               )}
             </ol>
@@ -526,7 +380,7 @@ export function InterviewPrep() {
           <section className="space-y-4" aria-live="polite">
             <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-forest-700">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-navy-700">
                   Combined result · {result.status || status}
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-carbon-900">
@@ -540,10 +394,10 @@ export function InterviewPrep() {
               )}
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <article className="min-w-0 rounded-card border border-border bg-white p-5 shadow-card">
-                <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
-                  <h3 className="font-bold text-carbon-900">Company dossier</h3>
-                  <span className="text-xs font-semibold text-forest-700">
+              <article className="min-w-0 rounded-card border-none bg-lavender-100 text-navy-900 p-5 shadow-pop">
+                <div className="flex items-center justify-between gap-2 border-b border-navy-900/10 pb-3">
+                  <h3 className="font-bold">What to know about them</h3>
+                  <span className="text-xs font-semibold text-navy-700">
                     {result.company_research?.status || "unavailable"}
                   </span>
                 </div>
@@ -551,7 +405,7 @@ export function InterviewPrep() {
                   <div className="mt-4 space-y-3 text-sm">
                     <h4 className="text-lg font-bold text-carbon-900">
                       {String(
-                        companyProfile.name || values.company || "Company",
+                        companyProfile.name || "Company",
                       )}
                     </h4>
                     {typeof companyProfile.industry === "string" &&
@@ -570,18 +424,18 @@ export function InterviewPrep() {
                     {typeof companyProfile.website === "string" &&
                       companyProfile.website && (
                         <a
-                          className="inline-block text-forest-700 underline"
+                          className="inline-block text-navy-900 font-bold underline"
                           href={companyProfile.website}
                           target="_blank"
                           rel="noreferrer"
                         >
-                          Company website
+                          Check out their website
                         </a>
                       )}
                     {result.company_research?.data?.dossier && (
-                      <details className="border-t border-border pt-3">
-                        <summary className="cursor-pointer font-semibold">
-                          Full research synthesis
+                      <details className="border-t border-navy-900/10 pt-3">
+                        <summary className="cursor-pointer font-semibold text-navy-900">
+                          Dive into the full research
                         </summary>
                         <p className="mt-3 whitespace-pre-wrap leading-relaxed text-carbon-700">
                           {result.company_research.data.dossier}
@@ -597,18 +451,18 @@ export function InterviewPrep() {
                 )}
               </article>
 
-              <article className="min-w-0 rounded-card border border-border bg-white p-5 shadow-card">
-                <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
-                  <h3 className="font-bold text-carbon-900">
-                    Role market profile
+              <article className="min-w-0 rounded-card border-none bg-chrome-accent text-navy-900 p-5 shadow-pop">
+                <div className="flex items-center justify-between gap-2 border-b border-navy-900/10 pb-3">
+                  <h3 className="font-bold">
+                    What they're looking for
                   </h3>
-                  <span className="text-xs font-semibold text-forest-700">
+                  <span className="text-xs font-semibold text-navy-700">
                     {result.job_intelligence?.status || "unavailable"}
                   </span>
                 </div>
                 {jobProfile ? (
                   <div className="mt-4 space-y-4 text-sm">
-                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-carbon-500">
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-navy-800/70 font-medium">
                       <span>
                         {String(jobProfile.postingsCount ?? 0)} postings
                       </span>
@@ -616,29 +470,29 @@ export function InterviewPrep() {
                         Coverage: {String(jobProfile.coverage || "unknown")}
                       </span>
                       {jobProfile.isFallback === true && (
-                        <span className="text-amber-600">
+                        <span className="text-beige-600">
                           Broader market search
                         </span>
                       )}
                     </div>
                     <div>
-                      <h4 className="mb-2 text-xs font-bold uppercase text-carbon-500">
-                        Skills
+                      <h4 className="mb-2 text-xs font-bold uppercase text-navy-900/60">
+                        Top Skills
                       </h4>
                       {skills.length ? (
-                        <ul className="divide-y divide-border">
+                        <ul className="divide-y divide-navy-900/10">
                           {skills.slice(0, 12).map((skill, index) => (
                             <li
                               key={`${skill.name}-${index}`}
                               className="flex items-center justify-between gap-3 py-2"
                             >
-                              <span className="font-semibold text-carbon-900">
+                              <span className="font-semibold text-navy-900">
                                 {skill.name || "Skill"}
-                                <small className="ml-2 font-normal text-carbon-500">
+                                <small className="ml-2 font-normal text-navy-900/60">
                                   {skill.category}
                                 </small>
                               </span>
-                              <span className="shrink-0 text-xs text-carbon-500">
+                              <span className="shrink-0 text-xs font-bold text-navy-900/60">
                                 {skill.priority || ""}
                                 {typeof skill.percentage === "number"
                                   ? ` · ${skill.percentage}%`

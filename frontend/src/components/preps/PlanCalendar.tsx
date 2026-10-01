@@ -30,7 +30,7 @@ export function PlanCalendar({ entries: initialEntries }: PlanCalendarProps) {
 
   const getBadgeVariant = (type: string) => {
     switch(type) {
-      case 'due': return 'navy';
+      case 'due': return 'chrome';
       case 'missed': return 'warning';
       case 'rescheduled': return 'forest';
       default: return 'default';
@@ -46,16 +46,16 @@ export function PlanCalendar({ entries: initialEntries }: PlanCalendarProps) {
       <Card variant="default" className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold text-carbon-900 flex items-center gap-2">
-            <Icon name="calendar-outline" className="text-forest-700" />
+            <Icon name="calendar-outline" className="text-chrome" />
             Schedule
           </h3>
           <div className="flex bg-bg border border-border rounded-control overflow-hidden">
             <button 
-              className={`px-4 py-1.5 text-sm ${view === 'day' ? 'bg-navy-100 text-forest-700 font-medium' : 'text-carbon-500'}`}
+              className={`px-4 py-1.5 text-sm ${view === 'day' ? 'bg-lavender-100 text-chrome font-medium' : 'text-carbon-500'}`}
               onClick={() => setView('day')}
             >Day</button>
             <button 
-              className={`px-4 py-1.5 text-sm ${view === 'week' ? 'bg-navy-100 text-forest-700 font-medium' : 'text-carbon-500'}`}
+              className={`px-4 py-1.5 text-sm ${view === 'week' ? 'bg-lavender-100 text-chrome font-medium' : 'text-carbon-500'}`}
               onClick={() => setView('week')}
             >Week</button>
           </div>
