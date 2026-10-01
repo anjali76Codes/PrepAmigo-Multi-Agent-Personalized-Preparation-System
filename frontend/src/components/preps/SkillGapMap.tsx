@@ -10,15 +10,15 @@ interface SkillGapMapProps {
 
 export function SkillGapMap({ gaps }: SkillGapMapProps) {
   const getSeverity = (impact: number) => {
-    if (impact >= 80) return 'text-amber-600 bg-amber-100 border-amber-600/20'; // high-priority
-    if (impact >= 50) return 'text-forest-700 bg-navy-100 border-forest-700/20'; // moderate (navy)
-    return 'text-forest-700 bg-forest-100 border-forest-700/20'; // strong (forest)
+    if (impact >= 80) return 'text-beige-600 bg-beige-100 border-beige-600/20'; // high-priority
+    if (impact >= 50) return 'text-navy-700 bg-navy-100 border-navy-700/20'; // moderate (navy)
+    return 'text-navy-700 bg-navy-100 border-navy-700/20'; // strong (forest)
   };
 
   return (
     <Card variant="default" className="p-6">
       <h3 className="text-lg font-semibold mb-6 text-carbon-900 flex items-center gap-2">
-        <Icon name="git-network-outline" className="text-forest-700" />
+        <Icon name="git-network-outline" className="text-navy-700" />
         Topic Dependency & Skill Gaps
       </h3>
       

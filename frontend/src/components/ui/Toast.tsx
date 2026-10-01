@@ -12,17 +12,17 @@ export interface ToastProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Toast({ className, variant = 'default', title, description, onClose, ...props }: ToastProps) {
   const variants = {
     default: 'bg-surface shadow-pop border-border text-carbon-900',
-    success: 'bg-surface border-forest-700/30 text-carbon-900',
+    success: 'bg-surface border-navy-700/30 text-carbon-900',
     error: 'bg-surface border-danger-600/30 text-carbon-900',
-    warning: 'bg-surface border-amber-600/30 text-carbon-900',
+    warning: 'bg-surface border-beige-600/30 text-carbon-900',
     info: 'bg-surface border-navy-500/30 text-carbon-900',
   };
 
   const icons = {
     default: null,
-    success: <Icon name="checkmark-circle-outline" className="h-5 w-5 text-forest-700 mt-0.5" />,
+    success: <Icon name="checkmark-circle-outline" className="h-5 w-5 text-navy-700 mt-0.5" />,
     error: <Icon name="warning-outline" className="h-5 w-5 text-danger-600 mt-0.5" />,
-    warning: <Icon name="alert-circle-outline" className="h-5 w-5 text-amber-600 mt-0.5" />,
+    warning: <Icon name="alert-circle-outline" className="h-5 w-5 text-beige-600 mt-0.5" />,
     info: <Icon name="information-circle-outline" className="h-5 w-5 text-navy-500 mt-0.5" />,
   };
 

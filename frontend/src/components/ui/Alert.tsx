@@ -10,8 +10,8 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant = "info", ...props }, ref) => {
     const variants = {
       info: "bg-navy-100 text-navy-900 border-navy-500/20 border",
-      success: "bg-forest-100 text-forest-800 border-forest-700/20 border",
-      warning: "bg-amber-100 text-amber-600 border-amber-600/20 border",
+      success: "bg-navy-100 text-navy-800 border-navy-700/20 border",
+      warning: "bg-beige-100 text-beige-600 border-beige-600/20 border",
       danger: "bg-danger-100 text-danger-600 border-danger-600/20 border",
     };
 

@@ -2,8 +2,8 @@ import { Icon } from '../ui/Icon';
 
 export function RevisionCycles({ }: { sprintId: string }) {
   return (
-    <div className="bg-forest-100 rounded-card p-4 border border-forest-700/20">
-      <h4 className="text-sm font-semibold text-forest-700 flex items-center gap-2 mb-2">
+    <div className="bg-navy-100 rounded-card p-4 border border-navy-700/20">
+      <h4 className="text-sm font-semibold text-navy-700 flex items-center gap-2 mb-2">
         <Icon name="sync-outline" />
         Revision Cycle Scheduled
       </h4>

@@ -19,7 +19,7 @@ export function PrepDetails() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
 
-  const { preps, agentEvents: mockAgentEvents, notifications: mockNotifications } = useAppContext();
+  const { preps, notifications: mockNotifications } = useAppContext();
   const prep = preps.find(p => p.id === prepId);
 
   const searchParams = new URLSearchParams(location.search);
@@ -29,13 +29,13 @@ export function PrepDetails() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg">
         <h2 className="text-2xl font-bold text-carbon-900 mb-4">Prep not found</h2>
-        <Button onClick={() => navigate('/app/preps')}>Back to Preps</Button>
+        <Button onClick={() => navigate('/dashboard/preps')}>Back to Preps</Button>
       </div>
     );
   }
 
   const setTab = (tab: string) => {
-    navigate(`/app/preps/${prepId}?tab=${tab}`, { replace: true });
+    navigate(`/dashboard/preps/${prepId}?tab=${tab}`, { replace: true });
   };
 
   const tabs = [
@@ -51,29 +51,9 @@ export function PrepDetails() {
     switch (activeTab) {
       case 'overview':
         return (
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 space-y-6">
+          <div className="grid md:grid-cols-4 gap-6">
+            <div className="md:col-span-3 space-y-6">
               <PrepOverview context={prep.learningContext} />
-              <div className="bg-white rounded-[2rem] p-8 border border-border">
-                <h3 className="text-2xl font-bold mb-6 text-carbon-900 flex items-center gap-3">
-                  <Icon name="search" className="text-chrome-accent" />
-                  What the Agents Found
-                </h3>
-                <div className="space-y-4">
-                  {mockAgentEvents.map(event => (
-                    <div key={event.id} className="flex gap-4 items-start bg-bg rounded-xl p-4 border border-border/50">
-                      <div className="w-10 h-10 rounded-full bg-chrome-accent/10 text-chrome-accent flex items-center justify-center shrink-0 shadow-sm">
-                        <Icon name="scan" className="text-lg" />
-                      </div>
-                      <div>
-                        <div className="text-lg font-bold text-carbon-900 leading-tight mb-1">{event.agent}</div>
-                        <div className="text-sm font-medium text-carbon-500">{event.action}</div>
-                        <div className="text-xs text-carbon-500/60 mt-2 uppercase tracking-widest font-bold">{new Date(event.timestamp).toLocaleTimeString()}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
             <div className="space-y-6">
               <LearningContextPanel context={prep.learningContext} />
@@ -89,9 +69,13 @@ export function PrepDetails() {
         );
       case 'roadmap':
         return (
-          <div className="space-y-8 max-w-4xl">
-            <RoadmapView roadmap={prep.roadmap} />
-            <PlanUpdateTimeline updates={mockNotifications} />
+          <div className="space-y-8 grid grid-cols-4 gap-6">
+            <div className="col-span-3">
+              <RoadmapView roadmap={prep.roadmap} />
+            </div>
+            <div className="col-span-1">
+              <PlanUpdateTimeline updates={mockNotifications} />
+            </div>
           </div>
         );
       case 'calendar':
@@ -132,7 +116,7 @@ export function PrepDetails() {
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
       <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 pt-8 md:pt-12 border-b border-border">
         <div className="flex items-center gap-6 mb-8">
-          <Button variant="ghost" onClick={() => navigate('/app/preps')} className="hidden md:flex p-3 -ml-3 rounded-full hover:bg-surface border border-transparent hover:border-border transition-all">
+          <Button variant="ghost" onClick={() => navigate('/dashboard/preps')} className="hidden md:flex p-3 -ml-3 rounded-full hover:bg-surface border border-transparent hover:border-border transition-all">
             <Icon name="arrow-back" className="text-2xl" />
           </Button>
           <div>
@@ -142,17 +126,16 @@ export function PrepDetails() {
             </p>
           </div>
         </div>
-        
+
         <div className="flex overflow-x-auto hide-scrollbar gap-8">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setTab(tab.id)}
-              className={`flex items-center gap-2 py-4 border-b-4 font-bold text-sm whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? 'border-chrome-accent text-chrome-accent'
-                  : 'border-transparent text-carbon-500 hover:text-carbon-900'
-              }`}
+              className={`flex items-center gap-2 py-4 border-b-4 font-bold text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
+                ? 'border-chrome-accent text-chrome-accent'
+                : 'border-transparent text-carbon-500 hover:text-carbon-900'
+                }`}
             >
               <Icon name={tab.icon.replace('-outline', '')} className="text-lg" />
               {tab.label}

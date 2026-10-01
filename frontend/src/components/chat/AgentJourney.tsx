@@ -46,7 +46,7 @@ export function AgentJourney({
     activeIndex,
     autoPlay = false,
     stepDuration = 1800,
-    finishText = 'All done! 🎉',
+    finishText = 'All done! ',
     maxHeight = '70vh',
     finalAction,
     onComplete,
@@ -121,7 +121,7 @@ export function AgentJourney({
     const actionClasses = cn(
         'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-300',
         finished
-            ? 'bg-forest-700 text-white shadow-md hover:bg-forest-700/90 cursor-pointer'
+            ? 'bg-navy-700 text-white shadow-md hover:bg-navy-700/90 cursor-pointer'
             : 'bg-carbon-500/10 text-carbon-500/50 border border-carbon-500/20 pointer-events-none'
     );
 
@@ -159,7 +159,7 @@ export function AgentJourney({
                                     strokeWidth={4}
                                     strokeLinecap="round"
                                     stroke="currentColor"
-                                    className="text-forest-700"
+                                    className="text-navy-700"
                                     initial={{ pathLength: 0 }}
                                     animate={{ pathLength: i < current ? 1 : 0 }}
                                     transition={{ duration: 0.8, ease: 'easeInOut' }}
@@ -183,7 +183,7 @@ export function AgentJourney({
                             >
                                 {isActive && (
                                     <motion.div
-                                        className="absolute inset-0 rounded-full bg-forest-700/30"
+                                        className="absolute inset-0 rounded-full bg-navy-700/30"
                                         animate={{ scale: [1, 1.7], opacity: [0.6, 0] }}
                                         transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
                                     />
@@ -192,8 +192,8 @@ export function AgentJourney({
                                     animate={{ scale: isActive ? 1.1 : 1 }}
                                     className={cn(
                                         'relative w-full h-full rounded-full border-2 flex items-center justify-center transition-colors duration-300 shadow-[0_4px_0_0_rgba(0,0,0,0.12)]',
-                                        isDone && 'bg-forest-700 border-forest-700 text-white',
-                                        isActive && 'bg-white border-forest-700 text-forest-700',
+                                        isDone && 'bg-navy-700 border-navy-700 text-white',
+                                        isActive && 'bg-white border-navy-700 text-navy-700',
                                         !isDone && !isActive && 'bg-carbon-500/10 border-carbon-500/20 text-carbon-500/50'
                                     )}
                                 >
@@ -208,7 +208,7 @@ export function AgentJourney({
                             <div
                                 className={cn(
                                     'absolute text-[10px] font-semibold text-center leading-tight truncate transition-colors duration-300',
-                                    isActive ? 'text-carbon-900' : isDone ? 'text-forest-700' : 'text-carbon-500/50'
+                                    isActive ? 'text-carbon-900' : isDone ? 'text-navy-700' : 'text-carbon-500/50'
                                 )}
                                 style={{ left: p.x - 55, width: 110, top: p.y + NODE / 2 + 6 }}
                             >
@@ -272,7 +272,7 @@ export function AgentJourney({
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
                                 transition={{ duration: 0.25, delay: 0.45 }}
-                                className="absolute w-max bg-forest-100 text-forest-700 text-xs font-medium px-3 py-2 rounded-card border border-forest-700/10 shadow-sm"
+                                className="absolute w-max bg-navy-100 text-navy-700 text-xs font-medium px-3 py-2 rounded-card border border-navy-700/10 shadow-sm"
                                 style={{
                                     top: 4,
                                     maxWidth: bubbleMax,
@@ -283,7 +283,7 @@ export function AgentJourney({
                             >
                                 <span
                                     className={cn(
-                                        'absolute top-4 w-2 h-2 rotate-45 bg-forest-100 border-forest-700/10',
+                                        'absolute top-4 w-2 h-2 rotate-45 bg-navy-100 border-navy-700/10',
                                         bubbleSide === 'right' ? '-left-1 border-l border-b' : '-right-1 border-r border-t'
                                     )}
                                 />
@@ -293,7 +293,7 @@ export function AgentJourney({
                                         {[0, 1, 2].map((d) => (
                                             <motion.span
                                                 key={d}
-                                                className="w-1 h-1 rounded-full bg-forest-700"
+                                                className="w-1 h-1 rounded-full bg-navy-700"
                                                 animate={{ opacity: [0.2, 1, 0.2] }}
                                                 transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }}
                                             />

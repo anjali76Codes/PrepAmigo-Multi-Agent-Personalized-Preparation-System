@@ -87,7 +87,7 @@ function AnimatedRoutes() {
         </Route>
 
         {/* App Routes */}
-        <Route path="/app" element={<AppLayout />}>
+        <Route path="/dashboard" element={<AppLayout />}>
           <Route
             index
             element={

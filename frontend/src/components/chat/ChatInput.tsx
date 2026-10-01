@@ -67,19 +67,19 @@ const PREP_OPTIONS: OptionCategory[] = [
     label: "Goal Mode",
     options: [
       {
-        label: "⚡ Build Full Roadmap",
+        label: " Build Full Roadmap",
         prompt:
           "I want a complete personalized roadmap tailored to my target company requirements",
         icon: "trail-sign",
       },
       {
-        label: "🎯 Fix Weak Areas",
+        label: " Fix Weak Areas",
         prompt:
           "I scored badly on my DSA quiz, adjust my plan to focus on my weak topics",
         icon: "fitness",
       },
       {
-        label: "🧠 Daily Flashcards",
+        label: " Daily Flashcards",
         prompt:
           "Give me revision cards for system design and core interview patterns",
         icon: "albums",
@@ -218,12 +218,12 @@ export function ChatInput({
                 className={cn(
                   "px-3 py-1 text-xs font-medium rounded-full transition-all flex items-center gap-1.5 border text-left",
                   selectedOption === opt.label
-                    ? "bg-forest-100 text-forest-800 border-forest-700/30 font-semibold shadow-xs"
-                    : "bg-bg/60 hover:bg-forest-100/60 text-carbon-700 border-border/70 hover:border-forest-700/20",
+                    ? "bg-navy-100 text-navy-800 border-navy-700/30 font-semibold shadow-xs"
+                    : "bg-bg/60 hover:bg-navy-100/60 text-carbon-700 border-border/70 hover:border-navy-700/20",
                 )}
               >
                 {opt.icon && (
-                  <Icon name={opt.icon} className="text-xs text-forest-700" />
+                  <Icon name={opt.icon} className="text-xs text-navy-700" />
                 )}
                 <span>{opt.label}</span>
               </button>
@@ -233,7 +233,7 @@ export function ChatInput({
       </form>
 
       <div className="flex items-center justify-center gap-2 text-xs text-carbon-500/80">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-forest-700"></span>
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-navy-700"></span>
         <span>Adaptive Multi-Agent Reasoning Engine active</span>
       </div>
     </div>

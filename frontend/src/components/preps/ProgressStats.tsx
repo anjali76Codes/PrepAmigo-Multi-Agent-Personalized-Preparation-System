@@ -13,7 +13,7 @@ export function ProgressStats({ stats }: { stats: ProgressStatsType }) {
             <circle cx="50" cy="50" r="45" className="fill-none stroke-bg stroke-[8]" />
             <circle 
               cx="50" cy="50" r="45" 
-              className="fill-none stroke-forest-700 stroke-[8] stroke-dasharray-[283] transition-all duration-1000"
+              className="fill-none stroke-navy-700 stroke-[8] stroke-dasharray-[283] transition-all duration-1000"
               style={{ strokeDashoffset: 283 - (283 * levelProgress) / 100 }}
             />
           </svg>
@@ -26,25 +26,25 @@ export function ProgressStats({ stats }: { stats: ProgressStatsType }) {
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
           <div>
             <div className="text-sm text-carbon-500 flex items-center gap-1 mb-1">
-              <Icon name="star" className="text-forest-700" /> Total XP
+              <Icon name="star" className="text-navy-700" /> Total XP
             </div>
             <div className="text-2xl font-bold text-carbon-900">{stats.xp.toLocaleString()}</div>
           </div>
           <div>
             <div className="text-sm text-carbon-500 flex items-center gap-1 mb-1">
-              <Icon name="flame" className="text-sunny-500" /> Day Streak
+              <Icon name="flame" className="text-beige-500" /> Day Streak
             </div>
             <div className="text-2xl font-bold text-carbon-900">{stats.streak}</div>
           </div>
           <div>
             <div className="text-sm text-carbon-500 flex items-center gap-1 mb-1">
-              <Icon name="medal-outline" className="text-forest-700" /> Badges
+              <Icon name="medal-outline" className="text-navy-700" /> Badges
             </div>
             <div className="text-2xl font-bold text-carbon-900">{stats.badges.length}</div>
           </div>
           <div>
             <div className="text-sm text-carbon-500 flex items-center gap-1 mb-1">
-              <Icon name="trophy-outline" className="text-forest-700" /> Next Level
+              <Icon name="trophy-outline" className="text-navy-700" /> Next Level
             </div>
             <div className="text-2xl font-bold text-carbon-900">{1000 - (stats.xp % 1000)} <span className="text-sm text-carbon-500 font-normal">XP</span></div>
           </div>

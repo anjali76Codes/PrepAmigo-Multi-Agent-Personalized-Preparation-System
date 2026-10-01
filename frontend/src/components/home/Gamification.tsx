@@ -13,10 +13,10 @@ export function Gamification() {
                 </p>
                 <RevealStagger className="flex flex-wrap justify-center gap-6">
                     {[
-                        { title: '5 Day Streak!', icon: 'star', color: 'text-sunny-500', bg: 'bg-sunny-50' },
+                        { title: '5 Day Streak!', icon: 'star', color: 'text-beige-500', bg: 'bg-beige-50' },
                         { title: '+250 XP', icon: 'zap', color: 'text-chrome-accent', bg: 'bg-chrome-accent/10' },
                         { title: 'Level Up: Architect', icon: 'award', color: 'text-coral-500', bg: 'bg-coral-50' },
-                        { title: 'Badge: DSA Master', icon: 'shield', color: 'text-forest-500', bg: 'bg-forest-50' }
+                        { title: 'Badge: DSA Master', icon: 'shield', color: 'text-navy-500', bg: 'bg-navy-50' }
                     ].map((badge, i) => (
                         <RevealStaggerItem key={i}>
                             <div className="group relative flex items-center gap-3 rounded-full border border-border bg-white px-8 py-4 shadow-card hover:shadow-pop transition-all hover:-translate-y-1">

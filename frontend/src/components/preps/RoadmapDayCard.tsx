@@ -21,14 +21,14 @@ export function RoadmapDayCard({ day }: RoadmapDayCardProps) {
 
   const isToday = day.status === 'today';
   return (
-    <Card variant={isToday ? "carbon" : "default"} className={cn("flex items-start gap-4 p-4 transition-colors group", !isToday && "hover:border-forest-700/30")}>
+    <Card variant={isToday ? "carbon" : "default"} className={cn("flex items-start gap-4 p-4 transition-colors group", !isToday && "hover:border-navy-700/30")}>
       <div className={cn("flex flex-col items-center justify-center rounded-control w-12 h-12 shrink-0", isToday ? "bg-white/10 text-white" : "bg-navy-100/50 text-carbon-900")}>
         <span className={cn("text-xs", isToday ? "text-white/70" : "text-carbon-500")}>Day</span>
         <span className="font-bold">{day.dayNumber}</span>
       </div>
       <div className="flex-1">
         <div className="flex justify-between items-start">
-          <h4 className={cn("font-semibold transition-colors", isToday ? "text-white" : "text-carbon-900 group-hover:text-forest-700")}>{day.topic}</h4>
+          <h4 className={cn("font-semibold transition-colors", isToday ? "text-white" : "text-carbon-900 group-hover:text-navy-700")}>{day.topic}</h4>
           <Badge variant={getStatusVariant(day.status) as any}>{day.status}</Badge>
         </div>
         <p className={cn("text-sm mt-1", isToday ? "text-white/80" : "text-carbon-500")}>{day.objective}</p>
@@ -38,7 +38,7 @@ export function RoadmapDayCard({ day }: RoadmapDayCardProps) {
             <Icon name="time-outline" /> {day.estimatedMinutes}m
           </div>
           {day.references.map((ref, idx) => (
-            <div key={idx} className={cn("text-xs flex items-center gap-1 px-2 py-1 rounded border", isToday ? "text-white bg-white/10 border-white/20" : "text-forest-700 bg-forest-100/50 border-forest-700/10")}>
+            <div key={idx} className={cn("text-xs flex items-center gap-1 px-2 py-1 rounded border", isToday ? "text-white bg-white/10 border-white/20" : "text-navy-700 bg-navy-100/50 border-navy-700/10")}>
               <Icon name="link-outline" /> {ref}
             </div>
           ))}
@@ -47,7 +47,7 @@ export function RoadmapDayCard({ day }: RoadmapDayCardProps) {
         {day.practiceTask && (
           <div className={cn("mt-3 text-xs px-3 py-2 rounded-control border flex items-center justify-between", isToday ? "bg-white/10 text-white border-white/20" : "bg-surface text-carbon-900 border-border")}>
             <div className="flex items-center gap-2">
-              <Icon name="code-working-outline" className={cn(isToday ? "text-white" : "text-forest-700")} />
+              <Icon name="code-working-outline" className={cn(isToday ? "text-white" : "text-navy-700")} />
               <span className="font-medium">Task:</span> {day.practiceTask.title}
             </div>
             <span className={cn("capitalize", isToday ? "text-white/70" : "text-carbon-500")}>{day.practiceTask.status}</span>

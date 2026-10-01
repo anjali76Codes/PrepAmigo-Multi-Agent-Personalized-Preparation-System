@@ -31,12 +31,12 @@ export function Notifications() {
     switch (type) {
       case 'missed-task': 
       case 'streak-warning': 
-        return 'bg-amber-100 text-amber-600 border-amber-600/20';
+        return 'bg-beige-100 text-beige-600 border-beige-600/20';
       case 'plan-update':
       case 'quiz-result':
-        return 'bg-forest-100 text-forest-700 border-forest-700/20';
+        return 'bg-navy-100 text-navy-700 border-navy-700/20';
       case 'milestone-unlock':
-        return 'bg-navy-100 text-forest-700 border-forest-700/20';
+        return 'bg-navy-100 text-navy-700 border-navy-700/20';
       default: 
         return 'bg-surface text-carbon-500 border-border';
     }
@@ -92,7 +92,7 @@ export function Notifications() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className={`font-semibold ${notif.read ? 'text-carbon-900' : 'text-forest-700'}`}>{notif.title}</h3>
+                    <h3 className={`font-semibold ${notif.read ? 'text-carbon-900' : 'text-navy-700'}`}>{notif.title}</h3>
                     <span className="text-xs text-carbon-500 whitespace-nowrap">
                       {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>

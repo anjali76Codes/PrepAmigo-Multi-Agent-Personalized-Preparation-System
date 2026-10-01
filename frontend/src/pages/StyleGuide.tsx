@@ -39,8 +39,8 @@ export function StyleGuide() {
         <h2 className="text-2xl font-bold text-carbon-900">Colors</h2>
         <div className="flex gap-4 flex-wrap">
           <div className="w-24 h-24 bg-carbon-900 rounded-control"></div>
-          <div className="w-24 h-24 bg-forest-700 rounded-control"></div>
-          <div className="w-24 h-24 bg-amber-600 rounded-control"></div>
+          <div className="w-24 h-24 bg-navy-700 rounded-control"></div>
+          <div className="w-24 h-24 bg-beige-600 rounded-control"></div>
         </div>
       </section>
 
