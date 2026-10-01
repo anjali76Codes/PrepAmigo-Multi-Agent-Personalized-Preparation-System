@@ -3,8 +3,7 @@ import cookieParser from "cookie-parser";
 import { config } from "./config/env.js";
 import { logger } from "./utils/logger.js";
 import authRouter from "./auth/routes.js";
-import agentRouter from "./agent/routes.js";
-import jobIntelligenceRouter from "./agent/jobIntelligence/routes.js";
+import apiRouter from "./routes/index.js";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
 
@@ -42,17 +41,14 @@ app.get("/health", (_req: Request, res: Response) => {
 // Auth routes
 app.use(authRouter);
 
-// Agent SSE & Execution routes
-app.use("/api/agent", agentRouter);
+// Agent, job-intelligence, plans, sprints, and progress routes
+app.use(apiRouter);
 
-// Job Intelligence Agent routes
-app.use(jobIntelligenceRouter);
-
-// Connect DB
-connectDB();
-
-app.listen(config.PORT, () => {
-  logger.info(
-    `Server running in ${config.NODE_ENV} mode on port ${config.PORT}`,
-  );
+// Start accepting requests only after MongoDB is connected and models are registered.
+void connectDB().then(() => {
+  app.listen(config.PORT, () => {
+    logger.info(
+      `Server running in ${config.NODE_ENV} mode on port ${config.PORT}`,
+    );
+  });
 });

@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { RevealStagger, RevealStaggerItem } from "../components/ui/Reveal";
-import { Mascot } from "../components/ui/Mascot";
 import { PageBackground } from "../components/ui/PageBackground";
 
 import { motion, useScroll, useTransform } from "framer-motion";
@@ -21,7 +20,7 @@ export function Home() {
 
   const handleChatSubmit = (message: string) => {
     if (message.trim()) {
-      navigate("/app/chat");
+      navigate("/dashboard/chat");
     }
   };
 
@@ -32,7 +31,7 @@ export function Home() {
       {/* 1. Hero */}
       <motion.section
         style={{ scale, filter }}
-        className="relative pt-24 pb-12 px-4 md:px-6 mx-2 md:mx-4 rounded-3xl md:rounded-b-[2.5rem] min-h-[92vh] flex flex-col items-center justify-center bg-carbon-900 text-white text-center z-10 shadow-2xl"
+        className="relative pt-24 pb-12 px-4 md:px-6 mx-2 md:mx-4 rounded-3xl md:rounded-b-[2.5rem] min-h-[98vh] flex flex-col items-center justify-center bg-carbon-900 text-white text-center z-10 shadow-2xl"
       >
         <RevealStagger className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center space-y-5 my-auto">
           <RevealStaggerItem>

@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../auth/middleware.js";
+import { AuthenticatedRequest } from "../../types/authenticated-request.js";
 import { getJobIntelligence } from "./service.js";
 import { SerpApiError } from "./serpApiClient.js";
 import { RateLimitError } from "./rateLimiter.js";

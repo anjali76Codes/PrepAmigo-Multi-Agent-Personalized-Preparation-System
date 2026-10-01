@@ -45,7 +45,7 @@ export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
       </div>
       
       <div className="flex items-center gap-2 text-sm text-carbon-500 bg-bg p-3 rounded-control border border-border">
-        <Icon name="information-circle-outline" className="text-forest-700" />
+        <Icon name="information-circle-outline" className="text-navy-700" />
         <span className="font-medium text-carbon-900">{activeAgent || 'Idle'}:</span> {statusText || 'Waiting for input...'}
       </div>
     </div>

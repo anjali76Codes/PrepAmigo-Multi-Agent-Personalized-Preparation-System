@@ -12,7 +12,7 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ className, icon, variant = 'ghost', size = 'md', isLoading, disabled, tone = 'default', ...props }, ref) => {
-    const baseStyles = cn('inline-flex items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50', tone === 'inverse' ? 'focus-visible:ring-chrome-accent' : 'focus-visible:ring-forest-700');
+    const baseStyles = cn('inline-flex items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50', tone === 'inverse' ? 'focus-visible:ring-chrome-accent' : 'focus-visible:ring-navy-700');
     
     const variants = tone === 'inverse' ? {
       primary: 'bg-chrome-accent text-chrome hover:bg-chrome-accent/90 shadow-pop',

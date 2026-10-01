@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { logger } from "../utils/logger.js";
 import { config } from "./env.js";
+import "../models/index.js";
 
 export async function connectDB() {
   try {

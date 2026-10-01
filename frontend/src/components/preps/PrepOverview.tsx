@@ -26,18 +26,18 @@ export function PrepOverview({ context }: PrepOverviewProps) {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-navy-900 rounded-[2rem] p-8 shadow-pop text-white">
+        <div className="bg-lavender-100 rounded-[2rem] p-8 shadow-pop border border-chrome-border">
           <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-            <Icon name="list" className="text-chrome-accent" />
+            <Icon name="list" className="text-chrome" />
             Job Requirements
           </h3>
           <ul className="space-y-4">
             {jobRequirements.map(req => (
-              <li key={req.id} className="flex items-start gap-4 text-sm bg-white/5 rounded-xl p-4 border border-white/10">
-                <Icon name="checkmark-circle" className="text-chrome-accent text-xl shrink-0 mt-0.5" />
+              <li key={req.id} className="flex items-start gap-4 text-sm bg-chrome-accent rounded-xl p-4 border border-white/10">
+                <Icon name="checkmark-circle" className="text-navy-800 text-2xl shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-bold text-lg leading-tight mb-1">{req.skill}</div>
-                  <div className="text-xs text-navy-100 font-medium capitalize tracking-wider uppercase">{req.importance} • {req.category}</div>
+                  <div className="font-bold text-lg text-chrome mb-1">{req.skill}</div>
+                  <div className="text-xs text-navy-900 font-medium uppercase">{req.importance} • {req.category}</div>
                 </div>
               </li>
             ))}
@@ -46,19 +46,19 @@ export function PrepOverview({ context }: PrepOverviewProps) {
 
         <div className="bg-surface rounded-[2rem] p-8 border border-border">
           <h3 className="text-2xl font-bold mb-6 text-carbon-900 flex items-center gap-3">
-            <Icon name="git-merge" className="text-forest-500" />
+            <Icon name="git-merge" className="text-navy-500" />
             Interview Patterns
           </h3>
           <ul className="space-y-4">
             {interviewPatterns.map((pat, i) => (
               <li key={i} className="flex gap-4 items-start bg-bg rounded-xl p-4 border border-border/50">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-forest-100 flex items-center justify-center text-forest-700 font-extrabold text-sm shadow-sm">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-extrabold text-sm shadow-sm">
                   {i + 1}
                 </div>
                 <div>
                   <div className="font-bold text-lg text-carbon-900 mb-1 leading-tight">{pat.round}</div>
                   <div className="text-sm text-carbon-500 font-medium">{pat.focus}</div>
-                  <div className="text-xs text-forest-700 font-bold uppercase tracking-widest mt-2">{pat.format}</div>
+                  <div className="text-xs text-navy-700 font-bold uppercase tracking-widest mt-2">{pat.format}</div>
                 </div>
               </li>
             ))}

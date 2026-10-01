@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { AuthenticatedRequest } from "../auth/middleware.js";
+import { AuthenticatedRequest } from "../types/authenticated-request.js";
 import { config } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 import { redisClient, createRedisSubscriber } from "../config/redis.js";

@@ -6,6 +6,7 @@ import { StreakCalendar } from '../components/preps/StreakCalendar';
 import { SkillLevelBars } from '../components/preps/SkillLevelBars';
 import { MilestoneTrack } from '../components/preps/MilestoneTrack';
 import { TitleCard } from '../components/preps/TitleCard';
+import { Mascot } from '../components/ui/Mascot';
 
 export function Progress() {
   const shouldReduceMotion = useReducedMotion();
@@ -15,15 +16,20 @@ export function Progress() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 py-8 md:py-12 border-b border-border">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-4xl font-extrabold text-carbon-900 mb-2 tracking-tight">Progress Dashboard</h1>
-          <p className="text-lg text-carbon-500">
-            Track your learning velocity and skill levels. 
-            <span className="text-chrome-accent font-medium ml-1 block mt-1 md:inline md:mt-0">
-              * XP is earned only from completed tasks and assessment scores.
-            </span>
-          </p>
+      <div className="bg-bg shrink-0 z-10 sticky top-0 px-4 md:px-8 py-6 border-b border-border">
+        <div className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center justify-between shadow-pop border border-chrome-accent/50 relative overflow-hidden max-w-6xl mx-auto">
+          <div className="relative z-10">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-navy-900 mb-2 tracking-tight">Progress Dashboard</h1>
+            <p className="text-base md:text-lg text-navy-800/80 font-medium">
+              Track your learning velocity and skill levels.
+              <span className="text-navy-900 font-bold ml-1 block mt-1 md:inline md:mt-0">
+                XP is earned only from completed tasks.
+              </span>
+            </p>
+          </div>
+          <div className="relative z-10 hidden sm:block shrink-0">
+            <Mascot size="lg" mood="think" className="bg-white shadow-card rounded-full p-2" />
+          </div>
         </div>
       </div>
 

@@ -18,7 +18,7 @@ export const Mascot = forwardRef<HTMLDivElement, MascotProps>(
     return (
       <div
         ref={ref}
-        className={cn("inline-flex items-center justify-center rounded-full bg-forest-100 text-forest-700", sizeMap[size], className)}
+        className={cn("inline-flex items-center justify-center rounded-full bg-navy-100 text-navy-700", sizeMap[size], className)}
         {...props}
       >
         <svg viewBox="0 0 100 100" className="w-full h-full fill-current" preserveAspectRatio="xMidYMid meet">

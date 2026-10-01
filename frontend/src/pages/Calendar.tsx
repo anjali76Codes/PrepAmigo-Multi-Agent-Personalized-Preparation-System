@@ -82,8 +82,8 @@ export function Calendar() {
   const getTagStyle = (type: string) => {
     switch (type) {
       case 'READ': return 'bg-sky-100 text-sky-800 border-sky-200';
-      case 'PRACTISE': return 'bg-forest-100 text-forest-800 border-forest-200';
-      case 'CODE': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'PRACTISE': return 'bg-navy-100 text-navy-800 border-navy-200';
+      case 'CODE': return 'bg-beige-100 text-beige-800 border-beige-200';
       case 'REVIEW': return 'bg-coral-100 text-coral-800 border-coral-200';
       default: return 'bg-surface-muted text-carbon-700 border-border';
     }
@@ -106,13 +106,13 @@ export function Calendar() {
               <select
                 value={selectedPrepId}
                 onChange={(e) => setSelectedPrepId(e.target.value)}
-                className="appearance-none pl-7 pr-8 py-1.5 bg-surface-muted hover:bg-forest-100/50 border border-border rounded-full text-xs font-bold text-carbon-900 cursor-pointer outline-none transition-colors"
+                className="appearance-none pl-7 pr-8 py-1.5 bg-surface-muted hover:bg-navy-100/50 border border-border rounded-full text-xs font-bold text-carbon-900 cursor-pointer outline-none transition-colors"
               >
                 {preps.map((p) => (
                   <option key={p.id} value={p.id}>{p.title}</option>
                 ))}
               </select>
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <span className="w-2.5 h-2.5 rounded-full bg-beige-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <Icon name="chevron-down" className="text-xs text-carbon-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 
@@ -124,19 +124,6 @@ export function Calendar() {
             </button>
           </div>
 
-          {/* Quick Header Stats */}
-          <div className="flex items-center gap-4 text-xs font-bold text-carbon-600 self-end md:self-auto">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-muted rounded-full border border-border">
-              <span>3/18</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-muted rounded-full border border-border">
-              <span>2%</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
-              <Icon name="flame" className="text-amber-600 text-sm" />
-              <span>0</span>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -160,9 +147,9 @@ export function Calendar() {
                   className="bg-white border border-border rounded-2xl p-5 md:p-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-1 pr-6">
-                    <h3 className="text-base font-bold text-carbon-900">You missed 2 days. No drama.</h3>
+                    <h3 className="text-base font-bold text-carbon-900">It's okay to miss a day!</h3>
                     <p className="text-sm text-carbon-500 leading-relaxed">
-                      5 tasks are waiting in your backlog. Nothing was rescheduled and nothing expires; the plan is still the one you were given.
+                      You have 5 tasks waiting in your backlog. Nothing expires; we're just picking up right where you left off.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -172,7 +159,7 @@ export function Calendar() {
                     >
                       See the backlog
                     </button>
-                    <Link to="/app/chat">
+                    <Link to="/dashboard/chat">
                       <button className="px-3.5 py-2 border border-border hover:bg-surface-muted text-carbon-700 text-xs font-bold rounded-xl transition-all">
                         Adjust plan
                       </button>
@@ -213,7 +200,7 @@ export function Calendar() {
                   )}
                 >
                   <span>Backlog</span>
-                  <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-500/15 text-amber-700 font-extrabold">{backlogTasks.length}</span>
+                  <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-beige-500/15 text-beige-700 font-extrabold">{backlogTasks.length}</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('upcoming')}
@@ -228,7 +215,7 @@ export function Calendar() {
                 </button>
               </div>
 
-              <Link to="/app/practice" className="text-xs font-bold text-forest-700 hover:text-forest-800 flex items-center gap-1 group">
+              <Link to="/dashboard/practice" className="text-xs font-bold text-navy-700 hover:text-navy-800 flex items-center gap-1 group">
                 <span>Whole plan</span>
                 <Icon name="arrow-forward" className="text-xs group-hover:translate-x-0.5 transition-transform" />
               </Link>
@@ -239,10 +226,10 @@ export function Calendar() {
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
                 <div>
                   <span className="text-xs font-semibold text-carbon-400 uppercase tracking-wider">
-                    {activeTab === 'today' ? 'Today • Wednesday 30 Sept' : activeTab === 'backlog' ? 'Backlog items pending' : 'Upcoming Next Sprints'}
+                    {activeTab === 'today' ? "Today's Plan (Wed, 30 Sept)" : activeTab === 'backlog' ? 'Waiting for you' : 'Coming up next'}
                   </span>
                   <h2 className="text-3xl md:text-4xl font-extrabold text-carbon-900 tracking-tight mt-1">
-                    {activeTab === 'today' ? `${remainingToday} to go` : activeTab === 'backlog' ? `${backlogTasks.filter(t => !t.completed).length} pending tasks` : `${upcomingTasks.length} upcoming tasks`}
+                    {activeTab === 'today' ? `Just ${remainingToday} more to go` : activeTab === 'backlog' ? `${backlogTasks.filter(t => !t.completed).length} tasks waiting` : `${upcomingTasks.length} tasks lined up`}
                   </h2>
                 </div>
 
@@ -251,7 +238,7 @@ export function Calendar() {
                     <span className="text-xs font-bold text-carbon-500">{completedToday} of {totalToday}</span>
                     <div className="w-24 h-2 rounded-full bg-surface-muted overflow-hidden">
                       <div 
-                        className="h-full bg-forest-700 rounded-full transition-all duration-300"
+                        className="h-full bg-navy-700 rounded-full transition-all duration-300"
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
@@ -261,7 +248,7 @@ export function Calendar() {
 
               {/* Sub-label */}
               <div className="flex items-center gap-2 text-xs font-medium text-carbon-500">
-                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-beige-500 shrink-0" />
                 <span className="font-semibold text-carbon-800">{selectedPrep?.title || 'Java, Spring Boot, AWS, and Docker'}</span>
                 <span>•</span>
                 <span>Java Fundamentals - day 3</span>
@@ -285,8 +272,8 @@ export function Calendar() {
                     className={cn(
                       "w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors",
                       task.completed 
-                        ? "bg-forest-700 border-forest-700 text-white" 
-                        : "border-carbon-300 group-hover:border-forest-700 bg-white"
+                        ? "bg-navy-700 border-navy-700 text-white" 
+                        : "border-carbon-300 group-hover:border-navy-700 bg-white"
                     )}
                   >
                     {task.completed && <Icon name="checkmark" className="text-xs font-bold" />}
@@ -314,7 +301,7 @@ export function Calendar() {
                   onClick={() => setIsAddingTask(true)}
                   className="flex items-center gap-2 text-xs font-bold text-carbon-500 hover:text-carbon-900 py-3 px-4 rounded-xl border border-dashed border-border hover:bg-white transition-all w-full justify-center"
                 >
-                  <Icon name="add" className="text-base" /> Add my own task
+                  <Icon name="add" className="text-base" /> Add something else to do
                 </button>
               ) : (
                 <form onSubmit={handleAddTask} className="bg-white p-4 rounded-2xl border border-border space-y-3 shadow-sm">
@@ -335,7 +322,7 @@ export function Calendar() {
                       placeholder="Task description..."
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="flex-1 px-3 py-1.5 text-sm bg-transparent border border-border rounded-lg outline-none focus:border-forest-700"
+                      className="flex-1 px-3 py-1.5 text-sm bg-transparent border border-border rounded-lg outline-none focus:border-navy-700"
                     />
                   </div>
                   <div className="flex justify-end gap-2">
@@ -362,95 +349,100 @@ export function Calendar() {
             transition={{ delay: 0.1 }}
             className="lg:col-span-4 space-y-6"
           >
+            {/* Mascot Widget */}
+            <div className="bg-chrome-accent text-navy-900 rounded-2xl p-5 shadow-xs flex items-center gap-4 relative overflow-hidden">
+              <div className="flex-1 z-10">
+                <h4 className="font-bold text-lg leading-tight mb-1">Keep it up!</h4>
+                <p className="text-xs text-navy-900/70 font-medium leading-relaxed">
+                  You're making steady progress. Your mascot is cheering for you!
+                </p>
+              </div>
+              <div className="w-14 h-14 shrink-0 bg-white rounded-full flex items-center justify-center shadow-sm relative z-10">
+                <span className="text-2xl animate-bounce"></span>
+              </div>
+            </div>
+
             {/* 1. Mini Calendar Widget */}
-            <div className="bg-white border border-border rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="bg-lavender-100 text-navy-900 rounded-2xl p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-carbon-900">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  <span className="w-2 h-2 rounded-full bg-navy-900" />
                   <span className="truncate max-w-[170px]">{selectedPrep?.title || 'Java, Spring Boot'}</span>
                 </div>
-                <span className="text-xs font-bold text-carbon-500">0/18 days</span>
+                <span className="text-xs font-bold text-navy-500">0 of 18 days done</span>
               </div>
 
-              <div className="flex justify-between items-center text-xs font-semibold text-carbon-400">
+              <div className="flex justify-between items-center text-xs font-semibold text-navy-500">
                 <span>Sept, Oct</span>
               </div>
 
               {/* Day Headers */}
-              <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-carbon-400 pb-1">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-navy-500 pb-1">
                 {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
                   <div key={i}>{d}</div>
                 ))}
               </div>
 
               {/* Calendar Days Matrix */}
-              <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                {/* Week 1 */}
-                <div className="py-2 text-carbon-400">28</div>
-                <div className="py-2 text-carbon-400">29</div>
-                <div className="py-2 font-bold text-amber-800 bg-amber-100 rounded-lg border border-amber-300">30</div>
-                <div className="py-2 text-carbon-800 font-medium">1</div>
-                <div className="py-2 text-carbon-800 font-medium">2</div>
-                <div className="py-2 text-carbon-800 font-medium">3</div>
-                <div className="py-2 text-carbon-800 font-medium">4</div>
+              <div className="grid grid-cols-7 gap-1.5 text-center text-xs">
+                {Array.from({ length: 31 }).map((_, i) => {
+                  const isToday = i === 15;
+                  const isDone = i < 15;
+                  
+                  let bgStyle = 'bg-white';
+                  if (isToday) bgStyle = 'border border-beige-600 bg-beige-100 text-beige-900 font-bold';
+                  else if (isDone) bgStyle = 'bg-navy-100 text-navy-900';
+                  else bgStyle = 'bg-white text-navy-900';
 
-                {/* Week 2 */}
-                <div className="py-2 text-carbon-800 font-medium">5</div>
-                <div className="py-2 text-carbon-800 font-medium">6</div>
-                <div className="py-2 text-carbon-800 font-medium">7</div>
-                <div className="py-2 text-carbon-800 font-medium">8</div>
-                <div className="py-2 text-carbon-800 font-medium">9</div>
-                <div className="py-2 text-carbon-800 font-medium">10</div>
-                <div className="py-2 text-carbon-800 font-medium">11</div>
-
-                {/* Week 3 */}
-                <div className="py-2 text-carbon-800 font-medium">12</div>
-                <div className="py-2 text-carbon-800 font-medium">13</div>
-                <div className="py-2 text-carbon-800 font-medium">14</div>
-                <div className="py-2 text-carbon-800 font-medium">15</div>
-                <div className="py-2 text-carbon-300">16</div>
-                <div className="py-2 text-carbon-300">17</div>
-                <div className="py-2 text-carbon-300">18</div>
+                  return (
+                    <div
+                      key={i}
+                      className={`h-7 flex items-center justify-center rounded-lg ${bgStyle}`}
+                    >
+                      {i + 1}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Calendar Legend */}
-              <div className="flex items-center justify-between text-[11px] font-semibold text-carbon-500 pt-3 border-t border-border">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-navy-500 pt-3 border-t border-navy-500/20">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" /> done
+                  <span className="w-2 h-2 rounded-lg bg-navy-100" /> done
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-xs border border-amber-500 bg-amber-100" /> today
+                  <span className="w-2 h-2 rounded-lg border border-beige-600 bg-beige-100" /> today
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-xs border border-dashed border-carbon-400" /> 2 missed
+                  <span className="w-2 h-2 rounded-lg border border-dashed border-navy-500/40" /> 2 missed
                 </div>
               </div>
             </div>
 
             {/* 2. Progress & Backlog Stats Widget */}
-            <div className="bg-white border border-border rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="bg-navy-900 text-white rounded-2xl p-5 shadow-pop space-y-4">
               <div className="flex items-center gap-4">
                 {/* Radial Gauge */}
                 <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
                   <svg className="w-12 h-12 -rotate-90">
-                    <circle cx="24" cy="24" r="18" className="stroke-surface-muted" strokeWidth="4" fill="transparent" />
-                    <circle cx="24" cy="24" r="18" className="stroke-forest-700" strokeWidth="4" strokeDasharray={113} strokeDashoffset={110} fill="transparent" strokeLinecap="round" />
+                    <circle cx="24" cy="24" r="18" className="stroke-white/10" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="18" className="stroke-chrome-accent" strokeWidth="4" strokeDasharray={113} strokeDashoffset={110} fill="transparent" strokeLinecap="round" />
                   </svg>
                 </div>
                 <div>
-                  <h4 className="text-base font-extrabold text-carbon-900">2% done</h4>
-                  <p className="text-xs text-carbon-500 font-medium">1 of 53 tasks completed</p>
+                  <h4 className="text-base font-extrabold text-white">2% done</h4>
+                  <p className="text-xs text-on-chrome-muted font-medium">1 of 53 tasks completed</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-surface-muted/60 rounded-xl p-3 border border-border/60">
-                  <div className="text-xl font-extrabold text-carbon-900">15</div>
-                  <div className="text-xs font-semibold text-carbon-500">days left</div>
+                <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                  <div className="text-xl font-extrabold text-white">15</div>
+                  <div className="text-xs font-semibold text-on-chrome-muted">days left</div>
                 </div>
-                <div className="bg-surface-muted/60 rounded-xl p-3 border border-border/60">
-                  <div className="text-xl font-extrabold text-amber-700">{backlogTasks.length}</div>
-                  <div className="text-xs font-semibold text-carbon-500">in backlog</div>
+                <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                  <div className="text-xl font-extrabold text-chrome-accent">{backlogTasks.length}</div>
+                  <div className="text-xs font-semibold text-on-chrome-muted">in backlog</div>
                 </div>
               </div>
             </div>
@@ -458,7 +450,7 @@ export function Calendar() {
             {/* 3. Live Community Activity Widget */}
             <div className="bg-white border border-border rounded-2xl p-5 shadow-xs space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-carbon-900">
-                <span className="w-2 h-2 rounded-full bg-forest-700 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-navy-700 animate-pulse" />
                 <span>In the last 3 hours</span>
               </div>
 

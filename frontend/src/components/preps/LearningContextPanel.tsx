@@ -27,7 +27,7 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
       
       <div className="space-y-6">
         <motion.div 
-          animate={{ backgroundColor: highlight && (highlightField === 'role' || highlightField === 'all') ? 'var(--color-forest-100)' : 'transparent' }}
+          animate={{ backgroundColor: highlight && (highlightField === 'role' || highlightField === 'all') ? 'var(--color-navy-100)' : 'transparent' }}
           className="rounded-control p-2 -mx-2 transition-colors relative"
         >
           <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wider mb-2 flex justify-between items-center">
@@ -40,7 +40,7 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
         </motion.div>
 
         <motion.div 
-          animate={{ backgroundColor: highlight && (highlightField === 'summary' || highlightField === 'all') ? 'var(--color-forest-100)' : 'transparent' }}
+          animate={{ backgroundColor: highlight && (highlightField === 'summary' || highlightField === 'all') ? 'var(--color-navy-100)' : 'transparent' }}
           className="rounded-control p-2 -mx-2 transition-colors relative"
         >
           <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wider mb-2 flex justify-between items-center">
@@ -53,7 +53,7 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
         </motion.div>
 
         <motion.div 
-          animate={{ backgroundColor: highlight && (highlightField === 'gaps' || highlightField === 'all') ? 'var(--color-forest-100)' : 'transparent' }}
+          animate={{ backgroundColor: highlight && (highlightField === 'gaps' || highlightField === 'all') ? 'var(--color-navy-100)' : 'transparent' }}
           className="rounded-control p-2 -mx-2 transition-colors relative"
         >
           <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wider mb-2 flex justify-between items-center">
@@ -64,7 +64,7 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
           </div>
           <div className="flex flex-wrap gap-2">
             {context.knowledgeGaps.map(gap => (
-              <Badge key={gap.id} variant="default" className="bg-amber-100 text-amber-600 border-amber-600/20">
+              <Badge key={gap.id} variant="default" className="bg-beige-100 text-beige-600 border-beige-600/20">
                 {gap.skill}
               </Badge>
             ))}

@@ -7,9 +7,9 @@ export function TitleCard({ titles }: { titles: Title[] }) {
     <Card variant="default" className="p-6 h-full">
       <h3 className="text-lg font-bold text-carbon-900 mb-6">Equipped Title</h3>
       {titles.length > 0 ? (
-        <div className="p-4 bg-navy-100 border border-forest-700/20 rounded-card flex items-center justify-center gap-3">
-          <Icon name="ribbon-outline" className="text-2xl text-forest-700" />
-          <span className="text-xl font-bold text-forest-700 tracking-wide uppercase">
+        <div className="p-4 bg-navy-100 border border-navy-700/20 rounded-card flex items-center justify-center gap-3">
+          <Icon name="ribbon-outline" className="text-2xl text-navy-700" />
+          <span className="text-xl font-bold text-navy-700 tracking-wide uppercase">
             {titles[0].name}
           </span>
         </div>
@@ -19,7 +19,7 @@ export function TitleCard({ titles }: { titles: Title[] }) {
         </div>
       )}
       <div className="mt-6 text-sm text-center">
-        <button className="text-forest-700 hover:underline font-medium">Change Title</button>
+        <button className="text-navy-700 hover:underline font-medium">Change Title</button>
       </div>
     </Card>
   );

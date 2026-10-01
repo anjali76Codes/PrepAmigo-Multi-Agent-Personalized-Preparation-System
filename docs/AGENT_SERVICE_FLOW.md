@@ -48,14 +48,14 @@ The supervisor and memory recall start together. `dispatch` waits for both befor
 
 ## 3. Agents and Shared Capabilities
 
-| Agent/node | Main work | Memory usage | Guardrails / data boundary |
-|---|---|---|---|
-| `chat` (`ChatAgent`) | General PrepAmigo response | Inherits `BaseAgent`; recalled facts and recent messages are added to its prompt | No external search tools |
-| `research` (`ResearchNode` + `ContentResearchAgent`) | Learning resources, docs, books, papers, videos, transcripts | Requires `user_id`; reuses `memory_context` during request extraction and research scoping | Search tools validate inputs, bound results, sanitize links, and label mock/fixture sources |
-| `company_research` (`CompanyResearchAgent`) | Company facts, engineering context, and news | The outer graph still recalls/saves memory; the company agent's own prompt currently consumes its messages and task context, not `memory_context` directly | Its tool calls pass through `cr_guardrails` before `cr_tools`; tool errors are handled by `ToolNode` |
-| `interview_intelligence` (`InterviewIntelligenceNode`) | Company/role-specific interview rounds and candidate reports | Request extraction can use recalled memory | Uses bounded search tools and reports source errors/coverage |
-| `job_intelligence` (`JobIntelligenceAgent`) | Job postings, skills, seniority, responsibilities, qualifications | No direct Mem0 call; participates in the graph workflow and final exchange save | Pydantic input/output validation, Mongo profile cache, bounded SerpApi/LLM calls, safe partial/error results |
-| `interview_prep` (`InterviewPrepOrchestrator`) | Collect required fields, run Company Research and Job Intelligence concurrently, evaluate and clarify | Field extraction may consult recalled memory; intermediate profiles stay in checkpoint/task context | Central field schema, isolated branch results, timeout/error handling, bounded clarification and evaluation |
+| Agent/node                                             | Main work                                                                                             | Memory usage                                                                                                                                               | Guardrails / data boundary                                                                                   |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `chat` (`ChatAgent`)                                   | General PrepAmigo response                                                                            | Inherits `BaseAgent`; recalled facts and recent messages are added to its prompt                                                                           | No external search tools                                                                                     |
+| `research` (`ResearchNode` + `ContentResearchAgent`)   | Learning resources, docs, books, papers, videos, transcripts                                          | Requires `user_id`; reuses `memory_context` during request extraction and research scoping                                                                 | Search tools validate inputs, bound results, sanitize links, and label mock/fixture sources                  |
+| `company_research` (`CompanyResearchAgent`)            | Company facts, engineering context, and news                                                          | The outer graph still recalls/saves memory; the company agent's own prompt currently consumes its messages and task context, not `memory_context` directly | Its tool calls pass through `cr_guardrails` before `cr_tools`; tool errors are handled by `ToolNode`         |
+| `interview_intelligence` (`InterviewIntelligenceNode`) | Company/role-specific interview rounds and candidate reports                                          | Request extraction can use recalled memory                                                                                                                 | Uses bounded search tools and reports source errors/coverage                                                 |
+| `job_intelligence` (`JobIntelligenceAgent`)            | Job postings, skills, seniority, responsibilities, qualifications                                     | No direct Mem0 call; participates in the graph workflow and final exchange save                                                                            | Pydantic input/output validation, Mongo profile cache, bounded SerpApi/LLM calls, safe partial/error results |
+| `interview_prep` (`InterviewPrepOrchestrator`)         | Collect required fields, run Company Research and Job Intelligence concurrently, evaluate and clarify | Field extraction may consult recalled memory; intermediate profiles stay in checkpoint/task context                                                        | Central field schema, isolated branch results, timeout/error handling, bounded clarification and evaluation  |
 
 ### Memory
 
@@ -76,11 +76,11 @@ This guardrail is intentionally narrow; it is not a general-purpose PII/content 
 
 `agents/interview_prep_fields.py` is the single source of truth for each workflow input:
 
-| Field | Required | Routed to |
-|---|---:|---|
-| `company` | yes | Company Research, Job Intelligence |
-| `role` | yes | Company Research, Job Intelligence |
-| `location` | yes | Job Intelligence |
+| Field      | Required | Routed to                          |
+| ---------- | -------: | ---------------------------------- |
+| `company`  |      yes | Company Research, Job Intelligence |
+| `role`     |      yes | Company Research, Job Intelligence |
+| `location` |      yes | Job Intelligence                   |
 
 Each `WorkflowField` also defines a user-facing label, description, and maximum length. This definition drives the extraction schema, missing-field detection, contextual clarification question, per-agent payload, and frontend form. The authenticated field-schema endpoint is `GET /api/agent/interview-prep/fields`.
 
@@ -120,13 +120,13 @@ Redis history is retained for one hour by default. The Node stream sends 15-seco
 
 ## 7. Cost and Behavior Switches
 
-| Setting | `true` / enabled | `false` / disabled | Cost/behavior effect |
-|---|---|---|---|
-| `SERPAPI_ENABLED` | Calls live SerpApi; requires `SERPAPI_API_KEY` | Reads provider-shaped JSON from `SERPAPI_DUMMY_DATA_PATH` | Prevents SerpApi requests/credits across the Python agents using the shared client |
-| `USE_DUMMY_STREAM` | Emits the scripted SSE demonstration instead of the ordinary real graph | Runs the real graph | Saves LLM/search work for demo stream requests. The structured interview-prep workflow forces the real graph so the coordinator is exercised |
-| `RESEARCH_CACHE_ENABLED` | Enables file cache for eligible Content/Interview research SerpApi calls | Bypasses that cache | Cache hits avoid repeat live requests; `RESEARCH_CACHE_TTL_SECONDS` controls expiry (`0` means no expiry) |
-| `STREAM_RESPONSES` | Enables token-level streaming where supported | Disables token streaming | Affects response streaming, not which provider or agent runs |
-| `LLM_PROVIDER` | `openai` or `ollama` selects the model provider | N/A | Affects model/provider cost; fixture mode still uses the LLM for extraction/synthesis |
+| Setting                  | `true` / enabled                                                         | `false` / disabled                                        | Cost/behavior effect                                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SERPAPI_ENABLED`        | Calls live SerpApi; requires `SERPAPI_API_KEY`                           | Reads provider-shaped JSON from `SERPAPI_DUMMY_DATA_PATH` | Prevents SerpApi requests/credits across the Python agents using the shared client                                                           |
+| `USE_DUMMY_STREAM`       | Emits the scripted SSE demonstration instead of the ordinary real graph  | Runs the real graph                                       | Saves LLM/search work for demo stream requests. The structured interview-prep workflow forces the real graph so the coordinator is exercised |
+| `RESEARCH_CACHE_ENABLED` | Enables file cache for eligible Content/Interview research SerpApi calls | Bypasses that cache                                       | Cache hits avoid repeat live requests; `RESEARCH_CACHE_TTL_SECONDS` controls expiry (`0` means no expiry)                                    |
+| `STREAM_RESPONSES`       | Enables token-level streaming where supported                            | Disables token streaming                                  | Affects response streaming, not which provider or agent runs                                                                                 |
+| `LLM_PROVIDER`           | `openai` or `ollama` selects the model provider                          | N/A                                                       | Affects model/provider cost; fixture mode still uses the LLM for extraction/synthesis                                                        |
 
 `SERPAPI_DUMMY_DATA_PATH` defaults to `agents-service/serpapi_fixtures.example.json`. Fixture results are labeled as dummy and should not be treated as live evidence. Disabling SerpApi does **not** disable LLM calls. Content Research may still fetch YouTube transcripts through `youtube-transcript-api`; that is separate from SerpApi. Job Intelligence also uses the MongoDB `job_intelligence_profiles` cache independently of the Content Research file cache.
 

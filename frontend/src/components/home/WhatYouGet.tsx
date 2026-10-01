@@ -62,7 +62,7 @@ export function WhatYouGet() {
                             <div
                                 key={i}
                                 className={`h-7 rounded-lg ${i === 5
-                                        ? 'border border-amber-600 bg-amber-100'
+                                        ? 'border border-beige-600 bg-beige-100'
                                         : i < 5
                                             ? 'bg-navy-100'
                                             : i === 6

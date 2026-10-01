@@ -29,14 +29,14 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
           animate={{ opacity: 1, y: 0 }}
           className={`flex gap-4 max-w-5xl mx-auto ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
         >
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user' ? 'bg-forest-100 text-forest-700' : 'bg-carbon-900 text-white'
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user' ? 'bg-navy-100 text-navy-700' : 'bg-carbon-900 text-white'
             }`}>
             <Icon name={msg.sender === 'user' ? 'person' : 'chatbubbles-outline'} />
           </div>
 
           <div className={`space-y-4 ${msg.sender === 'user' ? 'items-end flex flex-col' : 'flex-1'}`}>
             {msg.content && (
-              <div className={`px-4 py-3 rounded-card ${msg.sender === 'user' ? 'bg-forest-700 text-white rounded-tr-sm' : 'bg-surface border border-border rounded-tl-sm text-carbon-900'
+              <div className={`px-4 py-3 rounded-card ${msg.sender === 'user' ? 'bg-navy-700 text-white rounded-tr-sm' : 'bg-surface border border-border rounded-tl-sm text-carbon-900'
                 }`}>
                 {msg.content}
               </div>
@@ -66,13 +66,13 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
                   </div>
                   <div className="bg-bg p-4 rounded-control border border-border">
                     <div className="text-sm text-carbon-500 mb-1">Identified Gaps</div>
-                    <ul className="list-disc list-inside text-sm text-amber-600 font-medium">
+                    <ul className="list-disc list-inside text-sm text-beige-600 font-medium">
                       <li>System Design (High)</li>
                       <li>Graphs (Medium)</li>
                     </ul>
                   </div>
                 </div>
-                {/* <Link to="/app/preps/prep-1">
+                {/* <Link to="/dashboard/preps/prep-1">
                   <Button variant="primary">
                     View Roadmap <Icon name="arrow-forward-outline" />
                   </Button>
@@ -82,7 +82,7 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
 
             {msg.scenario === 'plan-update' && (
               <Card variant="default" className="p-6">
-                <div className="flex items-center gap-3 mb-4 text-forest-700 font-bold">
+                <div className="flex items-center gap-3 mb-4 text-navy-700 font-bold">
                   <Icon name="sync-outline" className="text-xl" /> Plan Reprioritized
                 </div>
                 <p className="text-sm text-carbon-500 mb-4">
@@ -106,7 +106,7 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
                   <div className="space-y-2">
                     <div className="text-sm flex justify-between p-2 rounded bg-surface border border-border">
                       <span className="text-carbon-500">Today</span>
-                      <span className="text-forest-700 font-medium">Missed Reading (Moved)</span>
+                      <span className="text-navy-700 font-medium">Missed Reading (Moved)</span>
                     </div>
                     <div className="text-sm flex justify-between p-2 rounded bg-bg border border-border opacity-70">
                       <span className="text-carbon-500">Tomorrow</span>

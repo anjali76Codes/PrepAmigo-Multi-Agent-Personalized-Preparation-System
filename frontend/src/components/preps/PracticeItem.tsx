@@ -5,9 +5,9 @@ import { Button } from '../ui/Button';
 
 export function PracticeItem({ item }: { item: Assessment }) {
   return (
-    <Card variant="default" className="p-6 flex justify-between items-center group hover:border-forest-700/30 transition-colors">
+    <Card variant="default" className="p-6 flex justify-between items-center group hover:border-navy-700/30 transition-colors">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-navy-100 text-forest-700">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-navy-100 text-navy-700">
           <Icon name={item.type === 'coding' ? 'code-slash-outline' : 'people-outline'} className="text-2xl" />
         </div>
         <div>
@@ -19,7 +19,7 @@ export function PracticeItem({ item }: { item: Assessment }) {
       <div className="text-right">
         {item.score !== undefined ? (
           <div>
-            <div className="text-2xl font-bold text-forest-700">{item.score}%</div>
+            <div className="text-2xl font-bold text-navy-700">{item.score}%</div>
             <div className="text-xs text-carbon-500">Score</div>
           </div>
         ) : (
