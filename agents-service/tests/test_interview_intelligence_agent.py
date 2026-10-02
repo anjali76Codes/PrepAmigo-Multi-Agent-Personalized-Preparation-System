@@ -100,6 +100,35 @@ def test_agent_continues_with_partial_source_failures():
     assert len(result["brief"]["sources"]) == 3
 
 
+def test_a_hanging_source_is_capped_by_its_own_timeout_not_the_whole_step(monkeypatch):
+    """One slow/hanging source must not be able to eat the whole step's
+    budget away from the other sources running alongside it."""
+    import time as time_module
+
+    import agents.interview_intelligence_agent as interview_intelligence_agent
+
+    class TinyToolBudget:
+        research_timeout_seconds = 30
+        research_tool_timeout_seconds = 0.05
+        research_min_relevance = 0.5
+        research_synthesis_timeout_seconds = 45
+
+    monkeypatch.setattr(interview_intelligence_agent, "settings", TinyToolBudget())
+
+    class HangingTool:
+        def invoke(self, payload):
+            time_module.sleep(1)  # far longer than research_tool_timeout_seconds
+            return {"source": "serpapi", "results": []}
+
+    tools = make_tools(news=HangingTool())
+    agent = InterviewIntelligenceAgent(llm=FakeLLM(), tools=tools)
+
+    result = asyncio.run(agent.run(REQUEST))
+
+    assert "news" in result["brief"]["source_errors"]
+    assert len(result["brief"]["sources"]) == 3  # search + questions + videos still succeeded
+
+
 def test_agent_fetches_ai_overview_immediately_from_search_page_token():
     search = FakeTool({"source": "serpapi", "results": [
         {"title": "Interview report", "url": "https://search.example/report", "snippet": "Candidate experience."},

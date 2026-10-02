@@ -52,6 +52,8 @@ class ExecuteAgentRequest(BaseModel):
     workflow_input: dict[str, Any] = Field(default_factory=dict)
     workflow_text_input: str | None = Field(default=None, max_length=4000)
     resume_input: dict[str, Any] | None = None
+    # interview_prep plan length in days; omitted = PLAN_TOTAL_DAYS
+    plan_days: int | None = Field(default=None, ge=1, le=366)
 
     @model_validator(mode="after")
     def validate_execution_mode(self):
@@ -227,5 +229,6 @@ async def execute_agent_async(
         workflow_input=request.workflow_input,
         workflow_text_input=request.workflow_text_input,
         resume_input=request.resume_input,
+        plan_days=request.plan_days,
     )
     return {"status": "accepted", "runId": request.runId}

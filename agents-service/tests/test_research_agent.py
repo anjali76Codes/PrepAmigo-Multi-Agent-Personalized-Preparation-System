@@ -49,19 +49,22 @@ class FailingMemory(LocalMemoryProvider):
 
 
 def fake_tools(**overrides):
+    # titles name their topic, like real search results do: the agent drops
+    # results whose title+snippet don't mention the topic (tools/relevance.py)
     tools = {
         "docs": FakeTool({"source": "serpapi", "results": [
-            {"title": "DP guide", "url": "https://docs.example/dp", "resource_type": "documentation"},
+            {"title": "Dynamic Programming guide", "url": "https://docs.example/dp", "resource_type": "documentation"},
         ]}),
         "books": FakeTool({"source": "serpapi", "results": [
-            {"title": "CLRS", "url": "https://books.example/clrs", "resource_type": "book"},
+            {"title": "CLRS", "url": "https://books.example/clrs", "resource_type": "book",
+             "snippet": "Classic algorithms text with a dynamic programming chapter."},
             {"title": "Duplicate", "url": "https://docs.example/dp", "resource_type": "book"},
         ]}),
         "papers": FakeTool({"source": "serpapi", "results": [
-            {"title": "A survey of DP", "url": "https://papers.example/dp", "resource_type": "paper"},
+            {"title": "A survey of dynamic programming", "url": "https://papers.example/dp", "resource_type": "paper"},
         ]}),
         "videos": FakeTool({"source": "serpapi", "results": [
-            {"title": "DP in 10 min", "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+            {"title": "Dynamic Programming in 10 min", "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
              "resource_type": "video", "video_id": "dQw4w9WgXcQ"},
         ]}),
         "transcript": FakeTool({"video_id": "dQw4w9WgXcQ", "source": "youtube", "available": True,
@@ -116,7 +119,8 @@ def test_end_to_end_module_and_handoff(memory):
     assert module["content_markdown"] == "## Overview\nDP matters."
     # links are deduplicated tool results, never LLM output
     assert [r["url"] for r in module["resources"]] == [
-        "https://docs.example/dp", "https://books.example/clrs", "https://youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://docs.example/dp", "https://books.example/clrs", "https://papers.example/dp",
+        "https://youtube.com/watch?v=dQw4w9WgXcQ",
     ]
     assert module["transcripts"][0]["video_id"] == "dQw4w9WgXcQ"
     assert module["uses_mock_sources"] is False
@@ -155,16 +159,17 @@ def test_depth_hint_is_validated_by_the_request():
         dataclasses.replace(REQUEST, depth_hint="bogus")
 
 
-def test_papers_are_fetched_only_at_intermediate_and_advanced_depth(memory):
+def test_papers_are_fetched_at_every_depth_except_revision(memory):
+    """Papers come from a free catalogue (arXiv), so a foundational module
+    gets one too; a revision pass stays short."""
     agent = make_agent(memory)
 
     foundational = asyncio.run(agent.run(REQUEST))
-    assert agent.tools["papers"].calls == []
-    assert "paper" not in {r.get("resource_type") for r in foundational["module"]["resources"]}
-
-    advanced = asyncio.run(agent.run(dataclasses.replace(REQUEST, depth_hint="advanced")))
     assert len(agent.tools["papers"].calls) == 1
-    assert any(r["url"] == "https://papers.example/dp" for r in advanced["module"]["resources"])
+    assert any(r["url"] == "https://papers.example/dp" for r in foundational["module"]["resources"])
+
+    asyncio.run(agent.run(dataclasses.replace(REQUEST, depth_hint="revision")))
+    assert len(agent.tools["papers"].calls) == 1
 
 
 def test_revision_scope_skips_books_and_transcripts(memory):
@@ -195,9 +200,42 @@ def test_partial_tool_failures_are_reported_not_fatal(memory):
     assert events[-1]["status"] == "completed"
 
 
+def test_a_hanging_tool_call_is_capped_by_its_own_timeout_not_the_whole_step(memory, monkeypatch):
+    """One slow/hanging SerpApi engine must not be able to eat the whole
+    step's remaining budget away from the other kinds running alongside it
+    (observed live: one uncached, unlucky query stalled execute_searches
+    for 58.8s while the other three kinds had already finished in <6s)."""
+    import time as time_module
+
+    import agents.research_agent as research_agent
+
+    class TinyToolBudget:
+        research_timeout_seconds = 30
+        research_tool_timeout_seconds = 0.05
+        research_min_relevance = 0.5
+        research_synthesis_timeout_seconds = 45
+
+    monkeypatch.setattr(research_agent, "settings", TinyToolBudget())
+
+    class HangingTool:
+        def invoke(self, payload):
+            time_module.sleep(1)  # far longer than research_tool_timeout_seconds
+            return {"source": "serpapi", "results": []}
+
+    agent = make_agent(memory, books=HangingTool())
+    events = asyncio.run(collect(agent))
+
+    search_done = next(e for e in events if e["step"] == "execute_searches" and e["status"] == "completed")
+    assert "books" in search_done["payload"]["errors"]
+    # the other kinds still completed instead of waiting on books
+    assert "docs" in search_done["payload"]["tool_timings_ms"]
+    assert events[-1]["status"] == "completed"
+
+
 def test_all_sources_failing_emits_failed_event_and_raises(memory):
     down = RuntimeError("down")
-    agent = make_agent(memory, docs=FakeTool(error=down), books=FakeTool(error=down), videos=FakeTool(error=down))
+    agent = make_agent(memory, docs=FakeTool(error=down), books=FakeTool(error=down),
+                       papers=FakeTool(error=down), videos=FakeTool(error=down))
     events = []
 
     with pytest.raises(ResearchAgentError, match="execute_searches"):
@@ -234,6 +272,8 @@ def test_research_phase_stops_once_its_time_budget_is_spent(monkeypatch):
 
     class TinyBudget:
         research_timeout_seconds = 0.01
+        research_tool_timeout_seconds = 12
+        research_min_relevance = 0.5
 
     # settings is a frozen dataclass instance; rebind the module-level name
     # research_agent reads from, rather than mutating the shared instance
@@ -253,6 +293,8 @@ def test_synthesis_has_its_own_time_budget_independent_of_the_research_phase(mem
 
     class TinyBudget:
         research_timeout_seconds = 30  # plenty for the (fast, mocked) research phase
+        research_tool_timeout_seconds = 12
+        research_min_relevance = 0.5
         research_synthesis_timeout_seconds = 0.01
 
     monkeypatch.setattr(research_agent, "settings", TinyBudget())

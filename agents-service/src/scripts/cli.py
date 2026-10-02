@@ -29,6 +29,7 @@ from graph.builder import build_graph
 from graph.streaming import stream_turn
 from memory.nodes import drain_pending_saves
 from observability import configure_logging
+from observability.metrics import collect_metrics, format_report
 
 configure_logging()  # LOG_LEVEL in .env controls verbosity (step/tool timing logs are INFO)
 
@@ -236,7 +237,7 @@ def _resource_type_counts(resources: list[dict]) -> str:
     return ", ".join(f"{c} {t}s" for t, c in sorted(counts.items()) if c)
 
 
-async def run_full_prep(company: str, role: str, location: str, resume_text: str):
+async def run_full_prep(company: str, role: str, location: str, resume_text: str, days: int | None = None):
     """
     Runs the full interview prep pipeline in silent mode (no SSE noise printed).
     All state passes internally between agents. Displays only the final
@@ -262,6 +263,8 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     print(f"\n{'═'*W}")
     print(f"  {BOLD}PrepAmigo — Full Pipeline Test{RESET}")
     print(f"  Company  : {BOLD}{company}{RESET}  │  Role : {role}  │  Location : {location}")
+    print(f"  Plan     : {days or settings.plan_total_days} days  │  research capped at "
+          f"{settings.research_max_gaps} skill gap(s)")
     has_resume = bool(resume_text.strip())
     print(f"  Resume   : {'provided — gap analysis will run' if has_resume else 'none — gap step will be skipped'}")
     serpapi_mode = f"{GREEN}live API (SERPAPI_ENABLED=true){RESET}" if settings.serpapi_enabled else f"{DIM}dummy fixtures (SERPAPI_ENABLED=false){RESET}"
@@ -277,6 +280,7 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     g.add_node("prep_run",      interview_prep.run_parallel)
     g.add_node("prep_skill_gap",interview_prep.run_skill_gap)
     g.add_node("prep_research", interview_prep.run_research)
+    g.add_node("prep_plan",     interview_prep.run_planner)
     g.add_node("prep_evaluate", interview_prep.evaluate)
     g.add_edge(START, "prep")
     g.add_conditional_edges(
@@ -285,7 +289,8 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     )
     g.add_edge("prep_run",       "prep_skill_gap")
     g.add_edge("prep_skill_gap", "prep_research")
-    g.add_edge("prep_research",  "prep_evaluate")
+    g.add_edge("prep_research",  "prep_plan")
+    g.add_edge("prep_plan",      "prep_evaluate")
     g.add_conditional_edges(
         "prep_evaluate", route_after_evaluate,
         {"save": END, "pause": END},
@@ -297,17 +302,30 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
         "user_id": "cli-prep-test",
         "interview_prep_input": {"company": company, "role": role, "location": location},
         "task_context": {"candidate_resume_text": resume_text},
+        "plan_total_days": days or settings.plan_total_days,
     }
     thread_config = {"configurable": {"thread_id": f"prep-{company.lower().replace(' ', '-')}"}}
 
     start_time = time.perf_counter()
-    try:
-        state = await graph.ainvoke(inputs, config=thread_config)
-    except Exception as exc:
-        elapsed = time.perf_counter() - start_time
-        print(f"\n  {RED}Pipeline failed after {elapsed:.2f}s: {exc}{RESET}\n")
-        return
+    with collect_metrics() as run_metrics:
+        try:
+            state = await graph.ainvoke(inputs, config=thread_config)
+        except Exception as exc:
+            elapsed = time.perf_counter() - start_time
+            print(f"\n  {RED}Pipeline failed after {elapsed:.2f}s: {exc}{RESET}\n")
+            _print_metrics(run_metrics.summary())
+            return
     elapsed_sec = time.perf_counter() - start_time
+
+    # every model call failing means nothing below is a real result: say so
+    # up front instead of letting empty stages look like findings
+    totals = run_metrics.summary()
+    llm_failures = [f for f in totals["failures"] if f["kind"] == "llm"]
+    if llm_failures and sum(f["count"] for f in llm_failures) == totals["totals"]["llm_calls"]:
+        print(f"\n  {RED}{BOLD}PIPELINE DID NOT RUN: every model call failed.{RESET}")
+        print(f"  {RED}{llm_failures[0]['error']}{RESET}")
+        print(f"  {DIM}Check the network connection and that the model server is reachable, then rerun. "
+              f"The sections below are empty for that reason.{RESET}")
 
     tc = state.get("task_context") or {}
     cp = tc.get("company_profile") or {}
@@ -327,6 +345,11 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
         if cp.get("industry"):
             print(f" ({cp['industry']})", end="")
         print()
+        brief = cp.get("brief") or {}
+        if brief.get("tech_stack"):
+            print(f"      Tech stack        : {', '.join(brief['tech_stack'])}")
+        if brief.get("engineering_focus"):
+            print(f"      Engineering focus : {'; '.join(brief['engineering_focus'])}")
         org_count = len(cp.get("organic_results") or [])
         news_count = len(cp.get("recent_developments") or [])
         print(f"      Sources collected : {org_count} tech/culture, {news_count} news articles")
@@ -350,6 +373,11 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     if sg.get("no_resume"):
         print(f"    {YELLOW}○{RESET} Skipped — no resume provided")
         print(f"      {DIM}The planner would receive an empty gap list and build a general prep plan.{RESET}")
+    elif sg.get("no_requirements"):
+        print(f"    {RED}✗{RESET} Skipped — job intelligence returned no required skills, so there is nothing "
+              f"to compare the resume against")
+        print(f"      {DIM}Usually a model/network timeout in Stage 1 (see the log above). Rerun: "
+              f"cached steps are reused.{RESET}")
     elif sg:
         score = sg.get("readiness_score", 0)
         score_color = GREEN if score >= 70 else (YELLOW if score >= 40 else RED)
@@ -391,6 +419,31 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
                 print(f"      Preview   : {DIM}{preview}...{RESET}")
             print()
 
+    # ── STAGE 4: Study Plan ───────────────────────────────────────────────────
+    output = state.get("study_plan")
+    plan = (output or {}).get("plan")
+    print(f"\n  {BOLD}STAGE 4 — STUDY PLAN{RESET}")
+    if not plan:
+        print(f"    {YELLOW}○{RESET} No plan — no skill gaps or research modules to plan around")
+    else:
+        print(f"    {GREEN}✓{RESET} {plan['total_days']} days in {len(plan['sprints'])} sprint(s), "
+              f"{plan['start_date']} → {plan['end_date']}  {DIM}(wording: {output['narrative_source']}){RESET}\n")
+        # long plans: one line per sprint (first → last day); every day is in the saved JSON
+        for sprint in plan["sprints"]:
+            days = sprint["sprint_days"]
+            span = days[0]["topic_title"] if len(days) == 1 else f"{days[0]['topic_title']} … {days[-1]['topic_title']}"
+            print(f"    {BOLD}S{sprint['sprint_number']:>2}{RESET} D{days[0]['day_number']}-{days[-1]['day_number']} "
+                  f"{sprint['sprint_name']}  {DIM}{span}{RESET}")
+        coverage = output["coverage"]
+        if coverage["unresearched"]:
+            print(f"\n    {YELLOW}○{RESET} No research for: {', '.join(coverage['unresearched'])} (planned, no references)")
+        if coverage.get("not_scheduled"):
+            print(f"    {YELLOW}○{RESET} Not scheduled (plan too short): {', '.join(coverage['not_scheduled'])}")
+        pack_counts = ", ".join(f"{k}: {len(v)}" for k, v in output["resource_pack"].items())
+        print(f"    Resource Pack : {pack_counts or 'none'}")
+        saved = state.get("study_plan_path")
+        print(f"    Saved JSON    : {BOLD}{saved}{RESET}" if saved else f"    Saved JSON    : {DIM}not saved (PLAN_OUTPUT_DIR empty or write failed){RESET}")
+
     # ── DATA FLOW STATUS ─────────────────────────────────────────────────────
     print(f"  {BOLD}DATA FLOW STATUS  {DIM}(did state pass between agents correctly?){RESET}")
     def flow_check(label: str, ok: bool, note: str = ""):
@@ -415,9 +468,14 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
         f"{len(gap_topics)} gap(s) passed" if gap_topics else ("no resume — 0 gaps" if sg.get("no_resume") else "gaps missing")
     )
     flow_check(
-        f"Research          → Planner  {DIM}[when built]{RESET}",
+        f"Research          → Planner",
         bool(materials or sg.get("no_resume")),
         f"{len(materials)} module(s) in state[\"researched_materials\"]" if materials else "0 modules (no gaps to research)"
+    )
+    flow_check(
+        f"Planner           → Output",
+        bool(plan or not (materials or gap_topics)),
+        f"{output['id']}, {plan['total_days']} day(s), validated against the backend plan schema" if plan else "plan missing"
     )
 
     time_str = f"{elapsed_sec:.2f}s"
@@ -427,7 +485,24 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
         time_str += f" ({mins}m {secs:.1f}s)"
 
     print(f"\n  {BOLD}TOTAL PIPELINE TIME{RESET} : {CYAN}{BOLD}{time_str}{RESET}")
+    _print_metrics(run_metrics.summary())
     print(f"\n{'═'*W}\n")
+
+
+def _print_metrics(summary: dict) -> None:
+    """Per-agent time/token/cache breakdown (observability/metrics.py),
+    printed and written to the log file for later comparison."""
+    import json
+    import logging
+
+    BOLD, DIM, RED, RESET = "\033[1m", "\033[2m", "\033[31m", "\033[0m"
+    models = ", ".join(summary["models"]) or "none called"
+    print(f"\n  {BOLD}RUN METRICS{RESET}  {DIM}model: {models}{RESET}")
+    lines = format_report(summary)
+    for i, line in enumerate(lines):
+        style = RED if line.startswith("FAILED") else (DIM if i >= len(lines) - 1 else "")
+        print(f"    {style}{line}{RESET}")
+    logging.getLogger("run_metrics").info("prep run metrics %s", json.dumps(summary))
 
 
 
@@ -467,8 +542,20 @@ Examples:
     parser.add_argument("--prep", action="store_true", help="run full pipeline: company+job → skill gap → research")
     parser.add_argument("--resume-file", default=None, help="path to plain-text resume file (prep mode)")
     parser.add_argument("--resume-text", default=None, help="inline resume text string (prep mode)")
+    parser.add_argument("--no-cache", action="store_true",
+                        help="bypass every cache for this run (API responses, transcripts, book/paper lookups, "
+                             "LLM responses, stored job profiles, SerpApi's own cache): nothing is read from or "
+                             "written to any of them")
+    parser.add_argument("--days", type=int, default=None,
+                        help=f"plan length in days (prep mode; default PLAN_TOTAL_DAYS={settings.plan_total_days})")
 
     args = parser.parse_args()
+    if args.no_cache:
+        from tools.cache import bypass_caches
+
+        bypass_caches()
+        print("Caches bypassed for this run (--no-cache): every API and model call is live, including "
+              "SerpApi's own cache (each search costs a credit).")
 
     if args.prep:
         if not args.company or not args.role:
@@ -486,7 +573,7 @@ Examples:
             resume_text = args.resume_text
         else:
             print("No --resume-file or --resume-text provided. Using built-in dummy resume for connectivity test.")
-        asyncio.run(run_full_prep(args.company, args.role, args.location, resume_text))
+        asyncio.run(run_full_prep(args.company, args.role, args.location, resume_text, args.days))
     elif args.company:
         asyncio.run(run_company_research(args.company, args.role))
     else:

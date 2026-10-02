@@ -6,8 +6,9 @@ task_context well-known keys (populated by specialist agents):
   - "company_profile"   : dict set by CompanyResearchAgent (overview, tech stack,
                           culture, recent news, financials, trends)
   - "job_intelligence"  : dict set by JobIntelligenceAgent (future)
-  - "skill_gap"         : dict set by SkillGapAgent (future)
-  - "preparation_plan"  : dict set by PlannerAgent (future)
+  - "skill_gap"         : dict set by SkillGapAgent
+  - "preparation_plan"  : dict set by PlannerAgent (also at state["study_plan"],
+                          same dict, kept top-level like company_research_result)
   - "candidate_progress": dict set by ProgressAgent (future)
 """
 from typing import Annotated, Any, Optional
@@ -84,6 +85,15 @@ class AgentState(TypedDict):
 
     # learning modules produced by the research agent this turn
     researched_materials: Annotated[list[dict[str, Any]], append_or_reset]
+
+    # Planner Agent output (agents/planner_agent.py): {"plan": the
+    # backend-shaped plan (schemas/study_plan.py), resource_pack,
+    # learning_modules, coverage, ...}; None until the planning stage runs
+    study_plan: Optional[dict[str, Any]]
+    # where that output was saved for review (PLAN_OUTPUT_DIR), if saving is on
+    study_plan_path: Optional[str]
+    # requested plan length in days for this run; None = PLAN_TOTAL_DAYS
+    plan_total_days: Optional[int]
 
     # UserKnowledgeGraph.get_knowledge_state() snapshot. Not currently set
     # by any agent (the research agent no longer touches the knowledge

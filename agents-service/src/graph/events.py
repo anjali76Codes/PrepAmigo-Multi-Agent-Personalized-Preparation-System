@@ -65,7 +65,11 @@ def emit_to_graph_stream(event: AgentEvent) -> None:
 
     try:
         writer = get_stream_writer()
-    except RuntimeError:  # not inside a LangGraph run
+    # not inside a LangGraph run: langgraph raises RuntimeError in some
+    # versions, KeyError('__pregel_runtime') in others (confirmed via a
+    # standalone tool.invoke() call outside any graph, e.g. direct unit
+    # tests or CLI tool R&D) — either way, there's no stream to write to
+    except (RuntimeError, KeyError):
         return
     writer(event)
 

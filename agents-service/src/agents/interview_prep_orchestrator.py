@@ -1,5 +1,6 @@
 """Bounded parallel workflow for company and job-market interview prep."""
 import asyncio
+import difflib
 import json
 import logging
 from typing import Annotated, Any, Literal
@@ -12,22 +13,32 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field, ValidationError
 from typing_extensions import TypedDict
 
+from agents.company_brief import DirectCompanyResearch, company_context
 from agents.company_research_node import CompanyResearchNode
 from agents import interview_prep_fields as workflow_fields
 from agents.job_intelligence_agent import JobIntelligenceAgent, JobIntelligenceInput
+from agents.planner_agent import PlannerAgent
 from agents.skill_gap_agent import SkillGapAgent
-from agents.research_agent import ContentResearchAgent
-from core.config import get_llm, settings
+from agents.research_agent import ContentResearchAgent, company_module_request, prep_focus
+from core.config import get_llm, llm_concurrency, service_path, settings
 from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, make_event
 from graph.router import route_after_agent
 from guardrails.validators import run_guardrails
+from observability.metrics import agent_scope
+from observability.timing import log_failure
+from storage.llm_cache import forget_response
 from prompts.system_prompts import COMPANY_RESEARCH_PROMPT
+from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
 
 logger = logging.getLogger(__name__)
 
 MAX_CLARIFICATION_ROUNDS = 3
-BRANCH_TIMEOUT_SECONDS = 45
+COMPANY_MODULE_MIN_RESOURCES = 4
+
+
+class _SkipEvaluator(Exception):
+    """The closing model call is switched off (EVALUATOR_LLM=off)."""
 
 
 class ReActDecision(BaseModel):
@@ -48,6 +59,37 @@ class CompanyBranchState(TypedDict, total=False):
     guardrail_flags: dict[str, str]
 
 
+def canonical_company(user_value: str, profile_name: str) -> str:
+    """The company name the rest of the pipeline should use: the research
+    profile's name (Google's knowledge-graph title or spelling fix) when it
+    is plausibly the same company the user typed — a typo fix like
+    "Antropic" -> "Anthropic", or a fuller form like "Google" -> "Google
+    LLC" — otherwise exactly what the user typed."""
+    user_value, profile_name = user_value.strip(), (profile_name or "").strip()
+    if not profile_name or profile_name.casefold() in {"the company", "target company"}:
+        return user_value
+    if not user_value:
+        return profile_name
+    a, b = user_value.casefold(), profile_name.casefold()
+    if b.startswith(a) or difflib.SequenceMatcher(None, a, b).ratio() >= 0.8:
+        return profile_name
+    return user_value
+
+
+def route_company_branch(state: dict[str, Any]) -> str:
+    """route_after_agent with a cap on tool rounds. Without thinking, the
+    model calls one tool per turn and can keep re-searching; past the cap
+    the branch ends with the profile already built from the tool results
+    so far, instead of hitting the recursion limit and losing all of it.
+    Only safe in this isolated branch: its messages are discarded after
+    the run, so ending on an unanswered tool call never reaches a chat
+    thread's history."""
+    if route_after_agent(state) == END:
+        return END
+    rounds = sum(1 for m in state.get("messages", []) if getattr(m, "tool_calls", None))
+    return END if rounds > settings.company_research_max_tool_rounds else "tools"
+
+
 def _build_company_branch():
     graph = StateGraph(CompanyBranchState)
     graph.add_node("company_research", CompanyResearchNode())
@@ -55,7 +97,7 @@ def _build_company_branch():
     graph.add_node("cr_tools", ToolNode(COMPANY_RESEARCH_TOOLS, handle_tool_errors=True))
     graph.add_edge(START, "company_research")
     graph.add_conditional_edges(
-        "company_research", route_after_agent, {"tools": "cr_guardrails", END: END}
+        "company_research", route_company_branch, {"tools": "cr_guardrails", END: END}
     )
     graph.add_conditional_edges(
         "cr_guardrails", route_after_agent, {"tools": "cr_tools", END: END}
@@ -125,11 +167,15 @@ class InterviewPrepOrchestrator:
         job_agent: Any | None = None,
         skill_gap_agent: SkillGapAgent | None = None,
         research_agent: ContentResearchAgent | None = None,
+        planner_agent: PlannerAgent | None = None,
+        company_direct: DirectCompanyResearch | None = None,
     ):
+        self.company_direct = company_direct or DirectCompanyResearch()
         self.company_graph = company_graph or _build_company_branch()
         self.job_agent = job_agent or JobIntelligenceAgent()
         self.skill_gap_agent = skill_gap_agent or SkillGapAgent()
         self.research_agent = research_agent or ContentResearchAgent()
+        self.planner_agent = planner_agent or PlannerAgent()
 
 
     async def _extract_fields(self, state: dict[str, Any], text: str | None = None) -> dict[str, str]:
@@ -150,6 +196,7 @@ class InterviewPrepOrchestrator:
             + "\n".join(str(item)[:300] for item in memories[:5])
             + f"\nConversation:\n{conversation}"
         )
+        response = None
         try:
             response = await asyncio.wait_for(
                 get_llm(temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=12
@@ -162,8 +209,9 @@ class InterviewPrepOrchestrator:
             parsed = json.loads(content.strip())
             if isinstance(parsed, dict):
                 return workflow_fields.normalize_workflow_fields(parsed)
-        except Exception:
-            logger.warning("Could not extract interview-prep fields; asking for them directly", exc_info=True)
+        except Exception as exc:
+            forget_response(response)  # an unparseable answer must not be replayed from the cache
+            log_failure(logger, "Could not extract interview-prep fields; asking for them directly", exc)
         return {}
 
     async def _prepare(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -230,7 +278,8 @@ class InterviewPrepOrchestrator:
         }
 
     async def prepare(self, state: dict[str, Any]) -> dict[str, Any]:
-        return await self._prepare(state)
+        with agent_scope("prepare"):
+            return await self._prepare(state)
 
     async def pause_for_input(self, state: dict[str, Any]) -> dict[str, Any]:
         answer = interrupt(state.get("workflow_question") or {"question": "Please provide the missing details."})
@@ -261,23 +310,86 @@ class InterviewPrepOrchestrator:
             "task_context": {},
             "guardrail_flags": {},
         }
+        # a single local Ollama server generates one response at a time, so
+        # two branches that each make their own LLM calls don't actually run
+        # concurrently there — they just queue behind each other while each
+        # branch's own timeout keeps counting down, so one (or both) can
+        # spuriously time out waiting for a turn that was always coming.
+        # Cloud providers (openai) genuinely serve concurrent requests, so
+        # gather is a real win there; for ollama, run them one at a time so
+        # neither branch's budget is spent waiting on the other.
+        # direct company research takes a couple of seconds and its brief
+        # is what job intelligence falls back on when the company has no
+        # postings, so it always runs first in that mode
+        run_concurrently = llm_concurrency(settings) > 1 and settings.company_research_mode != "direct"
+        job_state: dict[str, Any] = {"job_intelligence_input": job_fields}
         await dispatch_event(
             make_event("interview_prep", "parallel_agents", "running", {
                 "agents": ["company_research", "job_intelligence"],
-                "message": "Company Research and Job Intelligence are running in parallel.",
+                "message": (
+                    "Company Research and Job Intelligence are running in parallel."
+                    if run_concurrently
+                    else "Company Research and Job Intelligence are running sequentially (local model)."
+                ),
             }),
             None,
         )
 
         async def company_branch():
-            result = await asyncio.wait_for(
-                self.company_graph.ainvoke(company_input, config={"recursion_limit": 12}),
-                timeout=BRANCH_TIMEOUT_SECONDS,
+            with agent_scope("company_research"):
+                return await _company_branch()
+
+        async def _company_direct():
+            # COMPANY_RESEARCH_MODE=direct: both searches in parallel, then
+            # one small model call (agents/company_brief.py)
+            outcome = await asyncio.wait_for(
+                self.company_direct.run(values.get("company", ""), values.get("role", "")),
+                timeout=settings.interview_prep_branch_timeout_seconds,
             )
+            profile, brief = outcome["profile"], outcome.get("brief")
+            has_content = bool(profile.get("description") or any(profile.get("context_snippets", {}).values()))
+            return {
+                "status": "success" if has_content and brief else "partial",
+                "data": {
+                    "profile": profile,
+                    "dossier": (brief or {}).get("summary", ""),
+                    "dataSource": "dummy" if not settings.serpapi_enabled else "serpapi",
+                },
+                "error": None,
+            }
+
+        async def _company_branch():
+            if settings.company_research_mode == "direct":
+                return await _company_direct()
+            # agent -> guardrails -> tools per round, plus the final
+            # agent step: always room for the round cap to end it first
+            config = {"recursion_limit": 3 * settings.company_research_max_tool_rounds + 4}
+            latest: dict[str, Any] = {}
+
+            async def run() -> dict[str, Any]:
+                # streamed state by state where the graph supports it, so a
+                # timeout keeps what earlier rounds already gathered
+                if not hasattr(self.company_graph, "astream"):
+                    return await self.company_graph.ainvoke(company_input, config=config)
+                async for state in self.company_graph.astream(company_input, config=config, stream_mode="values"):
+                    latest.update(state)
+                return latest
+
+            timed_out = False
+            try:
+                result = await asyncio.wait_for(run(), timeout=settings.interview_prep_branch_timeout_seconds)
+            except asyncio.TimeoutError:
+                if not (latest.get("task_context") or {}).get("company_profile"):
+                    raise
+                # the profile is built from tool results; only the model's
+                # closing dossier text was still pending
+                logger.warning("Company Research timed out after %.0fs; keeping the profile gathered so far",
+                               settings.interview_prep_branch_timeout_seconds)
+                result, timed_out = latest, True
             messages = result.get("messages", [])
             profile = (result.get("task_context") or {}).get("company_profile")
-            dossier = _message_text(messages[-1]) if messages else ""
-            status = "success" if profile and (profile.get("description") or profile.get("context_snippets")) else "partial"
+            dossier = "" if timed_out else (_message_text(messages[-1]) if messages else "")
+            status = "success" if not timed_out and profile and (profile.get("description") or profile.get("context_snippets")) else "partial"
             return {
                 "status": status,
                 "data": {
@@ -289,16 +401,37 @@ class InterviewPrepOrchestrator:
             }
 
         async def job_branch():
-            return await asyncio.wait_for(
-                self.job_agent({"job_intelligence_input": job_fields}),
-                timeout=BRANCH_TIMEOUT_SECONDS,
-            )
+            with agent_scope("job_intelligence"):
+                return await asyncio.wait_for(
+                    self.job_agent(job_state),
+                    timeout=settings.interview_prep_branch_timeout_seconds,
+                )
 
-        company_result, job_node_result = await asyncio.gather(
-            company_branch(), job_branch(), return_exceptions=True
-        )
+        async def _outcome(coro):
+            """await a branch and hand back its exception instead of raising,
+            matching asyncio.gather(..., return_exceptions=True)'s contract
+            so the error handling below works the same either way."""
+            try:
+                return await coro
+            except Exception as exc:
+                return exc
+
+        if run_concurrently:
+            company_result, job_node_result = await asyncio.gather(
+                company_branch(), job_branch(), return_exceptions=True
+            )
+        else:
+            company_result = await _outcome(company_branch())
+            # running one after the other lets the job search use the company
+            # name the research just resolved (e.g. a typo fix) instead of the raw input
+            if isinstance(company_result, dict) and job_fields.get("company"):
+                profile_name = ((company_result.get("data") or {}).get("profile") or {}).get("name", "")
+                job_fields["company"] = canonical_company(job_fields["company"], profile_name)
+            if isinstance(company_result, dict):
+                job_state["company_context"] = company_context((company_result.get("data") or {}).get("profile"))
+            job_node_result = await _outcome(job_branch())
         if isinstance(company_result, BaseException):
-            logger.warning("Company Research branch failed", exc_info=company_result)
+            log_failure(logger, "Company Research branch failed", company_result)
             company_result = {"status": "failed", "data": None, "error": "Company research is temporarily unavailable."}
         try:
             company_result = AgentBranchResult.model_validate(company_result).model_dump()
@@ -306,7 +439,7 @@ class InterviewPrepOrchestrator:
             logger.warning("Company Research returned an invalid result")
             company_result = {"status": "failed", "data": None, "error": "Company research returned an invalid result."}
         if isinstance(job_node_result, BaseException):
-            logger.warning("Job Intelligence branch failed", exc_info=job_node_result)
+            log_failure(logger, "Job Intelligence branch failed", job_node_result)
             job_result = {"status": "failed", "data": None, "error": "Job market data is temporarily unavailable."}
         else:
             job_result = job_node_result.get("job_intelligence_result") or {
@@ -333,6 +466,10 @@ class InterviewPrepOrchestrator:
         }
 
     async def run_skill_gap(self, state: dict[str, Any]) -> dict[str, Any]:
+        with agent_scope("skill_gap"):
+            return await self._run_skill_gap(state)
+
+    async def _run_skill_gap(self, state: dict[str, Any]) -> dict[str, Any]:
         """
         Stage 2 of the pipeline: skill gap analysis.
 
@@ -352,7 +489,7 @@ class InterviewPrepOrchestrator:
         company_profile = (company_result.get("data") or {}).get("profile") or {}
         job_intelligence = job_result.get("data") or {}
 
-        company = values.get("company", "") or company_profile.get("name", "")
+        company = canonical_company(values.get("company", ""), company_profile.get("name", ""))
         role = values.get("role", "")
         resume_text = (state.get("task_context") or {}).get("candidate_resume_text", "")
 
@@ -377,7 +514,7 @@ class InterviewPrepOrchestrator:
         try:
             gap_report = await asyncio.wait_for(
                 self.skill_gap_agent.analyze(company_profile, job_intelligence, resume_text, company, role),
-                timeout=BRANCH_TIMEOUT_SECONDS,
+                timeout=settings.interview_prep_branch_timeout_seconds,
             )
             task_context["skill_gap"] = gap_report
             skill_gaps = [g["skill"] for g in gap_report.get("priority_gaps", []) if g.get("skill")]
@@ -401,6 +538,10 @@ class InterviewPrepOrchestrator:
         }
 
     async def run_research(self, state: dict[str, Any]) -> dict[str, Any]:
+        with agent_scope("research"):
+            return await self._run_research(state)
+
+    async def _run_research(self, state: dict[str, Any]) -> dict[str, Any]:
         """
         Stage 3 of the pipeline: research each skill gap.
 
@@ -420,21 +561,46 @@ class InterviewPrepOrchestrator:
             )
             return {"researched_materials": [], "workflow_status": "evaluating"}
 
+        # one module per gap, highest priority first (skill_gaps keeps the
+        # skill-gap agent's priority order), capped so research time and
+        # SerpApi spend don't grow with the gap count; the planner still
+        # schedules the rest, without references
+        researched, skipped = skill_gaps[: settings.research_max_gaps], skill_gaps[settings.research_max_gaps:]
         await dispatch_event(
             make_event("interview_prep", "research_stage", "running", {
-                "message": f"Researching {len(skill_gaps)} skill gap(s)...",
-                "gaps": skill_gaps,
+                "message": f"Researching {len(researched)} skill gap(s)..."
+                + (f" ({len(skipped)} lower-priority gap(s) planned without research)" if skipped else ""),
+                "gaps": researched,
+                "skipped": skipped,
             }),
             None,
         )
 
+        # started alongside the gap research, not after it
+        company_task = asyncio.ensure_future(self._research_company_module(state))
         try:
-            result = await self.research_agent(state)
+            result = await self.research_agent({**state, "skill_gaps": researched})
         except Exception as exc:
             logger.warning("Research stage failed: %s", exc)
             result = {"researched_materials": [], "execution_events": [], "handoffs": []}
+        company_module = await company_task
 
         materials = result.get("researched_materials") or []
+        task_context_update = {}
+        if company_module:
+            # first in the plan: the company's own platform is what the
+            # candidate will be asked about and work with
+            materials = [company_module] + materials
+            task_context = dict(state.get("task_context") or {})
+            skill_gap = dict(task_context.get("skill_gap") or {})
+            skill_gap["priority_gaps"] = [
+                {"skill": company_module["topic"], "status": "company", "effort": "High",
+                 "evidence": "the target company's own platform"},
+                *(skill_gap.get("priority_gaps") or []),
+            ]
+            task_context["skill_gap"] = skill_gap
+            task_context_update = {"task_context": task_context}
+            result = {**result, "researched_materials": materials}
         await dispatch_event(
             make_event("interview_prep", "research_stage", "completed", {
                 "message": f"Research complete. {len(materials)} learning module(s) produced.",
@@ -445,10 +611,122 @@ class InterviewPrepOrchestrator:
 
         return {
             **result,
+            **task_context_update,
             "workflow_status": "evaluating",
         }
 
+    async def _research_company_module(self, state: dict[str, Any]) -> dict[str, Any] | None:
+        """COMPANY_MODULE=on: one module on the company's own platform from
+        its official site and GitHub. None when off, when the profile gives
+        nothing to search by, or when the research fails."""
+        if settings.company_module != "on":
+            return None
+        task_context = state.get("task_context") or {}
+        try:
+            request = company_module_request(
+                task_context.get("company_profile"), state.get("user_id") or "anonymous",
+                task_context.get("target_role", ""), task_context.get("target_company", ""),
+                focus=prep_focus(task_context.get("job_intelligence"), task_context.get("company_profile")),
+            )
+            if request is None:
+                return None
+            outcome = (await self.research_agent.research_many([request], memories=[]))[0]
+        except Exception as exc:
+            log_failure(logger, "Company platform module unavailable; planning skill gaps only", exc)
+            return None
+        module = outcome["module"] if outcome else None
+        # a company whose site has no developer material (most of what came
+        # back was dropped as marketing) must not get the plan's first and
+        # largest slot on the strength of a couple of links
+        if module and len(module.get("resources") or []) < COMPANY_MODULE_MIN_RESOURCES:
+            logger.info("Company platform module dropped: only %d usable resource(s) found for %r",
+                        len(module.get("resources") or []), module.get("topic"))
+            return None
+        return module
+
+    async def run_planner(self, state: dict[str, Any]) -> dict[str, Any]:
+        with agent_scope("planner"):
+            return await self._run_planner(state)
+
+    async def _run_planner(self, state: dict[str, Any]) -> dict[str, Any]:
+        """
+        Stage 4 of the pipeline: turn the skill gaps and research modules
+        into a study plan in the backend's plan -> sprints -> sprint_days
+        shape (agents/planner_agent.py, schemas/study_plan.py), and save it
+        to PLAN_OUTPUT_DIR/<plan id>.json for review.
+
+        Plans whenever there is at least one gap or module; a gap whose
+        research failed still gets its sprint (see the planner's docstring).
+        """
+        values = workflow_fields.normalize_workflow_fields(state.get("interview_prep_input") or {})
+        task_context = state.get("task_context") or {}
+        role = values.get("role", "")
+        company = task_context.get("target_company") or canonical_company(
+            values.get("company", ""), task_context.get("company_profile", {}).get("name", "")
+        )
+        materials = state.get("researched_materials") or []
+        priority_gaps = (task_context.get("skill_gap") or {}).get("priority_gaps", [])
+
+        if not materials and not priority_gaps:
+            await dispatch_event(
+                make_event("interview_prep", "planning_stage", "completed", {
+                    "message": "No skill gaps or research modules to plan around — planning stage skipped.",
+                }),
+                None,
+            )
+            return {"study_plan": None, "study_plan_path": None}
+
+        await dispatch_event(
+            make_event("interview_prep", "planning_stage", "running", {
+                "message": f"Building a study plan for {len(priority_gaps) or len(materials)} skill(s)...",
+            }),
+            None,
+        )
+
+        try:
+            output = await self.planner_agent.build_plan(
+                materials, priority_gaps, role, company, user_id=state.get("user_id"),
+                focus=prep_focus(task_context.get("job_intelligence"), task_context.get("company_profile")),
+                total_days=state.get("plan_total_days") or settings.plan_total_days,
+            )
+        except Exception as exc:
+            logger.warning("Planning stage failed: %s", exc, exc_info=True)
+            await dispatch_event(
+                make_event("interview_prep", "planning_stage", "failed", {"error": str(exc)}),
+                None,
+            )
+            return {"study_plan": None, "study_plan_path": None}
+
+        saved_path = None
+        if settings.plan_output_dir:
+            try:
+                saved_path = str(save_json(service_path(settings.plan_output_dir), f"{output['id']}.json", output))
+                logger.info("Study plan %s saved to %s", output["id"], saved_path)
+            except OSError:
+                # the plan is still in state; a disk problem shouldn't fail the run
+                logger.warning("Could not save study plan %s", output["id"], exc_info=True)
+
+        plan = output["plan"]
+        await dispatch_event(
+            make_event("interview_prep", "planning_stage", "completed", {
+                "message": f"Study plan ready: {plan['total_days']} day(s) across {len(plan['sprints'])} sprint(s).",
+                "plan_id": output["id"],
+                "total_days": plan["total_days"],
+                "sprints": len(plan["sprints"]),
+                "narrative_source": output["narrative_source"],
+                "unresearched": output["coverage"]["unresearched"],
+                "saved_path": saved_path,
+            }),
+            None,
+        )
+
+        return {"study_plan": output, "study_plan_path": saved_path}
+
     async def evaluate(self, state: dict[str, Any]) -> dict[str, Any]:
+        with agent_scope("evaluate"):
+            return await self._evaluate(state)
+
+    async def _evaluate(self, state: dict[str, Any]) -> dict[str, Any]:
 
         company_result = state.get("company_research_result") or {"status": "failed", "data": None}
         job_result = state.get("job_intelligence_result") or {"status": "failed", "data": None}
@@ -467,16 +745,28 @@ class InterviewPrepOrchestrator:
         }[fallback_action]
         action = fallback_action
         clarification_question = None
+        response = None
         try:
+            # the decision only needs each source's status and error, not
+            # the raw profile JSON (which used to fill ~7,000 prompt chars
+            # and push this call past its timeout)
+            def brief(result: dict[str, Any]) -> dict[str, Any]:
+                return {"status": result.get("status"), "error": result.get("error"),
+                        "has_data": bool(result.get("data"))}
+
             prompt = (
                 "Evaluate this combined interview-preparation result. Return JSON with action (complete, partial, failed), "
                 "and a short user-facing summary. Do not ask to retry agents. A failed or empty source means partial "
                 "when the other source has usable data; failed only when both failed. Do not include hidden reasoning.\n"
-                + json.dumps({"company": company_result, "job_market": job_result}, default=str)[:7000]
+                + json.dumps({"company": brief(company_result), "job_market": brief(job_result)})
             )
-            response = await asyncio.wait_for(
-                get_llm(temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=10
-            )
+            if settings.evaluator_llm == "off":
+                # EVALUATOR_LLM=off: the status is already decided from the
+                # branch results above; the model only rephrases the summary
+                raise _SkipEvaluator()
+            llm = get_llm(temperature=0, max_tokens=120,
+                          profile="fast" if settings.evaluator_llm == "fast" else "default")
+            response = await asyncio.wait_for(llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=10)
             content = _message_text(response).strip()
             if content.startswith("```"):
                 content = content.split("\n", 1)[-1]
@@ -488,8 +778,11 @@ class InterviewPrepOrchestrator:
             elif decision.action == fallback_action:
                 action = decision.action
                 summary = decision.summary
-        except Exception:
-            logger.warning("ReAct evaluator failed; using deterministic result status", exc_info=True)
+        except _SkipEvaluator:
+            pass
+        except Exception as exc:
+            forget_response(response)  # an unparseable answer must not be replayed from the cache
+            log_failure(logger, "ReAct evaluator failed; using deterministic result status", exc)
 
         if clarification_question:
             rounds = int(state.get("workflow_clarification_rounds") or 0) + 1
@@ -517,6 +810,7 @@ class InterviewPrepOrchestrator:
             "summary": summary,
             "company_research": company_result,
             "job_intelligence": job_result,
+            "study_plan": state.get("study_plan"),
             "react": {"action": action, "summary": summary, "bounded": True},
         }
         response = AIMessage(content=summary)
@@ -534,6 +828,8 @@ class InterviewPrepOrchestrator:
             task_context["company_profile"] = company_profile
         if job_profile:
             task_context["job_intelligence"] = job_profile
+        if state.get("study_plan"):
+            task_context["preparation_plan"] = state["study_plan"]
         return {
             "workflow_status": action,
             "interview_prep_result": result,
