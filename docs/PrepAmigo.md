@@ -359,14 +359,14 @@ Stage 5 (Planned):  Planner Agent → Data Parser → Roadmaps/Flashcards
 
 | Doc | What it covers |
 |---|---|
-| `docs/AGENT_SERVICE_FLOW.md` | Full graph flow, shared state contract, per-agent capabilities |
-| `docs/ORCHESTRATION_WORKFLOW.md` | Interview prep pipeline stages, state keys, agent contracts |
-| `docs/SSE_STREAMING_GUIDE.md` | Redis pub/sub SSE architecture, event types, client usage |
-| `docs/JOB_INTELLIGENCE_AGENT.md` | Job Intelligence Agent design and SerpAPI usage |
-| `docs/COMPANY_RESEARCH_AGENT.md` | Company Research Agent design and SerpAPI usage |
-| `docs/PLAN_PROGRESS_API.md` | Backend plan/progress REST API contract |
-| `docs/CLI_TESTING_GUIDE.md` | Developer CLI modes for testing agents in isolation |
-| `docs/ENVIRONMENT_CONFIGURATION.md` | All environment variables across all three services |
+| `docs/agents/AGENT_SERVICE_FLOW.md` | Full graph flow, shared state contract, per-agent capabilities |
+| `docs/agents/ORCHESTRATION_WORKFLOW.md` | Interview prep pipeline stages, state keys, agent contracts |
+| `docs/agents/SSE_STREAMING_GUIDE.md` | Redis pub/sub SSE architecture, event types, client usage |
+| `docs/agents/JOB_INTELLIGENCE_AGENT.md` | Job Intelligence Agent design and SerpAPI usage |
+| `docs/agents/COMPANY_RESEARCH_AGENT.md` | Company Research Agent design and SerpAPI usage |
+| `docs/api-docs/PLAN_PROGRESS_API.md` | Backend plan/progress REST API contract |
+| `docs/guides/CLI_TESTING_GUIDE.md` | Developer CLI modes for testing agents in isolation |
+| `docs/guides/ENVIRONMENT_CONFIGURATION.md` | All environment variables across all three services |
 | `agents-service/docs/PARSER_AGENT_GUIDE.md` | Markdown-to-JSON plan converter (`src/scripts/parser_agent.py`) |
 | `agents-service/docs/ollama_setup_guide.md` | Local Ollama setup for offline development |
 | `prepamigo-apis-bruno/` | Bruno API collection for all endpoints (auth, SSE, SerpAPI, agent triggers) |

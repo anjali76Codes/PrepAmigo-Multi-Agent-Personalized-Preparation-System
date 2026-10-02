@@ -34,17 +34,17 @@ This document is the authoritative record of every file that was **moved, create
 |---|---|---|---|
 | `agents-service/resume.txt` | `agents-service/.data/scratch/resume.txt` | Scratch artifact — gitignored | None (not imported) |
 | `agents-service/Resume_2_0.pdf` | `agents-service/.data/scratch/Resume_2_0.pdf` | Scratch artifact — gitignored | None |
-| `agents-service/schemas.txt` | `agents-service/.data/scratch/schemas.txt` | Scratch artifact — gitignored | `docs/PARSER_AGENT_GUIDE.md` reference updated |
+| `agents-service/schemas.txt` | `agents-service/.data/scratch/schemas.txt` | Scratch artifact — gitignored | `docs/agents/PARSER_AGENT_GUIDE.md` reference updated |
 | `agents-service/serpapi_fixtures.example.json` | `agents-service/docs/serpapi_fixtures.example.json` | Example fixture belongs in docs | `agents-service/.env.example` path updated |
 | `agents-service/ollama_setup_guide.md` | `agents-service/docs/ollama_setup_guide.md` | Guide doc belongs in docs | `agents-service/.env.example` cli path updated |
 | `agents-service/dummy_md/` (entire dir) | `agents-service/.data/dummy_md/` | Dev-only fixture data — gitignored | `parser_agent.py` INPUT_DIR constant |
 | `agents-service/output/` (entire dir) | `agents-service/.data/output/` | Generated output — gitignored | `parser_agent.py` OUTPUT_DIR constant |
-| `agents-service/parser_agent.py` | `agents-service/src/scripts/parser_agent.py` | Utility script belongs in src/scripts/ | `BASE_DIR` updated (`.parent` → `.parent.parent.parent`); `from src.config import` → `from src.core.config import`; `docs/PARSER_AGENT_GUIDE.md` run command updated |
+| `agents-service/parser_agent.py` | `agents-service/src/scripts/parser_agent.py` | Utility script belongs in src/scripts/ | `BASE_DIR` updated (`.parent` → `.parent.parent.parent`); `from src.config import` → `from src.core.config import`; `docs/agents/PARSER_AGENT_GUIDE.md` run command updated |
 | `agents-service/src/auth.py` | `agents-service/src/core/auth.py` | Cross-cutting core concern | 2 call sites in main.py, routers |
 | `agents-service/src/config.py` | `agents-service/src/core/config.py` | Cross-cutting core concern | 19 src files + 6 test files |
 | `agents-service/src/job_intelligence_router.py` | `agents-service/src/routers/job_intelligence_router.py` | FastAPI router convention | main.py import updated |
 | `agents-service/src/skill_gap_router.py` | `agents-service/src/routers/skill_gap_router.py` | FastAPI router convention | main.py import updated |
-| `agents-service/src/cli.py` | `agents-service/src/scripts/cli.py` | Developer utility belongs in scripts/ | docs/CLI_TESTING_GUIDE.md, agents-service/README.md, docs/ollama_setup_guide.md updated |
+| `agents-service/src/cli.py` | `agents-service/src/scripts/cli.py` | Developer utility belongs in scripts/ | docs/guides/CLI_TESTING_GUIDE.md, agents-service/README.md, docs/ollama_setup_guide.md updated |
 
 ### Files Created
 
@@ -166,9 +166,9 @@ All 25 files below had `from config import` replaced with `from core.config impo
 | File | What changed |
 |---|---|
 | `docs/PrepAmigo.md` | Added **Technical Architecture** section (three-service overview, directories, API endpoints, env vars, data models, integration status); added **Agent Architecture & Flow** section with Mermaid flowchart matching the product design, 5-stage pipeline table, Plan Output component table; added Data Parser Agent to Specialized Agents list; reordered agent list |
-| `docs/PARSER_AGENT_GUIDE.md` | Updated 5 path references: parser location (`agents-service/parser_agent.py` → `agents-service/src/scripts/parser_agent.py`), input dir (`agents-service/dummy_md/` → `agents-service/.data/dummy_md/`), output dir (`agents-service/output/` → `agents-service/.data/output/`), schemas path (`agents-service/schemas.txt` → `agents-service/.data/scratch/schemas.txt`), config path (`src/config.py` → `src/core/config.py`), run command (`python parser_agent.py` → `python src/scripts/parser_agent.py`) |
-| `docs/CLI_TESTING_GUIDE.md` | All `src/cli.py` → `src/scripts/cli.py` (10 occurrences) |
-| `docs/ENVIRONMENT_CONFIGURATION.md` | `src/auth.py` → `src/core/auth.py` (1 occurrence) |
+| `docs/agents/PARSER_AGENT_GUIDE.md` | Updated 5 path references: parser location (`agents-service/parser_agent.py` → `agents-service/src/scripts/parser_agent.py`), input dir (`agents-service/dummy_md/` → `agents-service/.data/dummy_md/`), output dir (`agents-service/output/` → `agents-service/.data/output/`), schemas path (`agents-service/schemas.txt` → `agents-service/.data/scratch/schemas.txt`), config path (`src/config.py` → `src/core/config.py`), run command (`python parser_agent.py` → `python src/scripts/parser_agent.py`) |
+| `docs/guides/CLI_TESTING_GUIDE.md` | All `src/cli.py` → `src/scripts/cli.py` (10 occurrences) |
+| `docs/guides/ENVIRONMENT_CONFIGURATION.md` | `src/auth.py` → `src/core/auth.py` (1 occurrence) |
 | `agents-service/docs/ollama_setup_guide.md` | `src/cli.py` → `src/scripts/cli.py` (1 occurrence) |
 | `agents-service/README.md` | `src/cli.py` → `src/scripts/cli.py` (2 occurrences) |
 

@@ -1,7 +1,7 @@
 """
 Generic bridge from one LangGraph chat turn to the Redis-backed SSE event
 contract (streaming/models.py, streaming/publisher.py, documented in
-docs/SSE_STREAMING_GUIDE.md).
+docs/agents/SSE_STREAMING_GUIDE.md).
 
 This is the "standard component" every specialist streams through: it
 reads graph.streaming.stream_turn's normalized route/step/final items,

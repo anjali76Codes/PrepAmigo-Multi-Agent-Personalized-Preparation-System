@@ -38,7 +38,7 @@ The service exposes:
 
 - `GET /health` for liveness information.
 - `POST /api/chat` for agent requests; waits for the full reply and returns it as JSON. Good for scripts/tests; no step-by-step progress.
-- `POST /internal/agent/execute` — the decoupled trigger for the Redis-backed SSE pipeline (`docs/SSE_STREAMING_GUIDE.md` at the repo root): accepts `{runId, query, thread_id?, user_id?}` for chat, or `workflow_mode: "interview_prep"` with `workflow_input` for structured orchestration. A same-thread `resume_input` continues an interrupted workflow with LangGraph `Command(resume=...)`. Progress and the final reply are published to Redis on `agent:events:{runId}` for the Node.js gateway to relay over SSE.
+- `POST /internal/agent/execute` — the decoupled trigger for the Redis-backed SSE pipeline (`docs/agents/SSE_STREAMING_GUIDE.md` at the repo root): accepts `{runId, query, thread_id?, user_id?}` for chat, or `workflow_mode: "interview_prep"` with `workflow_input` for structured orchestration. A same-thread `resume_input` continues an interrupted workflow with LangGraph `Command(resume=...)`. Progress and the final reply are published to Redis on `agent:events:{runId}` for the Node.js gateway to relay over SSE.
 
 Example request:
 
