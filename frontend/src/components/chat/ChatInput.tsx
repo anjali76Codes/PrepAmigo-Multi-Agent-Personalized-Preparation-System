@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { IconButton } from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
-import { cn } from "../../lib/utils";
+import { cn } from "../../utils/utils";
 
 interface OptionCategory {
   id: string;

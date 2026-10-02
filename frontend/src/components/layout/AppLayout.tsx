@@ -7,7 +7,7 @@ import { IconButton } from "../ui/IconButton";
 import { PageBackground } from "../ui/PageBackground";
 import { SearchBar } from "./SearchBar";
 
-import { useAuth } from "../../lib/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 
 export function AppLayout() {
   const { loading, logout } = useAuth();

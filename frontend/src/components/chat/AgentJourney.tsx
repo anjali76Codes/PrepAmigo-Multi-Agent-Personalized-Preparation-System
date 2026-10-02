@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, animate, useTransform } from 'framer-motion';
 import { Icon } from '../ui/Icon';
 import { Mascot } from '../ui/Mascot';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/utils';
 import { VIEW_W, VIEW_H, PATH_D, NODE_IMG, NODE_POSITIONS } from './AgentJourneyConstants';
 
 export interface JourneyStep {

@@ -1,4 +1,4 @@
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/utils';
 import { Icon } from './Icon';
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
