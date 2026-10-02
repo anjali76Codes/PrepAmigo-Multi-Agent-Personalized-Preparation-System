@@ -15,7 +15,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from config import settings
+from core.config import settings
 from tools.cache import cached_fetch, caches_bypassed, get_response_cache
 
 logger = logging.getLogger(__name__)

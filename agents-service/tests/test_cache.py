@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from config import Settings
+from core.config import Settings
 from tools.cache import ResponseCache, get_response_cache
 import tools.cache as cache_module
 

@@ -24,7 +24,7 @@ import time
 
 from langchain_core.messages import HumanMessage
 
-from config import settings
+from core.config import settings
 from graph.builder import build_graph
 from graph.streaming import stream_turn
 from memory.nodes import drain_pending_saves

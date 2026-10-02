@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/utils';
 
 export interface TooltipProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'content'> {
   content: React.ReactNode;

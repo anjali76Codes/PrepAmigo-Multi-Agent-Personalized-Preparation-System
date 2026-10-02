@@ -19,7 +19,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 
 from agents.base import recent_messages
 from agents.research_agent import ContentResearchAgent, ResearchAgentError, ResearchRequest
-from config import get_llm
+from core.config import get_llm
 from graph.events import INTERNAL_LLM_CONFIG
 from prompts.research_prompts import RESEARCH_REQUEST_EXTRACTION_PROMPT
 

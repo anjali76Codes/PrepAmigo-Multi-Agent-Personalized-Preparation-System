@@ -1,4 +1,4 @@
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/utils';
 
 export interface StatusBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   status: 'success' | 'warning' | 'error' | 'info' | 'default';

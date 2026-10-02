@@ -11,13 +11,13 @@ from typing import Annotated, List, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
 
-from src.config import get_llm
+from src.core.config import get_llm
 
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent
-INPUT_DIR = BASE_DIR / "dummy_md"
-OUTPUT_DIR = BASE_DIR / "output"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+INPUT_DIR = BASE_DIR / ".data" / "dummy_md"
+OUTPUT_DIR = BASE_DIR / ".data" / "output"
 TEST_USER_ID = "000000000000000000000001"
 MAX_CONCURRENT_SPRINTS = 4
 

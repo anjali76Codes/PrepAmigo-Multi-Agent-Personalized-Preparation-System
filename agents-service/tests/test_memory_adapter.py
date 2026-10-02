@@ -4,7 +4,7 @@ import types
 
 import pytest
 
-from config import Settings
+from core.config import Settings
 from memory.base import BaseMemoryInterface, BaseMemoryProvider
 from memory.local_adapter import LocalMemoryProvider
 from memory.mem0_adapter import Mem0MemoryProvider, Mem0UnavailableError, build_mem0_config

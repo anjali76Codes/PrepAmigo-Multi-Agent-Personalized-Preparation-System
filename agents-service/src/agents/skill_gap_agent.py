@@ -46,7 +46,7 @@ import re
 from typing import Any
 
 from agents.company_brief import company_focus
-from config import get_llm, settings
+from core.config import get_llm, settings
 from graph.events import INTERNAL_LLM_CONFIG, emit_to_graph_stream, make_event
 from observability.timing import log_failure
 from storage.llm_cache import forget_response

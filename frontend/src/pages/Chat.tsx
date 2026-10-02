@@ -7,7 +7,7 @@ import type { JourneyStep, JourneyAction } from '../components/chat/AgentJourney
 import { LearningContextPanel } from '../components/preps/LearningContextPanel';
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
-import { cn } from '../lib/utils';
+import { cn } from '../utils/utils';
 
 // 6 nodes per scenario. Rename agents to match your AGENTS list if you like.
 const JOURNEYS: Record<'setup' | 'plan-update' | 'missed-task' | 'flashcards' | 'fallback', JourneyStep[]> = {

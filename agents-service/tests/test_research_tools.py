@@ -5,7 +5,7 @@ import pytest
 
 import tools.research_tools as research_tools
 import tools.serpapi_client as serpapi_client
-from config import Settings
+from core.config import Settings
 
 
 @pytest.fixture

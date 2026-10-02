@@ -4,7 +4,7 @@ LangGraph node. Specialist agents subclass this instead of hand-rolling
 node functions, so LLM/memory/tool-binding logic lives in one place.
 """
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from config import get_llm
+from core.config import get_llm
 from prompts.system_prompts import MEMORY_CONTEXT_PROMPT
 
 # short-term context sent to the LLM; older turns are covered by

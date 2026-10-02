@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from config import get_llm, settings
+from core.config import get_llm, settings
 from graph.events import AgentEvent, EventCallback, dispatch_event, make_event
 from observability.timing import Timer, log_step
 from prompts.interview_intelligence_prompts import INTERVIEW_INTELLIGENCE_PROMPT

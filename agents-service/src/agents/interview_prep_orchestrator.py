@@ -20,7 +20,7 @@ from agents.job_intelligence_agent import JobIntelligenceAgent, JobIntelligenceI
 from agents.planner_agent import PlannerAgent
 from agents.skill_gap_agent import SkillGapAgent
 from agents.research_agent import ContentResearchAgent, company_module_request, prep_focus
-from config import get_llm, llm_concurrency, service_path, settings
+from core.config import get_llm, llm_concurrency, service_path, settings
 from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, make_event
 from graph.router import route_after_agent
 from guardrails.validators import run_guardrails

@@ -37,7 +37,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Callable, Optional, Protocol
 
-from config import service_path, settings
+from core.config import settings
 from observability.metrics import record_tool
 
 logger = logging.getLogger(__name__)

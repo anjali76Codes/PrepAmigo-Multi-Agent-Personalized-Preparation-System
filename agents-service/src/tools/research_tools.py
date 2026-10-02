@@ -48,7 +48,7 @@ from urllib.parse import parse_qs, quote_plus, urlparse
 
 from langchain_core.tools import tool
 
-from config import settings
+from core.config import settings
 from tools.cache import cached_fetch, get_response_cache
 from tools.serpapi_client import serpapi_search, using_dummy_data
 

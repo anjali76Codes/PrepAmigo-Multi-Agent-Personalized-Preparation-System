@@ -1,18 +1,18 @@
 # Markdown Plan Parser Agent
 
-This guide explains how the Python parser turns the Markdown plan files into a validated nested JSON payload and a merged Markdown document. The parser is in `agents-service/parser_agent.py`; it does not call the Node backend or write to MongoDB.
+This guide explains how the Python parser turns the Markdown plan files into a validated nested JSON payload and a merged Markdown document. The parser is in `agents-service/src/scripts/parser_agent.py`; it does not call the Node backend or write to MongoDB.
 
 ## Inputs and outputs
 
 The parser reads:
 
-- `agents-service/dummy_md/00_outline.md` for plan metadata and date context.
-- `agents-service/dummy_md/NN_sprint_*.md` for sprint schedules. Files are sorted by name before parsing.
+- `agents-service/.data/dummy_md/00_outline.md` for plan metadata and date context.
+- `agents-service/.data/dummy_md/NN_sprint_*.md` for sprint schedules. Files are sorted by name before parsing.
 
 It writes:
 
-- `agents-service/output/complete_plan.json`: the Pydantic-validated nested plan payload.
-- `agents-service/output/complete_plan.md`: the outline and sprint Markdown combined in order, separated by horizontal rules. Sprint headings are shifted down one heading level to preserve document hierarchy.
+- `agents-service/.data/output/complete_plan.json`: the Pydantic-validated nested plan payload.
+- `agents-service/.data/output/complete_plan.md`: the outline and sprint Markdown combined in order, separated by horizontal rules. Sprint headings are shifted down one heading level to preserve document hierarchy.
 
 ## Processing flow
 
@@ -35,7 +35,7 @@ The outline is parsed first because its dates supply the year for sprint dates t
 
 ## Schema mapping
 
-The Pydantic models follow the Mongoose fields in `agents-service/schemas.txt`:
+The Pydantic models follow the Mongoose fields in `agents-service/.data/scratch/schemas.txt`:
 
 - Plan metadata maps to `company`, `role`, `total_days`, `start_date`, and `end_date`. The parser also creates `plan_name`, `user_id`, `completion_percent`, and `status`.
 - Sprint entries map to `sprint_number`, `sprint_name`, `start_date`, `end_date`, and `total_days`.
@@ -63,14 +63,14 @@ OLLAMA_MODEL=your-ollama-model
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-`localhost:11434` is the Ollama client endpoint. A model name ending in `-cloud` routes inference to Ollama Cloud; a locally installed model runs inference on the local machine. OpenAI is also supported by the Python service with `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`. Gemini is not currently a provider option in `agents-service/src/config.py`.
+`localhost:11434` is the Ollama client endpoint. A model name ending in `-cloud` routes inference to Ollama Cloud; a locally installed model runs inference on the local machine. OpenAI is also supported by the Python service with `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`. Gemini is not currently a provider option in `agents-service/src/core/config.py`.
 
 ## Run the parser
 
 From Command Prompt in the `agents-service` directory, with its virtual environment active and configured LLM reachable:
 
 ```cmd
-python parser_agent.py
+python src/scripts/parser_agent.py
 ```
 
 Install dependencies into that same environment if needed:

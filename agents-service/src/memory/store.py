@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 from langgraph.checkpoint.memory import MemorySaver
 
-from config import Settings, settings
+from core.config import Settings, settings
 from memory.base import BaseMemoryProvider
 from memory.local_adapter import LocalMemoryProvider
 
