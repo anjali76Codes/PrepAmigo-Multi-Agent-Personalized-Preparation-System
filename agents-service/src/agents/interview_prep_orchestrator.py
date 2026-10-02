@@ -17,7 +17,7 @@ from agents import interview_prep_fields as workflow_fields
 from agents.job_intelligence_agent import JobIntelligenceAgent, JobIntelligenceInput
 from agents.skill_gap_agent import SkillGapAgent
 from agents.research_agent import ContentResearchAgent
-from config import get_llm, settings
+from core.config import get_llm, settings
 from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, make_event
 from graph.router import route_after_agent
 from guardrails.validators import run_guardrails

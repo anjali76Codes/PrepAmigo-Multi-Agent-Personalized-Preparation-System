@@ -1,7 +1,7 @@
 import pytest
 
 from agents.supervisor import supervisor_node
-from config import Settings
+from core.config import Settings
 import tools.search_tools as search_tools
 from guardrails.validators import check_no_unconfirmed_payment
 from tools.search_tools import search_flights

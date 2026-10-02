@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 
 import pymongo
 
-from config import settings, get_llm
-from auth import verify_token
+from core.config import settings, get_llm
+from core.auth import verify_token
 
 logger = logging.getLogger(__name__)
 

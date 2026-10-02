@@ -1,6 +1,6 @@
 import logging
 
-from config import Settings
+from core.config import Settings
 import observability.logging_config as logging_config
 
 

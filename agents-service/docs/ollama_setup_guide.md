@@ -59,5 +59,5 @@ uv run uvicorn --app-dir src main:app --reload
 Or test via the interactive CLI:
 
 ```shell
-uv run python src/cli.py
+uv run python src/scripts/cli.py
 ```

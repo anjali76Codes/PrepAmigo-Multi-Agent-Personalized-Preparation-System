@@ -30,7 +30,7 @@ from typing import Any
 
 from typing_extensions import TypedDict
 
-from config import settings
+from core.config import settings
 
 
 class NodeType(str, Enum):

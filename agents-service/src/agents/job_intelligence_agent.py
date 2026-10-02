@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from config import get_llm, settings
+from core.config import get_llm, settings
 from graph.events import INTERNAL_LLM_CONFIG
 from tools.serpapi_client import serpapi_search, using_dummy_data
 

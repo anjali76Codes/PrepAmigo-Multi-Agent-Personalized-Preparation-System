@@ -21,9 +21,9 @@ from graph.errors import friendly_error_detail
 from observability import configure_logging
 from streaming.publisher import get_event_publisher
 from streaming.runner import execute_agent_stream
-from auth import verify_token
-from job_intelligence_router import router as job_intelligence_router
-from skill_gap_router import router as skill_gap_router
+from core.auth import verify_token
+from routers.job_intelligence_router import router as job_intelligence_router
+from routers.skill_gap_router import router as skill_gap_router
 from agents.interview_prep_fields import WORKFLOW_FIELDS
 
 configure_logging()

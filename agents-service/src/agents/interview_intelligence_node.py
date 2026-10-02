@@ -12,7 +12,7 @@ from agents.interview_intelligence_agent import (
     InterviewIntelligenceError,
     InterviewIntelligenceRequest,
 )
-from config import get_llm
+from core.config import get_llm
 from graph.events import INTERNAL_LLM_CONFIG
 from prompts.interview_intelligence_prompts import INTERVIEW_REQUEST_EXTRACTION_PROMPT
 

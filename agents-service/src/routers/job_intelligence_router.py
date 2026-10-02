@@ -8,7 +8,7 @@ from agents.job_intelligence_agent import (
     fetch_google_jobs,
     get_job_intelligence_profile,
 )
-from auth import verify_token
+from core.auth import verify_token
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
 # PrepAmigo CLI Testing Guide
 
-The CLI (`src/cli.py`) provides three isolated testing modes. Each bypasses different parts of the stack so you can test specific agent layers without running everything.
+The CLI (`src/scripts/cli.py`) provides three isolated testing modes. Each bypasses different parts of the stack so you can test specific agent layers without running everything.
 
 ---
 
@@ -8,9 +8,9 @@ The CLI (`src/cli.py`) provides three isolated testing modes. Each bypasses diff
 
 | Mode | Command | What it tests |
 |---|---|---|
-| **REPL** | `uv run python src/cli.py` | Full multi-agent system (supervisor → routing → specialists) |
-| **Company Research** | `uv run python src/cli.py --company "..."` | CompanyResearchAgent in isolation |
-| **Full Pipeline** | `uv run python src/cli.py --prep --company "..." --role "..."` | Orchestrator chain end-to-end |
+| **REPL** | `uv run python src/scripts/cli.py` | Full multi-agent system (supervisor → routing → specialists) |
+| **Company Research** | `uv run python src/scripts/cli.py --company "..."` | CompanyResearchAgent in isolation |
+| **Full Pipeline** | `uv run python src/scripts/cli.py --prep --company "..." --role "..."` | Orchestrator chain end-to-end |
 
 ---
 
@@ -19,10 +19,10 @@ The CLI (`src/cli.py`) provides three isolated testing modes. Each bypasses diff
 Starts an interactive chat loop. The supervisor routes each message to the appropriate specialist agent.
 
 ```powershell
-uv run python src/cli.py
-uv run python src/cli.py --user yourname
-uv run python src/cli.py --user yourname --stream       # stream tokens as generated (default if STREAM_RESPONSES=true)
-uv run python src/cli.py --user yourname --no-stream    # wait for full reply then print
+uv run python src/scripts/cli.py
+uv run python src/scripts/cli.py --user yourname
+uv run python src/scripts/cli.py --user yourname --stream       # stream tokens as generated (default if STREAM_RESPONSES=true)
+uv run python src/scripts/cli.py --user yourname --no-stream    # wait for full reply then print
 ```
 
 **What to test here:**
@@ -49,9 +49,9 @@ You: prepare me for an ML engineer role at Anthropic in San Francisco
 Directly invokes the `CompanyResearchAgent` in a minimal 2-node graph, bypassing the supervisor and full orchestrator. Shows SSE step events as they fire and the full company dossier at the end.
 
 ```powershell
-uv run python src/cli.py --company "Stripe"
-uv run python src/cli.py --company "Anthropic" --role "ML Engineer"
-uv run python src/cli.py --company "Datadog" --role "Backend Engineer"
+uv run python src/scripts/cli.py --company "Stripe"
+uv run python src/scripts/cli.py --company "Anthropic" --role "ML Engineer"
+uv run python src/scripts/cli.py --company "Datadog" --role "Backend Engineer"
 ```
 
 **What to test here:**
@@ -86,16 +86,16 @@ Runs the complete orchestration chain **silently** (no intermediate SSE spam). A
 
 ```powershell
 # Minimum required: --prep, --company, --role
-uv run python src/cli.py --prep --company "Stripe" --role "Backend Engineer"
+uv run python src/scripts/cli.py --prep --company "Stripe" --role "Backend Engineer"
 
 # With explicit location
-uv run python src/cli.py --prep --company "Stripe" --role "Backend Engineer" --location "San Francisco"
+uv run python src/scripts/cli.py --prep --company "Stripe" --role "Backend Engineer" --location "San Francisco"
 
 # With a resume file (plain text, .txt recommended)
-uv run python src/cli.py --prep --company "Anthropic" --role "ML Engineer" --location "Remote" --resume-file path/to/resume.txt
+uv run python src/scripts/cli.py --prep --company "Anthropic" --role "ML Engineer" --location "Remote" --resume-file path/to/resume.txt
 
 # With inline resume text
-uv run python src/cli.py --prep --company "Google" --role "SRE" --resume-text "Python developer 3 years, Kubernetes, GCP"
+uv run python src/scripts/cli.py --prep --company "Google" --role "SRE" --resume-text "Python developer 3 years, Kubernetes, GCP"
 ```
 
 **If no `--resume-file` or `--resume-text` is given**, a built-in dummy resume is used. This is intentional — the dummy resume tests that the skill gap and research agents fire correctly, not the accuracy of results.

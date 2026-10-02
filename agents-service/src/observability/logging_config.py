@@ -20,7 +20,7 @@ import logging
 import logging.handlers
 from pathlib import Path
 
-from config import settings
+from core.config import settings
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

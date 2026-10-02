@@ -27,7 +27,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Optional
 
-from config import settings
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 

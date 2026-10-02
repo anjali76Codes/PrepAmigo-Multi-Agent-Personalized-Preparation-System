@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from langchain_core.tools import tool
 
-from config import settings
+from core.config import settings
 from graph.events import emit_to_graph_stream, make_event
 from tools.serpapi_client import serpapi_search, using_dummy_data
 

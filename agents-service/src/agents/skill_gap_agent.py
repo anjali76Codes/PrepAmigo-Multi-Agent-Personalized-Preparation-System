@@ -29,7 +29,7 @@ import json
 import logging
 from typing import Any
 
-from config import get_llm
+from core.config import get_llm
 from graph.events import emit_to_graph_stream, make_event
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ import tools.research_tools as research_tools
 import tools.search_tools as flight_tools
 import tools.serpapi_client as serpapi_client
 from agents import job_intelligence_agent
-from config import Settings
+from core.config import Settings
 
 
 def _write_fixture(path, data):

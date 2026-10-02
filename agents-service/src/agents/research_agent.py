@@ -48,7 +48,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from config import get_llm, settings
+from core.config import get_llm, settings
 from graph.events import AgentEvent, EventCallback, dispatch_event, emit_to_graph_stream, make_event
 from memory.base import BaseMemoryProvider
 from memory.store import get_memory_provider

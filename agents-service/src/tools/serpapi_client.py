@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from config import settings
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
