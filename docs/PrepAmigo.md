@@ -40,11 +40,68 @@ The system maintains a shared **Learning Context** containing the target role, c
 
 5. **Research Agent** - finds technical explanations, documentation, articles and learning material 
 
-6. **Assessment Agent** - evaluates progress through quizzes, coding tasks and mock interviews 
+6. **Planner Agent** - converts all findings into sprints, daily tasks, calendar plans and revision cycles 
 
-7. **Planner Agent** - converts all findings into sprints, daily tasks, calendar plans and revision cycles 
+7. **Data Parser Agent** - consumes outputs from the Research and Planner Agents and emits the structured Plan consumed by the frontend 
 
-8. **Progress Agent** - tracks completion, performance, streaks, XP, badges and learning velocity 
+8. **Assessment Agent** - evaluates progress through quizzes, coding tasks and mock interviews 
+
+9. **Progress Agent** - tracks completion, performance, streaks, XP, badges and learning velocity 
+
+---
+
+## **Agent Architecture & Flow**
+
+User input enters the **Agents Orchestrator**, which fans out to specialist agents in a defined sequence. The orchestrator coordinates the pipeline; no agent calls another directly.
+
+```mermaid
+flowchart TD
+    UI([User Input]) --> Orch[Agents Orchestrator]
+
+    subgraph Network ["Agent Network"]
+        Orch --> CR["Company Research Agent\ncompany products · engineering areas · recent updates"]
+        Orch --> JI["Job Intelligence Agent\nrecurring skills · technology · requirements"]
+        JI --> SG["Skill Gap Agent\nresume vs. company/role requirements"]
+        CR --> RA["Research Agent\ntechnical explanations · docs · articles · learning material"]
+        SG --> RA
+        RA --> PA["Planner Agent\nsprints · daily tasks · calendar plans · revision cycles"]
+    end
+
+    RA --> DPA["Data Parser Agent"]
+    PA --> DPA
+
+    DPA --> Plan["Structured Plan"]
+
+    subgraph PlanOutput ["Plan"]
+        Plan --> Roadmap["Roadmap\nEach day: topic · objective · estimated time · references · practice task"]
+        Plan --> Calendar["Calendar\nWhat to do each day · due dates · reminders · missed tasks · rescheduling"]
+        Plan --> ResourcePack["Resource Pack\nCurated resources — not just links"]
+        Plan --> Assessments["Assessments\nWeekly quizzes · revision flash cards"]
+        Plan --> Dashboard["Progress Dashboard\nXP · streaks · badges · titles · milestones · skill levels"]
+    end
+```
+
+### **Pipeline Stages**
+
+| Stage | Agents | What happens |
+|---|---|---|
+| **1 — Market Intelligence** (parallel) | Company Research Agent · Job Intelligence Agent | Orchestrator fans out to both simultaneously. Company Research gathers company facts, engineering context, and recent news. Job Intelligence fetches live job postings and extracts recurring skills, seniority signals, and responsibilities. |
+| **2 — Gap Analysis** | Skill Gap Agent | Receives Job Intelligence output. Compares the candidate's resume and stated strengths/weaknesses against the role requirements to produce a ranked gap list. |
+| **3 — Learning Research** | Research Agent | Receives both Company Research output (for cultural/tech context) and Skill Gap output (for targeted topics). Finds technical explanations, documentation, articles, videos, and transcripts per identified gap. |
+| **4 — Planning** | Planner Agent | Receives Research Agent output. Converts curated resources and gap priorities into a sprint-based study schedule with daily tasks, milestones, and revision cycles. |
+| **5 — Plan Synthesis** | Data Parser Agent | Receives output from both Research Agent and Planner Agent. Produces the fully structured Plan: Roadmap, Calendar, Resource Pack, Assessments, and Progress Dashboard. |
+
+### **Plan Output**
+
+| Component | Description |
+|---|---|
+| **Roadmap** | Day-by-day view. Each day contains a topic, objective, estimated study time, curated references, and a practice task. |
+| **Calendar** | Scheduling layer. Shows what to work on each day, handles due dates, reminders, missed tasks, and rescheduling. |
+| **Resource Pack** | A curated set of resources per gap — not a raw link dump. Videos, articles, docs, and books selected by the Research Agent. |
+| **Assessments** | Weekly quizzes and revision flash cards generated from the topics covered in each sprint. |
+| **Progress Dashboard** | Gamification layer. Tracks XP, streaks, badges, titles, milestones, and per-skill levels. |
+
+---
 
 ## **How It Works** 
 
