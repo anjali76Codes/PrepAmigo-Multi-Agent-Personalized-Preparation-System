@@ -46,6 +46,72 @@ def test_disabled_serpapi_uses_query_selected_json_fixture(monkeypatch, tmp_path
     assert result["_source"] == "dummy"
 
 
+def _live_settings(**overrides):
+    return Settings(serpapi_api_key="test-key", serpapi_enabled=True, **overrides)
+
+
+def _capture_params(monkeypatch):
+    import sys
+    import types
+
+    seen = []
+
+    class FakeSearch:
+        def __init__(self, params):
+            seen.append(params)
+
+        def get_dict(self):
+            return {"search_metadata": {"status": "Success"}}
+
+    monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=FakeSearch))
+    return seen
+
+
+def test_google_engine_gets_udm_14_by_default(monkeypatch):
+    monkeypatch.setattr(serpapi_client, "settings", _live_settings())
+    seen = _capture_params(monkeypatch)
+
+    serpapi_client.serpapi_search({"engine": "google", "q": "test"})
+
+    assert seen[0]["udm"] == 14
+
+
+def test_non_google_engine_is_left_alone(monkeypatch):
+    monkeypatch.setattr(serpapi_client, "settings", _live_settings())
+    seen = _capture_params(monkeypatch)
+
+    serpapi_client.serpapi_search({"engine": "google_news", "q": "test"})
+
+    assert "udm" not in seen[0]
+
+
+def test_suppress_ai_overview_false_opts_out_per_call(monkeypatch):
+    monkeypatch.setattr(serpapi_client, "settings", _live_settings())
+    seen = _capture_params(monkeypatch)
+
+    serpapi_client.serpapi_search({"engine": "google", "q": "test"}, suppress_ai_overview=False)
+
+    assert "udm" not in seen[0]
+
+
+def test_caller_supplied_udm_is_never_overridden(monkeypatch):
+    monkeypatch.setattr(serpapi_client, "settings", _live_settings())
+    seen = _capture_params(monkeypatch)
+
+    serpapi_client.serpapi_search({"engine": "google", "q": "test", "udm": 7})
+
+    assert seen[0]["udm"] == 7
+
+
+def test_global_setting_can_disable_suppression(monkeypatch):
+    monkeypatch.setattr(serpapi_client, "settings", _live_settings(serpapi_suppress_ai_overview=False))
+    seen = _capture_params(monkeypatch)
+
+    serpapi_client.serpapi_search({"engine": "google", "q": "test"})
+
+    assert "udm" not in seen[0]
+
+
 def test_relative_fixture_path_is_resolved_from_agents_service(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(serpapi_client, "settings", Settings(

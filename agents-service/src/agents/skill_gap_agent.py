@@ -4,10 +4,23 @@ Skill Gap Agent
 Analyzes a candidate's resume against job requirements (from JobIntelligenceAgent)
 and company profile (from CompanyResearchAgent) to identify and rank skill gaps.
 
-Pipeline (two sequential LLM calls + pure Python scoring):
-  extract_candidate_profile → LLM extracts skills, projects, experience from resume
-  evaluate_gaps             → LLM compares candidate profile against required skills
-  rank_and_score            → Pure Python: sorts gaps by priority, computes readiness score
+Pipeline (one LLM call + pure Python scoring):
+  evaluate_resume  → the model reads the resume and returns one verdict per
+                     required skill: strong / partial / missing + a short
+                     evidence phrase. Nothing else is generated.
+  rank_and_score   → pure Python: sorts gaps by priority, computes readiness
+
+One call, small output. It used to be two: the first rewrote the whole
+resume as JSON (2,000+ output tokens, 67s on a slow day) only to feed the
+second, which then ran out of the stage's time budget and returned nothing.
+Output is now ~25 tokens per required skill, and the skills compared are
+capped (SKILL_GAP_MAX_SKILLS, must-have first), so the call's size does not
+grow with the resume or the posting count.
+
+If the model is unavailable, late or unparseable, the verdicts come from
+the resume text itself (a required skill named in it is "partial", one that
+is not is "missing"): a rougher answer, flagged as
+evaluation_source="resume_text", instead of no gaps and no plan.
 
 Not a BaseAgent subclass: this is a fixed sequential pipeline, not a
 tool-calling chat loop. Follows ContentResearchAgent's pattern.
@@ -25,16 +38,29 @@ Outputs (written to state by run_skill_gap):
   task_context["skill_gap"]  : full gap report dict
   state["skill_gaps"]        : list[str] of gap topic names for ContentResearchAgent
 """
+import asyncio
+import difflib
 import json
 import logging
+import re
 from typing import Any
 
-from config import get_llm
-from graph.events import emit_to_graph_stream, make_event
+from agents.company_brief import company_focus
+from config import get_llm, settings
+from graph.events import INTERNAL_LLM_CONFIG, emit_to_graph_stream, make_event
+from observability.timing import log_failure
+from storage.llm_cache import forget_response
+from tools.plan_builder import parse_json_object
+from tools.relevance import relevance
 
 logger = logging.getLogger(__name__)
 
 AGENT_NAME = "skill_gap"
+
+
+RESUME_PROMPT_CHARS = 12_000  # ~3,000 tokens: bounds the prompt for very long resumes
+EVIDENCE_WORDS = 12
+VALID_STATUSES = {"strong", "partial", "missing"}
 
 
 # ---------------------------------------------------------------------------
@@ -42,89 +68,133 @@ AGENT_NAME = "skill_gap"
 # ---------------------------------------------------------------------------
 
 async def _call_llm_json(prompt: str, fallback: Any) -> Any:
-    """Call the LLM, parse JSON reply, retry once on parse failure."""
-    llm = get_llm(temperature=0)
-    for attempt in range(2):
-        try:
-            response = await llm.ainvoke(prompt)
-            content = str(response.content).strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-            return json.loads(content.strip())
-        except Exception as exc:
-            if attempt == 1:
-                logger.error("LLM JSON call failed after 2 attempts: %s", exc)
-                return fallback
-            prompt += f"\n\nPrevious attempt failed: {exc}. Return valid JSON only, no markdown."
-    return fallback
+    """One model call returning parsed JSON, or `fallback` when the call
+    fails, times out or does not contain a JSON object."""
+    profile = "fast" if settings.skill_gap_llm == "fast" else "default"
+    llm = get_llm(temperature=0, max_tokens=settings.skill_gap_max_output_tokens or None, profile=profile)
+    response = None
+    try:
+        response = await asyncio.wait_for(
+            llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=settings.skill_gap_llm_timeout_seconds)
+        text = re.sub(r"<think>.*?</think>", "", str(response.content), flags=re.S)
+        return parse_json_object(text)
+    except Exception as exc:
+        forget_response(response)  # an unparseable answer must not be replayed from the cache
+        log_failure(logger, "Skill gap model call unavailable; falling back to resume-text matching", exc)
+        return fallback
 
 
-async def _build_candidate_profile(resume_text: str) -> dict:
-    """Step 1: extract structured candidate profile from raw resume text."""
-    prompt = f"""Extract the candidate's profile from the following resume text.
-Include only what is explicitly stated — never infer skills not mentioned.
-
-Return strictly JSON matching this structure (no markdown fences):
-{{
-    "skills": ["skill1", "skill2"],
-    "projects": [{{"title": "Proj", "description": "Desc", "technologies": "Tech"}}],
-    "experience": [{{"role": "Role", "company": "Co", "description": "Desc"}}],
-    "education": [{{"degree": "Deg", "institution": "Inst"}}]
-}}
-
-Resume Text:
-{resume_text}"""
-    return await _call_llm_json(
-        prompt,
-        {"skills": [], "projects": [], "experience": [], "education": []},
-    )
+def _skill_name(skill: dict) -> str:
+    return str(skill.get("name") or skill.get("normalizedName") or "").strip()
 
 
-async def _evaluate_gaps(
-    candidate_profile: dict,
+def skills_to_evaluate(required_skills: list[dict]) -> list[dict]:
+    """The required skills the resume is compared against: named ones only,
+    must-have before nice-to-have (each in the postings' own order), capped
+    at SKILL_GAP_MAX_SKILLS so the model's output stays small. The plan
+    covers at most PLAN_MAX_TOPICS gaps anyway."""
+    named, seen = [], set()
+    for skill in required_skills:
+        key = _skill_name(skill).casefold() if isinstance(skill, dict) else ""
+        if key and key not in seen:
+            seen.add(key)
+            named.append(skill)
+    named.sort(key=lambda s: 0 if s.get("priority") == "must_have" else 1)  # stable: keeps posting order
+    return named[: settings.skill_gap_max_skills] if settings.skill_gap_max_skills else named
+
+
+def evaluate_from_resume_text(resume_text: str, required_skills: list[dict]) -> list[dict]:
+    """Verdicts without a model: a required skill whose name appears in the
+    resume is "partial" (mentioned, depth unverified), one that does not is
+    "missing". Never "strong": only reading the evidence can say that."""
+    evaluations = []
+    for skill in required_skills:
+        name = _skill_name(skill)
+        mentioned = relevance(name, resume_text) >= 1.0
+        evaluations.append({
+            "skill_name": name,
+            "status": "partial" if mentioned else "missing",
+            "evidence": "named in the resume" if mentioned else "",
+        })
+    return evaluations
+
+
+async def _evaluate_resume(
+    resume_text: str,
     required_skills: list[dict],
     company: str,
     role: str,
     company_profile: dict,
-) -> dict:
-    """Step 2: compare candidate against required skills, classify each as strong/partial/missing."""
-    skill_names = [s.get("name", s.get("normalizedName", "")) for s in required_skills if s.get("name") or s.get("normalizedName")]
+) -> tuple[list[dict], str]:
+    """One verdict per required skill, and where the verdicts came from:
+    "llm", "llm+resume_text" (the model skipped some skills) or
+    "resume_text" (no usable model answer)."""
+    names = [_skill_name(s) for s in required_skills]
     company_context = ""
     if company_profile.get("description"):
-        company_context = f"\nCompany Context ({company}): {company_profile['description'][:400]}"
+        company_context = f"\nCompany context ({company}): {company_profile['description'][:400]}"
+    # the company brief (direct company research), when there is one: what
+    # this company actually builds with, so evidence is judged against it
+    brief_line = company_focus(company_profile)
+    if brief_line:
+        company_context += f"\n{brief_line}"
 
-    prompt = f"""You are evaluating a candidate for a {role} role at {company}.{company_context}
+    prompt = f"""You are screening a resume for a {role} role at {company}.{company_context}
 
-Required Skills: {json.dumps(skill_names)}
+Required skills: {json.dumps(names)}
 
-Candidate Profile: {json.dumps(candidate_profile)}
+For EACH required skill, judge the resume:
+- "strong": used in a project or job described in the resume.
+- "partial": only listed, or closely related experience without the skill itself.
+- "missing": not in the resume. Never infer a skill that is not written there.
 
-Rules:
-1. Mark each required skill as 'strong', 'partial', or 'missing'.
-2. Provide a one-line 'evidence' string from the resume (or empty string if missing).
-3. A skill only listed in the skills section but with no project or experience behind it is 'partial' at most.
-4. List any skills the candidate has that are not in the required list as 'extra_skills'.
+Return ONLY a JSON object, no prose, no markdown, with exactly one entry per required skill, using the
+skill names exactly as given, and an evidence phrase of at most {EVIDENCE_WORDS} words ("" when missing):
+{{"evaluations": [{{"skill": "<name>", "status": "strong|partial|missing", "evidence": "<short phrase>"}}]}}
 
-Return strictly JSON (no markdown fences):
-{{
-    "skill_evaluations": [
-        {{"skill_name": "skill", "status": "strong|partial|missing", "evidence": "found in project X"}}
-    ],
-    "extra_skills": ["extra1", "extra2"]
-}}"""
-    return await _call_llm_json(
-        prompt,
-        {"skill_evaluations": [], "extra_skills": []},
-    )
+Resume:
+{resume_text[:RESUME_PROMPT_CHARS]}"""
+
+    answer = await _call_llm_json(prompt, None)
+    by_name: dict[str, dict] = {}
+    for entry in (answer or {}).get("evaluations") or []:
+        if not isinstance(entry, dict):
+            continue
+        key = str(entry.get("skill") or entry.get("skill_name") or "").strip().casefold()
+        status = str(entry.get("status", "")).strip().lower()
+        # a slightly reworded name ("REST API" for "REST APIs") still counts
+        lowered = [n.casefold() for n in names]
+        match = key if key in lowered else next(iter(difflib.get_close_matches(key, lowered, n=1, cutoff=0.8)), "")
+        if match and status in VALID_STATUSES and match not in by_name:
+            evidence = " ".join(str(entry.get("evidence") or "").split()[: EVIDENCE_WORDS * 2])
+            by_name[match] = {"status": status, "evidence": evidence}
+
+    # any skill the model left out is judged from the resume text, so every
+    # required skill always has a verdict
+    text_verdicts = {e["skill_name"].casefold(): e for e in evaluate_from_resume_text(resume_text, required_skills)}
+    evaluations = [
+        {"skill_name": name, **by_name[name.casefold()]} if name.casefold() in by_name else text_verdicts[name.casefold()]
+        for name in names
+    ]
+    source = "resume_text" if not by_name else ("llm" if len(by_name) == len(names) else "llm+resume_text")
+    return evaluations, source
 
 
 def _rank_and_score(gap_evaluation: dict, required_skills: list[dict]) -> dict:
     """Step 3: pure Python — rank gaps by priority, compute readiness score."""
-    evaluations = gap_evaluation.get("skill_evaluations", [])
+    # only skills the job actually requires can be gaps: the model also
+    # grades skills it found on the resume, which must never become "gaps"
+    required = {
+        str(s.get("name") or s.get("normalizedName") or "").strip().casefold() for s in required_skills
+    } - {""}
+    evaluations, seen = [], set()
+    for ev in gap_evaluation.get("skill_evaluations", []):
+        key = str(ev.get("skill_name", "")).strip().casefold() if isinstance(ev, dict) else ""
+        # a slightly reworded name ("REST API" for "REST APIs") still counts
+        match = key if key in required else next(iter(difflib.get_close_matches(key, required, n=1, cutoff=0.8)), "")
+        if match and match not in seen:
+            seen.add(match)
+            evaluations.append(ev)
     freq_map = {s.get("name", s.get("normalizedName", "")): s.get("frequency", 0) for s in required_skills}
 
     matched, partial, missing = [], [], []
@@ -137,9 +207,13 @@ def _rank_and_score(gap_evaluation: dict, required_skills: list[dict]) -> dict:
         else:
             missing.append(ev)
 
+    must_have = {_skill_name(s) for s in required_skills if s.get("priority") == "must_have"}
+
     def _sort_key(ev: dict) -> tuple:
-        # missing > partial; within each, higher frequency = higher priority
-        return (0 if ev.get("status") == "missing" else 1, -freq_map.get(ev.get("skill_name", ""), 0))
+        # missing > partial; within each, must-have skills first, then the
+        # ones more postings ask for
+        name = ev.get("skill_name", "")
+        return (0 if ev.get("status") == "missing" else 1, 0 if name in must_have else 1, -freq_map.get(name, 0))
 
     priority_gaps = [
         {
@@ -221,33 +295,30 @@ class SkillGapAgent:
                 "coverage": "none",
             }
 
-        # Step 1 — extract candidate profile from resume
-        emit_to_graph_stream(
-            make_event(
-                AGENT_NAME,
-                "extract_candidate_profile",
-                "running",
-                {"message": "Extracting candidate profile from resume..."},
+        # No requirements to compare against (job intelligence failed or
+        # timed out): stop here. Asked to grade against an empty list, the
+        # model grades the resume's own skills, and the plan then "teaches"
+        # what the candidate already listed.
+        if not [s for s in job_intelligence.get("skills") or [] if isinstance(s, dict) and s.get("name")]:
+            message = "No job requirements available — skill gap analysis skipped."
+            emit_to_graph_stream(
+                make_event(AGENT_NAME, "analyze_skill_gap", "failed", {"message": message, "error": message})
             )
-        )
-        candidate_profile = await _build_candidate_profile(resume_text)
-        emit_to_graph_stream(
-            make_event(
-                AGENT_NAME,
-                "extract_candidate_profile",
-                "completed",
-                {
-                    "message": (
-                        f"Profile extracted: {len(candidate_profile.get('skills', []))} skills, "
-                        f"{len(candidate_profile.get('projects', []))} projects."
-                    ),
-                    "skills_found": len(candidate_profile.get("skills", [])),
-                },
-            )
-        )
+            return {
+                "no_resume": False,
+                "no_requirements": True,
+                "error": message,
+                "matched_skills": [],
+                "partial_skills": [],
+                "missing_skills": [],
+                "extra_skills": [],
+                "priority_gaps": [],
+                "readiness_score": 0,
+                "coverage": "none",
+            }
 
-        # Step 2 — evaluate gaps against job requirements
-        required_skills = job_intelligence.get("skills", [])
+        # Step 1 — one model call: a verdict per required skill
+        required_skills = skills_to_evaluate(job_intelligence.get("skills") or [])
         emit_to_graph_stream(
             make_event(
                 AGENT_NAME,
@@ -255,16 +326,19 @@ class SkillGapAgent:
                 "running",
                 {
                     "message": (
-                        f"Comparing {len(required_skills)} required skills against candidate profile "
+                        f"Comparing the resume against {len(required_skills)} required skills "
                         f"for {role} at {company}..."
                     )
                 },
             )
         )
-        gap_evaluation = await _evaluate_gaps(candidate_profile, required_skills, company, role, company_profile)
+        evaluations, source = await _evaluate_resume(resume_text, required_skills, company, role, company_profile)
+        gap_evaluation = {"skill_evaluations": evaluations, "extra_skills": []}
 
         # Step 3 — rank and score (pure Python)
         report = _rank_and_score(gap_evaluation, required_skills)
+        report["evaluation_source"] = source
+        report["skills_evaluated"] = len(required_skills)
         emit_to_graph_stream(
             make_event(
                 AGENT_NAME,

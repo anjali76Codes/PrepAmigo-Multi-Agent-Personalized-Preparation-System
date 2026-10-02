@@ -18,9 +18,8 @@ LOG_FILE="" to disable the file and keep console-only output.
 """
 import logging
 import logging.handlers
-from pathlib import Path
 
-from config import settings
+from config import service_path, settings
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -46,7 +45,7 @@ def configure_logging() -> None:
     root.addHandler(console)
 
     if settings.log_file:
-        path = Path(settings.log_file)
+        path = service_path(settings.log_file)
         path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.handlers.RotatingFileHandler(
             path, maxBytes=settings.log_file_max_bytes, backupCount=_BACKUP_COUNT, encoding="utf-8"

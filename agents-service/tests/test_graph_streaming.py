@@ -57,7 +57,10 @@ def test_stream_yields_route_steps_tokens_and_final():
     assert "step" in kinds
     tokens = [item for item in items if item["type"] == "token"]
     assert len(tokens) > 1  # the reply arrived incrementally
-    assert items[-1] == {"type": "final", "agent": "chat", "content": "Start with recursion then memoization."}
+    # the final item also carries the turn's task_context (added with the
+    # company-research SSE integration); this test is about the reply
+    assert {key: items[-1][key] for key in ("type", "agent", "content")} == {
+        "type": "final", "agent": "chat", "content": "Start with recursion then memoization."}
     assert "".join(t["content"] for t in tokens) == items[-1]["content"]
 
 

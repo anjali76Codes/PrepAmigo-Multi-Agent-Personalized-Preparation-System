@@ -8,7 +8,9 @@ Memory has two tiers:
     this file.
 """
 import logging
+import threading
 from functools import lru_cache
+from typing import Any, Callable
 
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -28,6 +30,27 @@ def get_checkpointer():
 MEMORY_PROVIDERS = {"local", "mem0", "mem0_oss"}
 
 
+def _within(seconds: float, build: Callable[[], BaseMemoryProvider]) -> BaseMemoryProvider:
+    """Run `build` with a time limit. mem0's client validates its key over
+    the network when constructed; with no connectivity that stalled startup
+    for two minutes before failing. A daemon thread, so a connection attempt
+    that is still hanging never keeps the process alive."""
+    outcome: dict[str, Any] = {}
+
+    def run() -> None:
+        try:
+            outcome["provider"] = build()
+        except Exception as exc:
+            outcome["error"] = exc
+
+    thread = threading.Thread(target=run, name="memory-connect", daemon=True)
+    thread.start()
+    thread.join(seconds)
+    if "provider" in outcome:
+        return outcome["provider"]
+    raise outcome.get("error") or TimeoutError(f"no connection within {seconds:.0f}s")
+
+
 def build_memory_provider(cfg: Settings = settings) -> BaseMemoryProvider:
     """Build the configured provider:
       local     in-process store, optionally persisted to MEMORY_STORE_PATH
@@ -40,15 +63,19 @@ def build_memory_provider(cfg: Settings = settings) -> BaseMemoryProvider:
     if cfg.memory_provider in {"mem0", "mem0_oss"}:
         from memory.mem0_adapter import Mem0MemoryProvider, build_mem0_config
 
-        try:
+        def connect() -> BaseMemoryProvider:
             if cfg.memory_provider == "mem0":
                 return Mem0MemoryProvider.from_platform(cfg.mem0_api_key, cfg.mem0_host or None)
             return Mem0MemoryProvider.from_local_config(build_mem0_config(cfg))
-        except Exception:
+
+        try:
+            return _within(cfg.memory_connect_timeout_seconds, connect)
+        except Exception as exc:
+            # one line, no traceback: an unreachable memory service is an
+            # expected condition (offline, bad key), not a bug to debug
             logger.warning(
-                "%s memory provider unavailable; falling back to local memory",
-                cfg.memory_provider,
-                exc_info=True,
+                "%s memory provider unavailable (%s); falling back to local memory",
+                cfg.memory_provider, exc,
             )
     return LocalMemoryProvider(cfg.memory_store_path or None)
 

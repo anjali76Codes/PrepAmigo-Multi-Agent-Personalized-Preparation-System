@@ -61,6 +61,31 @@ def _extract_company_from_messages(messages: list) -> str:
     return ""
 
 
+SEARCH_LIST_KEYS = ("organic_results", "related_questions", "discussions_and_forums", "sitelinks")
+
+
+def _merge_results(base: dict, new: dict, list_keys: tuple[str, ...]) -> dict:
+    """Combine two tool results of the same kind: list fields are
+    concatenated with duplicates (same link, else same title/question)
+    dropped; the first non-empty knowledge_graph is kept."""
+    if not base:
+        return dict(new)
+    merged = {**base, **{k: v for k, v in new.items() if k not in list_keys and k != "knowledge_graph"}}
+    merged["knowledge_graph"] = base.get("knowledge_graph") or new.get("knowledge_graph") or {}
+    for key in list_keys:
+        items = list(base.get(key) or [])
+        seen = {item.get("link") or item.get("title") or item.get("question") for item in items if isinstance(item, dict)}
+        for item in new.get(key) or []:
+            if not isinstance(item, dict):
+                continue
+            marker = item.get("link") or item.get("title") or item.get("question")
+            if marker not in seen:
+                seen.add(marker)
+                items.append(item)
+        merged[key] = items
+    return merged
+
+
 class CompanyResearchAgent(BaseAgent):
     name = "company_research"
     system_prompt = COMPANY_RESEARCH_PROMPT
@@ -71,24 +96,23 @@ class CompanyResearchAgent(BaseAgent):
         messages = list(state.get("messages", []))
 
         # ------------------------------------------------------------------
-        # Parse ToolMessages from the most recent tool-call batch.
-        # We only look at messages after the last AIMessage that had tool_calls,
-        # to avoid reprocessing tool outputs from earlier turns on long threads.
+        # Parse every ToolMessage of the current turn (since the last
+        # HumanMessage), merging results across tool rounds. A model that
+        # calls one tool per turn would otherwise rebuild the profile from
+        # only its latest search each round, dropping the earlier ones (seen
+        # live: the news results vanished once a second web search ran).
+        # Starting at the last HumanMessage still skips earlier turns'
+        # outputs on long chat threads.
         # ------------------------------------------------------------------
         search_data: dict = {}
         news_data: dict = {}
         detected_company: str = ""
+        corrected_company: str = ""
         has_tool_messages: bool = False
 
-        # Find the slice of messages that belong to the current tool-call round
-        last_ai_with_tools_idx = -1
-        for i, msg in enumerate(messages):
-            if getattr(msg, "tool_calls", None):
-                last_ai_with_tools_idx = i
+        turn_start = max((i for i, m in enumerate(messages) if isinstance(m, HumanMessage)), default=-1) + 1
 
-        recent_messages = messages[last_ai_with_tools_idx + 1:] if last_ai_with_tools_idx >= 0 else messages
-
-        for msg in recent_messages:
+        for msg in messages[turn_start:]:
             tool_name = getattr(msg, "name", None)
             content = getattr(msg, "content", None)
             if not content or not isinstance(content, str):
@@ -99,11 +123,11 @@ class CompanyResearchAgent(BaseAgent):
                 try:
                     parsed = json.loads(content)
                     if isinstance(parsed, dict) and parsed.get("search_metadata", {}).get("status") != "Error":
-                        search_data = parsed
-                        # Prefer the KG title as the authoritative company name
-                        kg_title = parsed.get("knowledge_graph", {}).get("title")
-                        if kg_title:
-                            detected_company = kg_title
+                        search_data = _merge_results(search_data, parsed, SEARCH_LIST_KEYS)
+                        # the KG title is the authoritative company name; a
+                        # spelling correction is the next best signal
+                        detected_company = detected_company or (parsed.get("knowledge_graph") or {}).get("title", "")
+                        corrected_company = corrected_company or parsed.get("corrected_company") or ""
                 except Exception as exc:
                     logger.warning("[CompanyResearchAgent] Failed to parse search tool output: %s", exc)
 
@@ -112,9 +136,10 @@ class CompanyResearchAgent(BaseAgent):
                 try:
                     parsed = json.loads(content)
                     if isinstance(parsed, dict) and parsed.get("search_metadata", {}).get("status") != "Error":
-                        news_data = parsed
+                        news_data = _merge_results(news_data, parsed, ("news_results",))
                 except Exception as exc:
                     logger.warning("[CompanyResearchAgent] Failed to parse news tool output: %s", exc)
+        detected_company = detected_company or corrected_company
 
         # ------------------------------------------------------------------
         # Normalize tool outputs into task_context["company_profile"]
