@@ -143,7 +143,13 @@ class InterviewIntelligenceAgent:
 
         async def call(kind: str, payload: dict[str, Any]):
             with Timer() as timer:
-                result = await asyncio.to_thread(self.tools[kind].invoke, payload)
+                # a per-call cap, independent of the overall step deadline:
+                # one slow/hanging source must not eat the whole step's
+                # budget away from the other sources running alongside it
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(self.tools[kind].invoke, payload),
+                    timeout=settings.research_tool_timeout_seconds,
+                )
             timings[kind] = timer.duration_ms
             return result
 
@@ -238,8 +244,9 @@ class InterviewIntelligenceAgent:
             started = time.perf_counter()
             try:
                 with Timer() as timer:
-                    result = await asyncio.to_thread(
-                        self.tools["transcript"].invoke, {"video_id": video_id}
+                    result = await asyncio.wait_for(
+                        asyncio.to_thread(self.tools["transcript"].invoke, {"video_id": video_id}),
+                        timeout=settings.research_tool_timeout_seconds,
                     )
             except Exception as exc:
                 errors[key] = str(exc)

@@ -57,6 +57,13 @@ ehthumbs.db
 Thumbs.db
 # --- Local agent data (mem0 vectors/history, JSON stores, run logs) ---
 .data/
+
+# --- Logs, wherever a run was started from ---
+*.log
+logs/
+
+# --- Generated study plans (the pipeline writes them to .data/plans/; older runs wrote them here) ---
+/plan-*.json
 graph_db.json
 *.local.json
 

@@ -62,9 +62,11 @@ def fake_serpapi(monkeypatch):
             self.params = params
 
         def get_dict(self):
-            if self.params["engine"] == "google" and "best books to learn" in self.params.get("q", ""):
+            # google_light (the docs/books engine) answers in google's shape
+            engine = {"google_light": "google"}.get(self.params["engine"], self.params["engine"])
+            if engine == "google" and "best books to learn" in self.params.get("q", ""):
                 return responses["books"]
-            return responses[self.params["engine"]]
+            return responses[engine]
 
     monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=FakeSearch))
     return seen
@@ -110,11 +112,42 @@ def test_search_books_queries_for_book_recommendations(fake_serpapi):
     result = research_tools.search_books.invoke({"topic": "python"})
 
     assert "tbm" not in fake_serpapi[0]  # SerpApi's google engine rejects tbm=bks
-    assert fake_serpapi[0]["engine"] == "google"
+    assert fake_serpapi[0]["engine"] == "google"  # SERPAPI_WEB_ENGINE default
     assert "best books to learn python" in fake_serpapi[0]["q"]
     assert result["results"][0]["title"] == "Fluent Python"
     assert result["results"][0]["resource_type"] == "book"
     assert result["results"][0]["source"] == "www.oreilly.com"
+
+
+def test_google_engine_calls_suppress_ai_overview_by_default(fake_serpapi):
+    """A plain `google` call that never reads ai_overview shouldn't pay for
+    SerpApi rendering it — udm=14 forces Google's overview-free view."""
+    research_tools.search_technical_docs.invoke({"query": "python asyncio"})
+    research_tools.search_books.invoke({"topic": "python"})
+
+    assert [params["engine"] for params in fake_serpapi] == ["google", "google"]
+    assert all(params["udm"] == 14 for params in fake_serpapi)
+
+
+def test_the_light_engine_can_be_selected_and_gets_no_udm(fake_serpapi, monkeypatch):
+    """SERPAPI_WEB_ENGINE=google_light: no AI Overview to suppress there."""
+    light = Settings(serpapi_api_key="test-key", serpapi_enabled=True, serpapi_web_engine="google_light",
+                     books_source="web")
+    monkeypatch.setattr(research_tools, "settings", light)
+    monkeypatch.setattr(serpapi_client, "settings", light)
+    research_tools.search_technical_docs.invoke({"query": "python asyncio"})
+    research_tools.search_books.invoke({"topic": "python"})
+
+    assert [params["engine"] for params in fake_serpapi] == ["google_light", "google_light"]
+    assert not any("udm" in params for params in fake_serpapi)
+
+
+def test_interview_sources_tool_keeps_ai_overview(fake_serpapi):
+    """search_google_interview_sources exists specifically to read
+    ai_overview.page_token, so it must opt out of the default suppression."""
+    research_tools.search_google_interview_sources.invoke({"query": "Stripe backend interview"})
+
+    assert "udm" not in fake_serpapi[0]
 
 
 def test_search_academic_papers_uses_google_scholar(fake_serpapi):
@@ -281,6 +314,8 @@ def cache_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(research_tools, "settings", live_settings)
     monkeypatch.setattr(serpapi_client, "settings", live_settings)
     cache = ResponseCache(tmp_path)
+    # SerpApi responses are cached at the SerpApi boundary, transcripts here
+    monkeypatch.setattr(serpapi_client, "get_response_cache", lambda: cache)
     monkeypatch.setattr(research_tools, "get_response_cache", lambda: cache)
     return tmp_path
 

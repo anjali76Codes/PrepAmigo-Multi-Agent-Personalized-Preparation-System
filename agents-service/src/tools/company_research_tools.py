@@ -24,6 +24,38 @@ from tools.serpapi_client import serpapi_search, using_dummy_data
 
 logger = logging.getLogger(__name__)
 
+# bounds how much raw SerpApi text (descriptions, snippets) reaches the LLM
+# as ToolMessage content — the field selection below already drops most of
+# the raw response, but unbounded snippet/description strings were still
+# feeding a large, noisy JSON blob into company_research_agent's synthesis
+# call, measurably slowing local generation (see interview_prep_orchestrator
+# docs for why that call's time budget matters)
+SNIPPET_CHARS = 220
+
+
+def _truncate(value: Any, limit: int = SNIPPET_CHARS) -> str:
+    text = value.strip() if isinstance(value, str) else ""
+    return text if len(text) <= limit else text[:limit].rstrip() + "..."
+
+
+def corrected_company_name(company_name: str, query: str, corrected_query: Optional[str]) -> str:
+    """Google's spelling fix for the company name, e.g. "Antropic" ->
+    "Anthropic". Aligns the corrected query against the query we sent and
+    returns the words where the name was, or "" when Google changed nothing
+    there (or rewrote the query too much to align word for word)."""
+    if not corrected_query or not company_name:
+        return ""
+    sent, fixed, name = query.split(), corrected_query.split(), company_name.split()
+    if len(sent) != len(fixed) or not name:
+        return ""
+    lowered = [w.casefold() for w in sent]
+    target = [w.casefold() for w in name]
+    for i in range(len(sent) - len(name) + 1):
+        if lowered[i:i + len(name)] == target:
+            candidate = " ".join(fixed[i:i + len(name)])
+            return candidate if candidate.casefold() != company_name.casefold() else ""
+    return ""
+
 
 def _serpapi_search(params: dict) -> dict:
     """
@@ -153,7 +185,7 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
             "industry": kg_raw.get("type") or kg_raw.get("industry", ""),
             "founded": kg_raw.get("founded", ""),
             "headquarters": kg_raw.get("headquarters", ""),
-            "description": kg_raw.get("description", ""),
+            "description": _truncate(kg_raw.get("description", ""), 400),
             "website": kg_raw.get("website", ""),
             "ceo": kg_raw.get("ceo", ""),
             # Richer fields — present for larger companies
@@ -172,7 +204,7 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
             "title": r.get("title", ""),
             "link": r.get("link", ""),
             "displayed_link": r.get("displayed_link", ""),
-            "snippet": r.get("snippet", ""),
+            "snippet": _truncate(r.get("snippet", "")),
         }
         for idx, r in enumerate(result.get("organic_results", [])[:10])
         if r.get("title") or r.get("snippet")
@@ -182,7 +214,7 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
     related_questions = [
         {
             "question": q.get("question", ""),
-            "snippet": q.get("snippet", ""),
+            "snippet": _truncate(q.get("snippet", "")),
         }
         for q in result.get("related_questions", [])[:8]
         if q.get("question")
@@ -229,10 +261,15 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
         )
     )
 
+    search_info = result.get("search_information") or {}
+    corrected = corrected_company_name(
+        company_name, search_q, search_info.get("spelling_fix") or search_info.get("showing_results_for")
+    )
     return json.dumps({
         "status": "success",
         "search_metadata": metadata,
         "query": search_q,
+        "corrected_company": corrected,
         "knowledge_graph": knowledge_graph,
         "organic_results": organic_results,
         "related_questions": related_questions,
@@ -318,7 +355,7 @@ def search_company_news(company_name: str, query: Optional[str] = None) -> str:
             "link": item.get("link", ""),
             "source": source_name,
             "date": item.get("iso_date") or item.get("date", ""),
-            "snippet": item.get("snippet", ""),
+            "snippet": _truncate(item.get("snippet", "")),
         }
 
         # Google News sometimes clusters related stories under a headline
