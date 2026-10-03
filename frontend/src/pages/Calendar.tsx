@@ -6,12 +6,15 @@ import { Button } from '../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
+import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
+
 interface TaskItem {
   id: string;
   type: 'READ' | 'PRACTISE' | 'CODE' | 'REVIEW';
   title: string;
   completed: boolean;
   tag?: string;
+  resources: ResourceItem[];
 }
 
 export function Calendar() {
@@ -28,23 +31,23 @@ export function Calendar() {
 
   // Interactive task state
   const [todayTasks, setTodayTasks] = useState<TaskItem[]>([
-    { id: 't1', type: 'READ', title: 'Learn about exception handling and try-catch blocks.', completed: false },
-    { id: 't2', type: 'PRACTISE', title: 'Write a program that handles exceptions effectively.', completed: false },
-    { id: 't3', type: 'READ', title: 'Familiarize with Java Streams and Lambda expressions.', completed: false },
+    { id: 't1', type: 'READ', title: 'Learn about exception handling and try-catch blocks.', completed: false, resources: [{ id: 'r1', type: 'Article', title: 'Exception Handling Guide', url: '#' }] },
+    { id: 't2', type: 'PRACTISE', title: 'Write a program that handles exceptions effectively.', completed: false, resources: [] },
+    { id: 't3', type: 'READ', title: 'Familiarize with Java Streams and Lambda expressions.', completed: false, resources: [{ id: 'r2', type: 'Video', title: 'Java Streams Deep Dive', url: '#' }] },
   ]);
 
   const [backlogTasks, setBacklogTasks] = useState<TaskItem[]>([
-    { id: 'b1', type: 'READ', title: 'Review Object Oriented Programming pillars in Java.', completed: false },
-    { id: 'b2', type: 'CODE', title: 'Implement generic LinkedList and custom Queue.', completed: false },
-    { id: 'b3', type: 'PRACTISE', title: 'Solve 3 Leetcode Easy problems on HashMap.', completed: false },
-    { id: 'b4', type: 'READ', title: 'Spring Boot Dependency Injection & Autowiring deep dive.', completed: false },
-    { id: 'b5', type: 'REVIEW', title: 'RESTful API error response standard formats.', completed: false },
+    { id: 'b1', type: 'READ', title: 'Review Object Oriented Programming pillars in Java.', completed: false, resources: [] },
+    { id: 'b2', type: 'CODE', title: 'Implement generic LinkedList and custom Queue.', completed: false, resources: [] },
+    { id: 'b3', type: 'PRACTISE', title: 'Solve 3 Leetcode Easy problems on HashMap.', completed: false, resources: [] },
+    { id: 'b4', type: 'READ', title: 'Spring Boot Dependency Injection & Autowiring deep dive.', completed: false, resources: [] },
+    { id: 'b5', type: 'REVIEW', title: 'RESTful API error response standard formats.', completed: false, resources: [] },
   ]);
 
   const [upcomingTasks, setUpcomingTasks] = useState<TaskItem[]>([
-    { id: 'u1', type: 'CODE', title: 'Build a Spring Boot CRUD API with PostgreSQL & JPA.', completed: false },
-    { id: 'u2', type: 'READ', title: 'Docker containerization and multi-stage builds.', completed: false },
-    { id: 'u3', type: 'PRACTISE', title: 'AWS ECS & Fargate deployment walkthrough.', completed: false },
+    { id: 'u1', type: 'CODE', title: 'Build a Spring Boot CRUD API with PostgreSQL & JPA.', completed: false, resources: [] },
+    { id: 'u2', type: 'READ', title: 'Docker containerization and multi-stage builds.', completed: false, resources: [] },
+    { id: 'u3', type: 'PRACTISE', title: 'AWS ECS & Fargate deployment walkthrough.', completed: false, resources: [] },
   ]);
 
   const toggleTask = (id: string, listType: 'today' | 'backlog' | 'upcoming') => {
@@ -64,7 +67,8 @@ export function Calendar() {
       id: `custom-${Date.now()}`,
       type: newTaskType,
       title: newTaskTitle.trim(),
-      completed: false
+      completed: false,
+      resources: []
     };
     if (activeTab === 'today') setTodayTasks(prev => [...prev, newTask]);
     else if (activeTab === 'backlog') setBacklogTasks(prev => [...prev, newTask]);
@@ -258,39 +262,19 @@ export function Calendar() {
             {/* Task Item List */}
             <div className="space-y-3 pt-2">
               {currentList.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => toggleTask(task.id, activeTab)}
-                  className={cn(
-                    "group flex items-center gap-4 p-4 md:p-5 rounded-2xl bg-white border border-border shadow-xs hover:shadow-pop hover:border-chrome-accent/40 cursor-pointer transition-all",
-                    task.completed && "bg-surface-muted/50 border-border/40"
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-label="Toggle completed"
-                    className={cn(
-                      "w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors",
-                      task.completed 
-                        ? "bg-navy-700 border-navy-700 text-white" 
-                        : "border-carbon-300 group-hover:border-navy-700 bg-white"
-                    )}
-                  >
-                    {task.completed && <Icon name="checkmark" className="text-xs font-bold" />}
-                  </button>
-
+                <div key={task.id} className="relative">
+                  <DayTaskCard
+                    variant="compact"
+                    title={task.title}
+                    completed={task.completed}
+                    resources={task.resources}
+                    onToggleComplete={() => toggleTask(task.id, activeTab)}
+                  />
                   <span className={cn(
-                    "px-2.5 py-0.5 text-[11px] font-bold uppercase rounded-md tracking-wider border shrink-0",
+                    "absolute top-4 right-4 md:right-12 px-2 py-0.5 text-[10px] font-bold uppercase rounded-md tracking-wider border pointer-events-none z-10 bg-opacity-90",
                     getTagStyle(task.type)
                   )}>
                     {task.type}
-                  </span>
-
-                  <span className={cn(
-                    "text-sm md:text-base font-medium text-carbon-900 flex-1 leading-snug",
-                    task.completed && "line-through text-carbon-400"
-                  )}>
-                    {task.title}
                   </span>
                 </div>
               ))}

@@ -27,6 +27,9 @@ interface AgentJourneyProps {
     finalAction?: JourneyAction; // NEW: button shown under the last node
     onComplete?: () => void;
     className?: string;
+    interactive?: boolean;
+    onNodeClick?: (levelId: string, index: number) => void;
+    nodeStates?: ('completed' | 'current' | 'locked' | 'upcoming')[];
 }
 
 const NODE_SIZE = 70;
@@ -43,6 +46,9 @@ export function AgentJourney({
     finalAction,
     onComplete,
     className,
+    interactive = false,
+    onNodeClick,
+    nodeStates,
 }: AgentJourneyProps) {
     const [internal, setInternal] = useState(0);
     const pathRef = useRef<SVGPathElement>(null);
@@ -172,14 +178,42 @@ export function AgentJourney({
 
                 {/* Nodes + labels */}
                 {pointsPct.map((p, i) => {
-                    const isActive = i === current;
-                    const isDone = i < current || finished;
+                    const isActive = nodeStates ? nodeStates[i] === 'current' : (i === current);
+                    const isDone = nodeStates ? nodeStates[i] === 'completed' : (i < current || finished);
+                    const isLocked = nodeStates ? nodeStates[i] === 'locked' : false;
+                    const isUpcoming = nodeStates ? nodeStates[i] === 'upcoming' : false;
+
+                    const handleNodeClick = () => {
+                        if (!interactive || !onNodeClick) return;
+                        if (isLocked) {
+                            alert("Complete the previous level first");
+                            return;
+                        }
+                        onNodeClick(`level-${i + 1}`, i);
+                    };
+
+                    const interactiveProps = interactive ? {
+                        role: "button",
+                        tabIndex: 0,
+                        "aria-label": `Sprint Node ${i + 1}`,
+                        onClick: handleNodeClick,
+                        onKeyDown: (e: React.KeyboardEvent) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleNodeClick();
+                            }
+                        }
+                    } : {};
 
                     return (
                         <div
                             key={steps[i]?.agent + i}
-                            className="absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                            className={cn(
+                                "absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2",
+                                interactive && "cursor-pointer focus-visible:outline-chrome-accent outline-offset-4 rounded-full"
+                            )}
                             style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                            {...interactiveProps}
                         >
                             <div className="relative flex items-center justify-center" style={{ width: NODE_SIZE, height: NODE_SIZE }}>
                                 {isActive && (
@@ -197,12 +231,19 @@ export function AgentJourney({
                                         'relative w-full h-full object-contain transition-all duration-300',
                                         isDone && 'opacity-100 grayscale-0',
                                         isActive && 'opacity-100 grayscale-0',
-                                        !isDone && !isActive && 'opacity-40 grayscale'
+                                        isUpcoming && 'opacity-80 grayscale',
+                                        isLocked && 'opacity-40 grayscale',
+                                        (!nodeStates && !isDone && !isActive) && 'opacity-40 grayscale'
                                     )}
                                 />
                                 {isDone && (
                                     <div className="absolute top-0 right-0 bg-chrome-accent text-white rounded-full p-0.5 z-10 shadow-sm translate-x-1/4 -translate-y-1/4">
                                         <Icon name="checkmark-outline" className="w-4 h-4 px-1" />
+                                    </div>
+                                )}
+                                {isLocked && interactive && (
+                                    <div className="absolute top-0 right-0 bg-carbon-500 text-white rounded-full p-0.5 z-10 shadow-sm translate-x-1/4 -translate-y-1/4">
+                                        <Icon name="lock-closed-outline" className="w-4 h-4 px-1" />
                                     </div>
                                 )}
                             </div>
@@ -262,7 +303,7 @@ export function AgentJourney({
                             transition={{ duration: finished ? 0.6 : 1.6, repeat: Infinity, ease: 'easeInOut' }}
                             className="w-full h-full flex justify-center items-center"
                         >
-                            <Mascot size="md" mood={mood} className="shadow-sm" style={{ width: MASCOT_SIZE, height: MASCOT_SIZE }} />
+                            <Mascot size="md" variant={mood === "cheer" ? "Celebration.png" : mood === "think" ? "Thinking.png" : "OK.png"} className="shadow-sm" style={{ width: MASCOT_SIZE, height: MASCOT_SIZE }} />
                         </motion.div>
 
                         <AnimatePresence mode="wait">

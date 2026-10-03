@@ -28,22 +28,12 @@ export function AppLayout() {
   };
 
   const navItems = [
-    { to: "/dashboard", icon: "home-outline", label: "Home", exact: true },
+    { to: "/dashboard", icon: "home-outline", label: "Dashboard", exact: true },
     { to: "/dashboard/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
-    {
-      to: "/dashboard/interview-prep",
-      icon: "briefcase-outline",
-      label: "Interview Prep",
-    },
-    { to: "/dashboard/preps", icon: "map-outline", label: "Preps" },
-    { to: "/dashboard/calendar", icon: "calendar-outline", label: "Calendar" },
-    { to: "/dashboard/roadmap", icon: "git-network-outline", label: "Roadmap" },
-    { to: "/dashboard/progress", icon: "bar-chart-outline", label: "Progress" },
-    {
-      to: "/dashboard/notifications",
-      icon: "notifications-outline",
-      label: "Notifications",
-    },
+    { to: "/roadmap", icon: "git-network-outline", label: "Roadmap" },
+    { to: "/resource-pack", icon: "folder-open-outline", label: "Resource Pack" },
+    { to: "/calendar", icon: "calendar-outline", label: "Calendar" },
+    { to: "/assessment", icon: "clipboard-outline", label: "Assessment" },
   ];
 
   return (
@@ -227,15 +217,11 @@ export function AppLayout() {
       {/* Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-white/5 bg-carbon-900 flex items-center justify-around px-2 z-50 safe-area-bottom">
         {[
-          { to: "/dashboard", icon: "home-outline", label: "Home", exact: true },
+          { to: "/dashboard", icon: "home-outline", label: "Dashboard", exact: true },
           { to: "/dashboard/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
-          {
-            to: "/dashboard/interview-prep",
-            icon: "briefcase-outline",
-            label: "Interview Prep",
-          },
-          { to: "/dashboard/preps", icon: "map-outline", label: "Preps" },
-          { to: "/dashboard/calendar", icon: "calendar-outline", label: "Calendar" },
+          { to: "/roadmap", icon: "git-network-outline", label: "Roadmap" },
+          { to: "/resource-pack", icon: "folder-open-outline", label: "Resources" },
+          { to: "/calendar", icon: "calendar-outline", label: "Calendar" },
         ].map((item) => (
           <NavLink
             key={item.to}
