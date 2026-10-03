@@ -11,7 +11,7 @@ from langchain_core.messages import AIMessage
 
 import tools.serpapi_client as serpapi_client
 from agents.research_agent import ContentResearchAgent, ResearchRequest
-from config import Settings
+from core.config import Settings
 from memory.local_adapter import LocalMemoryProvider
 from observability.metrics import (
     METRICS_CALLBACK,

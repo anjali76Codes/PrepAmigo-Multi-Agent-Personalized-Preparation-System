@@ -2,7 +2,7 @@ import json
 
 import tools.company_research_tools as company_tools
 import tools.serpapi_client as serpapi_client
-from config import Settings
+from core.config import Settings
 
 
 def _disabled_settings(fixture_path):

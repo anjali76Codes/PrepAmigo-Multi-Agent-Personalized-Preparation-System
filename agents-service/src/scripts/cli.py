@@ -20,7 +20,19 @@ Two modes for local development and testing:
 
 import argparse
 import asyncio
+from pathlib import Path
+import sys
 import time
+
+# Ensure agents-service/src is on sys.path when running cli.py directly as a script
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 from langchain_core.messages import HumanMessage
 
@@ -565,8 +577,14 @@ Examples:
         if args.resume_file:
             try:
                 import pathlib
-                resume_text = pathlib.Path(args.resume_file).read_text(encoding="utf-8")
-                print(f"Using resume from: {args.resume_file}")
+                p = pathlib.Path(args.resume_file)
+                if not p.is_file():
+                    # If invoked inside agents-service with path prefixed by agents-service/
+                    stripped = pathlib.Path(*[part for part in p.parts if part != "agents-service"])
+                    if stripped.is_file():
+                        p = stripped
+                resume_text = p.read_text(encoding="utf-8")
+                print(f"Using resume from: {p}")
             except Exception as exc:
                 print(f"Warning: could not read resume file ({exc}). Using dummy resume.")
         elif args.resume_text:

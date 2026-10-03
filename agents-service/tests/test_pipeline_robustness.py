@@ -8,7 +8,7 @@ import agents.interview_prep_orchestrator as orchestrator_module
 import agents.skill_gap_agent as skill_gap_module
 from agents.interview_prep_orchestrator import InterviewPrepOrchestrator
 from agents.skill_gap_agent import SkillGapAgent, _rank_and_score
-from config import Settings
+from core.config import Settings
 from observability.timing import log_failure
 
 REQUIRED = [{"name": "Python"}, {"name": "REST APIs"}]
@@ -195,7 +195,7 @@ def test_a_rate_limited_fast_model_hands_the_call_to_the_main_model(monkeypatch)
     alone writes twice that. A 429 must cost speed, never the answer."""
     import dataclasses
 
-    import config
+    from core import config
     from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
     monkeypatch.setattr(config, "settings", dataclasses.replace(

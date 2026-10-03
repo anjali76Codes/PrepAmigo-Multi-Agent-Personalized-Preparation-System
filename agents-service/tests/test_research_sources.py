@@ -9,7 +9,7 @@ from langchain_core.messages import AIMessage
 import agents.research_agent as research_module
 import tools.research_tools as research_tools
 from agents.research_agent import ContentResearchAgent, ResearchAgentError, ResearchRequest, module_markdown
-from config import Settings
+from core.config import Settings
 from memory.local_adapter import LocalMemoryProvider
 from test_research_agent import FakeLLM, FakeTool, fake_tools
 from tools.relevance import not_learning_material
