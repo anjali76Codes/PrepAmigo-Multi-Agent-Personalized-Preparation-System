@@ -116,7 +116,7 @@ def test_relative_fixture_path_is_resolved_from_agents_service(monkeypatch, tmp_
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(serpapi_client, "settings", Settings(
         serpapi_enabled=False,
-        serpapi_dummy_data_path="serpapi_fixtures.example.json",
+        serpapi_dummy_data_path="docs/serpapi_fixtures.example.json",
     ))
 
     result = serpapi_client.serpapi_search({"engine": "google_jobs", "q": "Software Engineer"})

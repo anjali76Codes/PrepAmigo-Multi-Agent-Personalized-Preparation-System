@@ -14,7 +14,7 @@ def test_settings_reject_unknown_provider():
 
 @pytest.mark.parametrize(("value", "expected"), [("false", False), ("true", True), ("", None)])
 def test_ollama_reasoning_setting_reaches_the_model(monkeypatch, value, expected):
-    import config
+    from core import config
 
     monkeypatch.setattr(config, "settings", Settings(llm_provider="ollama", ollama_reasoning=value))
 

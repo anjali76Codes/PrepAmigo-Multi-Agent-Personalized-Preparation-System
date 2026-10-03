@@ -39,7 +39,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from config import get_llm, llm_concurrency, settings
+from core.config import get_llm, llm_concurrency, settings
 from graph.events import INTERNAL_LLM_CONFIG
 from observability.timing import log_failure
 from storage.llm_cache import forget_response

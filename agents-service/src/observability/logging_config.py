@@ -19,7 +19,7 @@ LOG_FILE="" to disable the file and keep console-only output.
 import logging
 import logging.handlers
 
-from core.config import settings
+from core.config import service_path, settings
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

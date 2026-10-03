@@ -31,7 +31,7 @@ from langchain_core.caches import BaseCache
 from langchain_core.messages import AIMessage, message_to_dict, messages_from_dict
 from langchain_core.outputs import ChatGeneration, Generation
 
-from config import settings
+from core.config import settings
 from tools.cache import ResponseCache, caches_bypassed, get_response_cache, replay_delay
 
 logger = logging.getLogger(__name__)

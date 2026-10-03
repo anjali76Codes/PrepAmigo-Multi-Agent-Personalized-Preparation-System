@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 from pathlib import Path
@@ -11,7 +12,10 @@ from typing import Annotated, List, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
 
-from src.core.config import get_llm
+# Ensure agents-service/src is on sys.path when running script directly
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from core.config import get_llm
 
 logger = logging.getLogger(__name__)
 

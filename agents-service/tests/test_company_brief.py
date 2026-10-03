@@ -15,7 +15,7 @@ from agents.company_brief import (
 )
 from agents.interview_prep_orchestrator import InterviewPrepOrchestrator
 from agents.research_agent import prep_focus
-from config import Settings
+from core.config import Settings
 
 BRIEF = {
     "summary": "Acme builds anvils as a service.",

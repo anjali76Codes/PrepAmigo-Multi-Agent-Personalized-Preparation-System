@@ -28,7 +28,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from config import get_llm, settings
+from core.config import get_llm, settings
 from graph.events import INTERNAL_LLM_CONFIG
 from observability.timing import log_failure
 from storage.llm_cache import forget_response
