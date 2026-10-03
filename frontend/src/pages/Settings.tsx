@@ -1,9 +1,20 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { useAuth } from '../hooks/useAuth';
 
 export function Settings() {
   const shouldReduceMotion = useReducedMotion();
+  const { user } = useAuth();
+
+  const userInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'JD';
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
@@ -29,11 +40,11 @@ export function Settings() {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-full bg-navy-100 flex items-center justify-center text-navy-900 text-3xl font-bold">
-                  JD
+                  {userInitials}
                 </div>
                 <div>
-                  <h4 className="font-bold text-carbon-900 text-lg">Jane Doe</h4>
-                  <p className="text-carbon-500">jane@example.com</p>
+                  <h4 className="font-bold text-carbon-900 text-lg">{user?.name || 'Jane Doe'}</h4>
+                  <p className="text-carbon-500">{user?.email || 'jane@example.com'}</p>
                 </div>
                 <Button variant="outline" className="ml-auto">Edit Profile</Button>
               </div>

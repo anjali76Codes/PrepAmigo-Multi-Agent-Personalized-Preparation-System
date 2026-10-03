@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatInput } from '../components/chat/ChatInput';
 import { Messages } from '../components/chat/Messages';
@@ -61,6 +62,9 @@ const uid = () => `${Date.now()}-${idCounter++}`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Chat() {
+  const location = useLocation();
+  const initialFiredRef = useRef(false);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [highlightField, setHighlightField] = useState<'role' | 'summary' | 'gaps' | 'all' | null>(null);
@@ -135,7 +139,17 @@ export function Chat() {
     const lower = text.toLowerCase();
 
     try {
-      if (lower.includes('45 days') && lower.includes('company x')) {
+      if (
+        (lower.includes('45 days') && lower.includes('company x')) ||
+        lower.includes('preparing for') ||
+        lower.includes('interview at')
+      ) {
+        const companyMatch = text.match(/at\s+([A-Za-z0-9\s_-]+?)(?:\s+in|\s*,|\s*\.|$)/i);
+        const roleMatch = text.match(/for\s+(?:a\s+)?([A-Za-z0-9\s_-]+?)(?:\s+position|\s+at|\s+in|\s*,|\s*\.|$)/i);
+
+        const company = companyMatch ? companyMatch[1].trim() : 'Target Company';
+        const role = roleMatch ? roleMatch[1].trim() : 'Target Role';
+
         await runJourney(JOURNEYS.setup, {
           keep: true,
           finalAction: { label: 'View Roadmap', to: '/app/preps/prep-1' },
@@ -143,7 +157,7 @@ export function Chat() {
         addAgentMessage({
           content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
           scenario: 'setup',
-          data: { role: 'SDE', company: 'Company X' },
+          data: { role, company },
         });
         setHighlightField('all');
         setHighlightSource('Planner');
@@ -183,6 +197,22 @@ export function Chat() {
       setIsProcessing(false);
     }
   };
+
+  // Automatically fire initial query from landing page or post-auth redirect
+  useEffect(() => {
+    if (initialFiredRef.current) return;
+
+    const stateQuery = (location.state as { initialQuery?: string })?.initialQuery;
+    const sessionQuery = sessionStorage.getItem("prepamigo_pending_query");
+    const queryToFire = stateQuery || sessionQuery;
+
+    if (queryToFire && queryToFire.trim()) {
+      initialFiredRef.current = true;
+      sessionStorage.removeItem("prepamigo_pending_query");
+      window.history.replaceState({}, document.title);
+      handleSend(queryToFire.trim());
+    }
+  }, []);
 
   const hasStarted = messages.length > 0;
 
