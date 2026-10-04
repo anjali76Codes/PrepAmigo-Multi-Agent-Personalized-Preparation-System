@@ -29,7 +29,7 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from core.config import get_llm, settings
-from graph.events import INTERNAL_LLM_CONFIG
+from graph.events import INTERNAL_LLM_CONFIG, invoke_tool_with_events
 from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from tools.company_research_tools import normalize_company_profile, search_company_news, search_company_overview
@@ -179,8 +179,10 @@ class DirectCompanyResearch:
     async def _search(self, company: str) -> tuple[dict[str, Any], dict[str, Any]]:
         async def call(kind: str) -> dict[str, Any]:
             try:
-                raw = await asyncio.wait_for(
-                    asyncio.to_thread(self.tools[kind].invoke, {"company_name": company}),
+                raw, _metadata = await invoke_tool_with_events(
+                    self.tools[kind],
+                    {"company_name": company},
+                    agent="company_research",
                     timeout=settings.research_tool_timeout_seconds,
                 )
             except Exception as exc:

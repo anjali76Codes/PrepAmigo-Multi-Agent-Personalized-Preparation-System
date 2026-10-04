@@ -21,7 +21,7 @@ from agents.planner_agent import PlannerAgent
 from agents.skill_gap_agent import SkillGapAgent
 from agents.research_agent import ContentResearchAgent, company_module_request, prep_focus
 from core.config import get_llm, llm_concurrency, service_path, settings
-from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, make_event
+from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, emit_to_graph_stream, make_event
 from graph.router import route_after_agent
 from guardrails.validators import run_guardrails
 from observability.metrics import agent_scope
@@ -371,8 +371,13 @@ class InterviewPrepOrchestrator:
                 # timeout keeps what earlier rounds already gathered
                 if not hasattr(self.company_graph, "astream"):
                     return await self.company_graph.ainvoke(company_input, config=config)
-                async for state in self.company_graph.astream(company_input, config=config, stream_mode="values"):
-                    latest.update(state)
+                async for mode, update in self.company_graph.astream(
+                    company_input, config=config, stream_mode=["values", "custom"]
+                ):
+                    if mode == "values":
+                        latest.update(update)
+                    elif mode == "custom":
+                        emit_to_graph_stream(update)
                 return latest
 
             timed_out = False
