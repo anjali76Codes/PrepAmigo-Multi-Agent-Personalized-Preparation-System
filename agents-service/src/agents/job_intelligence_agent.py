@@ -70,7 +70,7 @@ def get_db():
     if _mongo_client is None:
         from pymongo import MongoClient
 
-        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+        mongo_uri = settings.mongo_uri
         _mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=500)
     return _mongo_client["prepamigo"]
 
@@ -108,14 +108,19 @@ def fetch_google_jobs(query: str, location: str) -> dict[str, Any]:
         return {"error": "Job search is temporarily unavailable.", "jobs_results": []}
 
 
-JOB_MAX_OUTPUT_TOKENS = 900  # 15 skills + short lists; the answer used to run past 1,000
+# Configurable via JOB_MAX_OUTPUT_TOKENS or JOB_INTELLIGENCE_MAX_OUTPUT_TOKENS in .env
+JOB_MAX_OUTPUT_TOKENS = settings.job_intelligence_max_output_tokens
 
 
 def _llm():
     """JOB_INTELLIGENCE_LLM / JOB_INTELLIGENCE_MODEL choose the model."""
     # temperature 0: the same company and role should give the same skills
-    return get_llm(temperature=0, max_tokens=JOB_MAX_OUTPUT_TOKENS, profile=settings.job_intelligence_llm,
-                   model=settings.job_intelligence_model or None)
+    return get_llm(
+        temperature=0,
+        max_tokens=settings.job_intelligence_max_output_tokens or None,
+        profile=settings.job_intelligence_llm,
+        model=settings.job_intelligence_model or None,
+    )
 
 
 def deduplicate_jobs(postings: list[dict[str, Any]]) -> list[dict[str, Any]]:

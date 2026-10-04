@@ -1,7 +1,7 @@
 [project]
-name = "travelamigo-agents"
+name = "prepamigo-agents"
 version = "0.1.0"
-description = "TravelAmigo multi-agent flight search service"
+description = "PrepAmigo multi-agent interview preparation service"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,7 +9,7 @@ dependencies = [
     "google-search-results>=2.4.2",
     "langchain-core>=0.3.0",
     "langchain-ollama>=0.2.0",
-    "langchain-openai>=0.2.0",
+    "langchain-openai>=0.2.0",  # optional: only used for FAST_LLM_* compatible endpoint (e.g. Groq)
     "langgraph>=0.2.0",
     "mem0ai>=2.0.0",
     "pyjwt>=2.8.0",

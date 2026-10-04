@@ -56,9 +56,8 @@ from tools.plan_builder import (  # noqa: F401  (allocate_days etc. re-exported 
 logger = logging.getLogger(__name__)
 
 AGENT_NAME = "planner"
-NARRATIVE_TIMEOUT_SECONDS = 45
-# ~90 tokens per planned day x PLANNER_DAYS_PER_CALL (10), with headroom
-PLANNER_MAX_TOKENS = 1400
+NARRATIVE_TIMEOUT_SECONDS = settings.planner_narrative_timeout_seconds
+PLANNER_MAX_TOKENS = settings.planner_max_tokens
 
 
 class DayNarrative(BaseModel):

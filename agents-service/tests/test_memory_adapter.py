@@ -98,20 +98,20 @@ def test_mem0_config_uses_local_storage_without_qdrant_url(tmp_path):
     assert config["history_db_path"] == str(tmp_path / "history.db")
 
 
-def test_mem0_config_follows_openai_provider_and_remote_qdrant():
+def test_mem0_config_follows_remote_qdrant():
     config = build_mem0_config(
         Settings(
-            llm_provider="openai",
-            openai_api_key="sk-test",
+            llm_provider="ollama",
+            ollama_model="llama3.1",
             mem0_qdrant_url="https://qdrant.example:6333",
             mem0_qdrant_api_key="qk",
         )
     )
 
-    assert config["llm"] == {"provider": "openai", "config": {"model": "gpt-4o-mini", "api_key": "sk-test"}}
+    assert config["llm"] == {"provider": "ollama", "config": {"model": "llama3.1", "ollama_base_url": "http://localhost:11434"}}
     assert config["vector_store"]["config"]["url"] == "https://qdrant.example:6333"
     assert config["vector_store"]["config"]["api_key"] == "qk"
-    assert config["vector_store"]["config"]["embedding_model_dims"] == 1536
+    assert config["vector_store"]["config"]["embedding_model_dims"] == 768
     assert "path" not in config["vector_store"]["config"]
 
 

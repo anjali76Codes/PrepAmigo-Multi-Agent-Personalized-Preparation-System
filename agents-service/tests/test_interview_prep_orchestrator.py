@@ -28,7 +28,7 @@ def test_prepare_requests_only_missing_fields_without_running_agents():
 def test_parallel_branches_start_together_and_merge_to_distinct_results(monkeypatch):
     """A cloud provider (e.g. openai) genuinely serves concurrent requests,
     so run_parallel should actually gather the two branches there."""
-    monkeypatch.setattr(orchestrator_module, "settings", Settings(llm_provider="openai", openai_api_key="k"))
+    monkeypatch.setattr(orchestrator_module, "settings", Settings(llm_provider="ollama", llm_max_concurrency=4))
 
     async def run():
         started = 0

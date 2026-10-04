@@ -25,7 +25,7 @@ from memory.base import BaseMemoryProvider, MemoryInput, MemoryRecord, require_u
 
 COLLECTION_NAME = "prepamigo_memories"
 # output size of the default embedding model for each LLM provider
-DEFAULT_EMBEDDING_DIMS = {"ollama": 768, "openai": 1536}
+DEFAULT_EMBEDDING_DIMS = {"ollama": 768, }
 
 
 class Mem0UnavailableError(RuntimeError):
@@ -35,26 +35,19 @@ class Mem0UnavailableError(RuntimeError):
 def build_mem0_config(cfg: Settings = settings) -> dict[str, Any]:
     """Translate our Settings into a self-hosted mem0 config dict, reusing
     the same LLM provider the agents use."""
-    if cfg.llm_provider == "openai":
-        llm = {"provider": "openai", "config": {"model": cfg.openai_model, "api_key": cfg.openai_api_key}}
-        embedder = {
-            "provider": "openai",
-            "config": {"model": cfg.openai_embed_model, "api_key": cfg.openai_api_key},
-        }
-    else:
-        llm = {
-            "provider": "ollama",
-            "config": {"model": cfg.ollama_model, "ollama_base_url": cfg.ollama_base_url},
-        }
-        embedder = {
-            "provider": "ollama",
-            "config": {"model": cfg.ollama_embed_model, "ollama_base_url": cfg.ollama_base_url},
-        }
+    llm = {
+        "provider": "ollama",
+        "config": {"model": cfg.ollama_model, "ollama_base_url": cfg.ollama_base_url},
+    }
+    embedder = {
+        "provider": "ollama",
+        "config": {"model": cfg.ollama_embed_model, "ollama_base_url": cfg.ollama_base_url},
+    }
 
     data_dir = Path(cfg.mem0_data_dir)
     vector_config: dict[str, Any] = {
         "collection_name": COLLECTION_NAME,
-        "embedding_model_dims": DEFAULT_EMBEDDING_DIMS[cfg.llm_provider],
+        "embedding_model_dims": DEFAULT_EMBEDDING_DIMS["ollama"],
     }
     if cfg.mem0_qdrant_url:
         vector_config["url"] = cfg.mem0_qdrant_url
