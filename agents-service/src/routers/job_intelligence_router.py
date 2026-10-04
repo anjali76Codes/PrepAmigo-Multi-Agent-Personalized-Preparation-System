@@ -9,6 +9,7 @@ from agents.job_intelligence_agent import (
     get_job_intelligence_profile,
 )
 from core.auth import verify_token
+from schemas.api import SuccessResponse
 
 router = APIRouter()
 
@@ -20,7 +21,12 @@ class JobIntelligenceRequest(BaseModel):
     forceRefresh: bool = False
 
 
-@router.post("/api/agents/job-intelligence", dependencies=[Depends(verify_token)])
+@router.post(
+    "/api/agents/job-intelligence",
+    response_model=SuccessResponse,
+    dependencies=[Depends(verify_token)],
+    summary="Get extracted required skills and market profile for role",
+)
 async def get_job_intelligence(req: JobIntelligenceRequest):
     request = JobIntelligenceInput(
         company=req.company,
@@ -29,11 +35,16 @@ async def get_job_intelligence(req: JobIntelligenceRequest):
         force_refresh=req.forceRefresh,
     )
     profile = await get_job_intelligence_profile(request)
-    return {"success": True, "data": profile}
+    return SuccessResponse(data=profile)
 
 
-@router.post("/api/agents/job-intelligence/raw-search", dependencies=[Depends(verify_token)])
+@router.post(
+    "/api/agents/job-intelligence/raw-search",
+    response_model=SuccessResponse,
+    dependencies=[Depends(verify_token)],
+    summary="Execute raw job search via Google Jobs API",
+)
 async def get_raw_job_search(req: JobIntelligenceRequest):
     query = f"{req.company} {req.role}".strip()
     raw_data = await asyncio.to_thread(fetch_google_jobs, query, req.location)
-    return {"success": True, "data": raw_data}
+    return SuccessResponse(data=raw_data)

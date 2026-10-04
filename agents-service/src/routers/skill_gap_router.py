@@ -10,6 +10,7 @@ import pymongo
 
 from core.config import settings, get_llm
 from core.auth import verify_token
+from schemas.api import SuccessResponse
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,12 @@ async def evaluate_gaps(candidate_profile: dict, job_requirements: List[dict]) -
 
 
 # ----------------- Router -----------------
-@router.post("/api/agents/skill-gap", dependencies=[Depends(verify_token)])
+@router.post(
+    "/api/agents/skill-gap",
+    response_model=SuccessResponse,
+    dependencies=[Depends(verify_token)],
+    summary="Analyze candidate resume against job intelligence to identify skill gaps",
+)
 async def analyze_skill_gap(
     resume: UploadFile = File(...),
     job_intelligence_data: str = Form(...)
@@ -255,12 +261,13 @@ async def analyze_skill_gap(
             logger.error("Failed to store skill-gap report in MongoDB: %s", e)
             # non-fatal: the response is returned regardless
 
-    return {
+    report_data = {
         "matched_skills": matched_skills,
         "partial_skills": partial_skills,
         "missing_skills": missing_skills,
         "extra_skills": extra_skills,
         "priority_gaps": priority_gaps,
         "readiness_score": readiness_score,
-        "coverage": coverage
+        "coverage": coverage,
     }
+    return SuccessResponse(data=report_data)

@@ -1,4 +1,8 @@
-"""Flight search tools exposed to the flight specialist."""
+"""
+ARCHIVED / DEPRECATED:
+Flight search tools exposed to the archived flight specialist.
+Not used in PrepAmigo interview preparation pipelines. Kept for test reference only.
+"""
 import json
 import re
 from datetime import date as date_type
