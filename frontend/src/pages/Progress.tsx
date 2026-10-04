@@ -28,7 +28,7 @@ export function Progress() {
             </p>
           </div>
           <div className="relative z-10 hidden sm:block shrink-0">
-            <Mascot size="lg" mood="think" className="bg-white shadow-card rounded-full p-2" />
+            <Mascot size="lg" variant="Thinking.png" className="bg-white shadow-card rounded-full p-2" />
           </div>
         </div>
       </div>

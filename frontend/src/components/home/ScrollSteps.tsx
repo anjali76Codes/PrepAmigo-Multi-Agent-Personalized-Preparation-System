@@ -213,7 +213,7 @@ export function ScrollSteps() {
           <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
             <Mascot
               size="xl"
-              mood={STEPS[active].mood}
+              variant={STEPS[active].mood === "cheer" ? "Celebration.png" : STEPS[active].mood === "think" ? "Thinking.png" : "OK.png"}
               className="bg-lavender-100 shadow-pop ring-8 ring-bg"
             />
           </div>

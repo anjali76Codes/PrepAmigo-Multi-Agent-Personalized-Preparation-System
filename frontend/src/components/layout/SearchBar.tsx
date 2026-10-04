@@ -15,12 +15,12 @@ export function SearchBar() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const suggestions = [
-    { label: 'Go to Calendar', type: 'page', path: '/dashboard/calendar' },
-    { label: 'Go to Roadmap', type: 'page', path: '/dashboard/roadmap' },
+    { label: 'Go to Calendar', type: 'page', path: '/calendar' },
+    { label: 'Go to Roadmap', type: 'page', path: '/roadmap' },
     { label: 'Go to Progress', type: 'page', path: '/dashboard/progress' },
     { label: 'Message PrepAmigo', type: 'action', path: '/dashboard/chat' },
-    { label: 'System Design Quiz', type: 'task', path: '/dashboard/roadmap' },
-    { label: 'DSA Flashcards', type: 'task', path: '/dashboard/roadmap' },
+    { label: 'System Design Quiz', type: 'task', path: '/roadmap' },
+    { label: 'DSA Flashcards', type: 'task', path: '/roadmap' },
   ].filter(s => s.label.toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => {
@@ -99,6 +99,9 @@ export function SearchBar() {
 
       {/* Streak and Profile on Right */}
       <div className="flex items-center gap-3 shrink-0">
+        <button onClick={() => navigate('/dashboard/notifications')} className="w-10 h-10 rounded-full bg-white/50 text-carbon-700 flex items-center justify-center hover:bg-white transition-colors relative">
+          <Icon name="notifications-outline" className="text-xl" />
+        </button>
         <div className="flex items-center gap-1.5 bg-sunny-100 text-bg px-3 py-1.5 rounded-xl font-semibold text-sm">
           <Icon name="flame" /> {streak}
         </div>
