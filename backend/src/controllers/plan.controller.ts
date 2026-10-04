@@ -11,12 +11,20 @@ import { badId, getUserId, handleFailure, invalidBody, planBodySchema, routePara
 export async function createPlanHandler(req: AuthenticatedRequest, res: Response): Promise<void> {
   const userId = getUserId(req, res);
   if (!userId) return;
-  const parsed = planBodySchema.safeParse(req.body);
+  const rawBody = req.body?.plan && typeof req.body.plan === "object" ? req.body.plan : req.body;
+  const parsed = planBodySchema.safeParse(rawBody);
   if (!parsed.success) return invalidBody(res, parsed.error);
 
   try {
     const plan = await Plan.create({ ...parsed.data, user_id: userId, sprints: [] });
-    res.status(201).json({ success: true, message: "Plan created successfully.", id: plan._id, plan_id: plan._id, data: plan });
+    res.status(201).json({
+      success: true,
+      message: "Plan created successfully.",
+      id: plan._id,
+      planId: plan._id,
+      plan_id: plan._id,
+      data: plan,
+    });
   } catch (error) {
     handleFailure(res, "Create plan", error);
   }

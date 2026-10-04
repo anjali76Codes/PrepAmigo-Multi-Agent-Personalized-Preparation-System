@@ -5,3 +5,5 @@ export { SprintDay } from "./SprintDay.js";
 export { PlanProgress } from "./PlanProgress.js";
 export { JobPostingRaw } from "./JobPostingRaw.js";
 export { JobIntelligenceProfile } from "./JobIntelligenceProfile.js";
+export { Assessment } from "./Assessment.js";
+export { Flashcard } from "./Flashcard.js";

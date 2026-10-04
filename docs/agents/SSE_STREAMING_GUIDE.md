@@ -68,6 +68,28 @@ await publisher.emit_event(
 
 ## 4. Standard Event Contract Types
 
+Every event sent over SSE uses the same envelope:
+`{runId, type, timestamp, payload}`. Every payload has `agent`, `step`, and
+`status`. `type` describes the UI event category; `status` preserves the value
+provided by the agent, including lifecycle values (`running`, `completed`,
+`failed`, `waiting`) and outcome values (`success`, `partial`). Agent-specific
+details (for example `message`, `tool_timings_ms`, or `result`) remain alongside
+those standard fields.
+
+Tool events use the runtime tool name for their step and payload fields, so
+instrumentation does not need a second list of tool names. For a web search,
+the same event shape reports the actual operation and bounded result metadata:
+
+```json
+{"runId":"run-123","type":"researching","timestamp":1791112345678,"payload":{"agent":"research","step":"tool_search_technical_docs","status":"running","tool":"search_technical_docs","query":"dynamic programming","limit":12,"message":"Tool search_technical_docs running."}}
+{"runId":"run-123","type":"researching","timestamp":1791112348901,"payload":{"agent":"research","step":"tool_search_technical_docs","status":"completed","tool":"search_technical_docs","source":"serpapi","result_count":8,"duration_ms":742,"message":"Tool search_technical_docs returned 8 results."}}
+```
+
+Progress reports tool names, query context, counts, and timing. It does not
+stream hidden model reasoning or full raw search results. A failed tool is a
+non-terminal `researching`/`processing` event with `payload.status: "failed"`;
+the SSE `failed` event type is reserved for a failed run.
+
 | Event Type      | Purpose                                                        |
 | :-------------- | :------------------------------------------------------------- |
 | `thinking`      | Supervisor / router evaluating intent and planning next steps. |
@@ -79,7 +101,7 @@ await publisher.emit_event(
 | `failed`        | Terminal event indicating error, timeout, or failure.          |
 | `ping`          | 15s keep-alive heartbeat (ignored by UI business logic).       |
 
-For `interview_intelligence`, the final `completed` event's payload is `{ "message": "<final Markdown report>" }`. The full report is sent once, after synthesis; progress events contain status/count metadata only.
+For `interview_intelligence`, the final `completed` event includes the standard fields plus `message: "<final Markdown report>"`. The full report is sent once, after synthesis; progress events contain status/count metadata only.
 
 ---
 

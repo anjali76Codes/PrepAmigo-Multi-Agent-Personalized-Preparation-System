@@ -30,6 +30,8 @@ export interface ISprintDay extends Document {
   references: ISprintDayReference[];
   status: SprintDayStatus;
   completed_at: Date | null;
+  assessment_id?: Types.ObjectId;
+  flashcard_id?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +73,8 @@ const sprintDaySchema = new Schema<ISprintDay>(
       default: "pending",
     },
     completed_at: { type: Date, default: null },
+    assessment_id: { type: Schema.Types.ObjectId, ref: "Assessment" },
+    flashcard_id: { type: Schema.Types.ObjectId, ref: "Flashcard" },
   },
   { timestamps: true, collection: "sprint_days" },
 );

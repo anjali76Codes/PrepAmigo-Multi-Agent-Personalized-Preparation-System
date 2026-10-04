@@ -122,14 +122,14 @@ def test_default_45_day_plan_is_valid_with_bounded_sprints(planner_settings):
     planner_settings(plan_total_days=45, plan_sprint_max_days=7)
     output = asyncio.run(PlannerAgent(llm=ChunkLLM()).build_plan(MODULES, GAPS, "FDE", "Anthropic",
                                                                  start_date=date(2026, 1, 1)))
-    plan = StudyPlan.model_validate(output["plan"])
+    plan = StudyPlan.model_validate(output)
 
-    assert plan.total_days == 45 and str(plan.end_date) == "2026-02-14"
-    assert all(s.total_days <= 7 for s in plan.sprints)
+    assert output["plan"]["total_days"] == 45 and str(output["plan"]["end_date"]) == "2026-02-14"
+    assert all(s["total_days"] <= 7 for s in output["sprints"])
     days = output["coverage"]["days_per_topic"]
     assert days["Claude"] == days["Salesforce"] > days["Enterprise Integration"]  # High gets more
     assert sum(days.values()) == 45
-    long_sprints = [s.sprint_name for s in plan.sprints if "(part" in s.sprint_name]
+    long_sprints = [s["sprint_name"] for s in output["sprints"] if "(part" in s["sprint_name"]]
     assert "Claude (part 1 of 3)" in long_sprints
 
 
@@ -162,8 +162,7 @@ def test_wording_is_used_and_distinct_across_chunks(planner_settings):
     planner_settings(planner_days_per_call=3)
     output = build(ChunkLLM(), total_days=15)
 
-    claude = [d["topic_title"] for s in output["plan"]["sprints"] if s["sprint_name"].startswith("Claude")
-              for d in s["sprint_days"]]
+    claude = [d["topic_title"] for d in output["sprint_days"] if d["topic_title"].startswith("Claude")]
     assert claude == [f"Claude day {i}" for i in range(1, len(claude) + 1)]
     assert output["narrative_source"] == "llm"
 
@@ -171,12 +170,12 @@ def test_wording_is_used_and_distinct_across_chunks(planner_settings):
 def test_a_failed_or_short_chunk_falls_back_alone():
     output = build(ChunkLLM(fail_topics={"Salesforce"}, short_topics={"Enterprise Integration"}), total_days=10)
 
-    by_name = {s["sprint_name"]: s for s in output["plan"]["sprints"]}
     assert output["narrative_source"] == "partial"
-    assert by_name["Claude"]["sprint_days"][0]["topic_title"] == "Claude day 1"  # llm
-    assert by_name["Salesforce"]["sprint_days"][0]["topic_title"].startswith("Salesforce")  # fallback
-    assert "day 1" not in by_name["Enterprise Integration"]["sprint_days"][0]["topic_title"]  # short -> fallback
-    StudyPlan.model_validate(output["plan"])
+    claude_day1 = next(d for d in output["sprint_days"] if d["day_number"] == 1)
+    assert claude_day1["topic_title"] == "Claude day 1"  # llm
+    salesforce_day = next(d for d in output["sprint_days"] if d["topic_title"].startswith("Salesforce"))
+    assert salesforce_day["topic_title"].startswith("Salesforce")  # fallback
+    StudyPlan.model_validate(output)
 
 
 @pytest.mark.parametrize("llm", [
@@ -188,8 +187,8 @@ def test_unusable_model_output_falls_back_everywhere(llm):
     output = build(llm, total_days=10)
 
     assert output["narrative_source"] == "fallback"
-    StudyPlan.model_validate(output["plan"])
-    titles = [d["topic_title"] for s in output["plan"]["sprints"] for d in s["sprint_days"]]
+    StudyPlan.model_validate(output)
+    titles = [d["topic_title"] for d in output["sprint_days"]]
     assert len(set(titles)) == len(titles)
 
 
@@ -216,7 +215,7 @@ def test_short_fallback_covers_concepts_and_ends_hands_on():
 def test_references_map_to_the_backend_enum_drop_bad_urls_and_spread_across_days():
     output = build(total_days=12)  # Claude gets 5 days for 4 valid references
 
-    claude_days = [d for s in output["plan"]["sprints"] if s["sprint_name"] == "Claude" for d in s["sprint_days"]]
+    claude_days = [d for d in output["sprint_days"] if d["topic_title"].startswith("Claude")]
     refs = [r for d in claude_days for r in d["references"]]
     assert {r["url"] for r in refs} == {
         "https://docs.example/claude", "https://books.example/claude",
@@ -236,7 +235,7 @@ def test_papers_are_capped_per_plan_like_books(planner_settings):
 
     output = build(modules=modules, gaps=[{"skill": f"T{i}", "effort": "High"} for i in range(3)], total_days=9)
 
-    days = [d for s in output["plan"]["sprints"] for d in s["sprint_days"]]
+    days = output["sprint_days"]
     assert [d["day_number"] for d in days if d["references"]] == [1, 4]
     assert len(output["resource_pack"]["paper"]) == 6
 
@@ -250,7 +249,7 @@ def test_plan_text_is_sanitized_and_urls_are_left_alone():
 
     text = json.dumps(output, ensure_ascii=False)
     assert not any(ch in text for ch in "\u2019\u2014\u00a0\u200b\u2728\U0001F680")
-    ref = output["plan"]["sprints"][0]["sprint_days"][0]["references"][0]
+    ref = output["sprint_days"][0]["references"][0]
     assert ref["title"] == "The Ultimate Beginner's Guide" and ref["description"] == "zerowidth"
     assert ref["url"] == "https://docs.example/caf\u00e9?q=\u2013x"  # a link is never rewritten
     assert output["learning_modules"][0]["content_markdown"].startswith("## Overview\nClaude's API - fast.")
@@ -267,7 +266,7 @@ def test_books_are_one_per_topic_on_its_first_day_and_capped_per_plan(planner_se
 
     output = build(modules=modules, gaps=gaps, total_days=9)
 
-    days = [d for s in output["plan"]["sprints"] for d in s["sprint_days"]]
+    days = output["sprint_days"]
     book_days = [d["day_number"] for d in days for r in d["references"] if r["type"] == "book"]
     assert book_days == [1, 4]  # first day of the two highest-priority topics
     assert len(output["resource_pack"]["book"]) == 9  # nothing is lost from the pack
@@ -276,7 +275,7 @@ def test_books_are_one_per_topic_on_its_first_day_and_capped_per_plan(planner_se
 def test_gap_without_research_is_planned_and_reported():
     output = build(total_days=10)
 
-    salesforce = [d for s in output["plan"]["sprints"] if s["sprint_name"].startswith("Salesforce") for d in s["sprint_days"]]
+    salesforce = [d for d in output["sprint_days"] if d["topic_title"].startswith("Salesforce")]
     assert salesforce and all(d["references"] == [] for d in salesforce)
     assert output["coverage"]["unresearched"] == ["Salesforce"]
     assert output["coverage"]["researched"] == ["Claude", "Enterprise Integration"]
@@ -319,7 +318,7 @@ def test_the_same_video_under_two_urls_is_referenced_once_as_a_video():
     ]}]
     output = build(modules=modules, gaps=[{"skill": "Claude", "effort": "High"}], total_days=3)
 
-    refs = [r for s in output["plan"]["sprints"] for d in s["sprint_days"] for r in d["references"]]
+    refs = [r for d in output["sprint_days"] for r in d["references"]]
     assert len(refs) == 1 and refs[0]["type"] == "video"
     assert len(output["resource_pack"]["video"]) == 1 and "documentation" not in output["resource_pack"]
 

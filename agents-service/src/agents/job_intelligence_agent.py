@@ -10,7 +10,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from core.config import get_llm, settings
-from graph.events import INTERNAL_LLM_CONFIG
+from graph.events import INTERNAL_LLM_CONFIG, emit_to_graph_stream, invoke_tool_with_events, make_event
 from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from tools.cache import caches_bypassed
@@ -214,6 +214,12 @@ async def extract_with_llm(
         coverage = "medium"
 
     response = None
+    emit_to_graph_stream(make_event(
+        "job_intelligence",
+        "extract_job_requirements",
+        "running",
+        {"provider": settings.job_intelligence_llm, "message": "Analyzing job postings for role requirements..."},
+    ))
     try:
         response = await asyncio.wait_for(
             _llm().ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
@@ -229,10 +235,28 @@ async def extract_with_llm(
         ):
             if key in parsed and not isinstance(parsed[key], expected_type):
                 raise ValueError(f"LLM field {key} has an invalid type")
-        return {**empty, **parsed, **({"coverage": coverage} if coverage else {})}
+        result = {**empty, **parsed, **({"coverage": coverage} if coverage else {})}
+        emit_to_graph_stream(make_event(
+            "job_intelligence",
+            "extract_job_requirements",
+            "completed",
+            {
+                "provider": settings.job_intelligence_llm,
+                "skills_found": len(result.get("skills") or []),
+                "coverage": result.get("coverage"),
+                "message": "Job requirements extracted.",
+            },
+        ))
+        return result
     except Exception as exc:
         forget_response(response)  # an unparseable answer must not be replayed from the cache
         log_failure(logger, "[JobIntelligence] Extraction unavailable; returning a safe partial profile", exc)
+        emit_to_graph_stream(make_event(
+            "job_intelligence",
+            "extract_job_requirements",
+            "failed",
+            {"provider": settings.job_intelligence_llm, "error": str(exc)[:240]},
+        ))
         return empty
 
 
@@ -241,8 +265,10 @@ async def _search_postings(query: str, location: str) -> tuple[list[dict[str, An
     failed run: the caller carries on without postings, and the late
     response is still cached when it arrives, so the next run has it."""
     try:
-        raw = await asyncio.wait_for(
-            asyncio.to_thread(fetch_google_jobs, query, location),
+        raw, _metadata = await invoke_tool_with_events(
+            fetch_google_jobs,
+            {"query": query, "location": location},
+            agent="job_intelligence",
             timeout=settings.research_tool_timeout_seconds,
         )
     except asyncio.TimeoutError:
@@ -250,7 +276,8 @@ async def _search_postings(query: str, location: str) -> tuple[list[dict[str, An
                        query, settings.research_tool_timeout_seconds)
         return [], True
     postings = raw.get("jobs_results", []) if isinstance(raw, dict) else []
-    return (postings if isinstance(postings, list) else []), False
+    postings = postings if isinstance(postings, list) else []
+    return postings, False
 
 
 def _fresh_cache_entry(cached: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -381,9 +408,11 @@ class JobIntelligenceAgent:
     name = "job_intelligence"
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
+        emit_to_graph_stream(make_event(self.name, "analyze_job_market", "running"))
         try:
             request = JobIntelligenceInput.model_validate(state.get("job_intelligence_input") or {})
         except ValidationError as exc:
+            emit_to_graph_stream(make_event(self.name, "analyze_job_market", "failed"))
             return {"job_intelligence_result": {
                 "status": "invalid_input",
                 "data": None,
@@ -400,9 +429,11 @@ class JobIntelligenceAgent:
             )
             status = "success" if profile["analyzedPostingsCount"] and has_analysis else "partial"
             error = None if status == "success" else "No job postings were available for this search."
+            emit_to_graph_stream(make_event(self.name, "analyze_job_market", "completed", {"status": status}))
             return {"job_intelligence_result": {"status": status, "data": profile, "error": error}}
         except Exception as exc:
             log_failure(logger, "Job Intelligence node failed", exc)
+            emit_to_graph_stream(make_event(self.name, "analyze_job_market", "failed"))
             return {"job_intelligence_result": {
                 "status": "failed",
                 "data": None,

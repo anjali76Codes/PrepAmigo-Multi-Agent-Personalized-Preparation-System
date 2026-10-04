@@ -12,8 +12,8 @@ from urllib.parse import urlparse
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from core.config import get_llm, settings
-from graph.events import AgentEvent, EventCallback, dispatch_event, make_event
-from observability.timing import Timer, log_step
+from graph.events import AgentEvent, EventCallback, dispatch_event, invoke_tool_with_events, make_event
+from observability.timing import log_step
 from prompts.interview_intelligence_prompts import INTERVIEW_INTELLIGENCE_PROMPT
 from tools.research_tools import (
     MAX_QUERY_LENGTH,
@@ -142,15 +142,15 @@ class InterviewIntelligenceAgent:
         timings: dict[str, float] = {}
 
         async def call(kind: str, payload: dict[str, Any]):
-            with Timer() as timer:
-                # a per-call cap, independent of the overall step deadline:
-                # one slow/hanging source must not eat the whole step's
-                # budget away from the other sources running alongside it
-                result = await asyncio.wait_for(
-                    asyncio.to_thread(self.tools[kind].invoke, payload),
-                    timeout=settings.research_tool_timeout_seconds,
-                )
-            timings[kind] = timer.duration_ms
+            tool = self.tools[kind]
+            result, metadata = await invoke_tool_with_events(
+                tool,
+                payload,
+                agent=AGENT_NAME,
+                timeout=settings.research_tool_timeout_seconds,
+                fallback_name=kind,
+            )
+            timings[kind] = metadata["duration_ms"]
             return result
 
         async def search_with_overview():
@@ -176,7 +176,10 @@ class InterviewIntelligenceAgent:
                 }
             return {"search": search_result}
 
-        other_kinds = ("questions", "videos", "news")
+        other_kinds = [
+            kind for kind in context["queries"]
+            if kind != "search" and kind in self.tools
+        ]
         outcomes = await asyncio.gather(
             search_with_overview(),
             *(
@@ -228,7 +231,7 @@ class InterviewIntelligenceAgent:
             ai_overview_text=overview_text,
         )
         return {
-            "result_counts": {kind: len(groups.get(kind, [])) for kind in (*SEARCH_TOOLS, "ai_overview")},
+            "result_counts": {kind: len(results) for kind, results in groups.items()},
             "sources": providers,
             "errors": errors,
             "tool_timings_ms": timings,
@@ -243,16 +246,17 @@ class InterviewIntelligenceAgent:
             key = f"transcript:{video_id}"
             started = time.perf_counter()
             try:
-                with Timer() as timer:
-                    result = await asyncio.wait_for(
-                        asyncio.to_thread(self.tools["transcript"].invoke, {"video_id": video_id}),
-                        timeout=settings.research_tool_timeout_seconds,
-                    )
+                result, metadata = await invoke_tool_with_events(
+                    self.tools["transcript"],
+                    {"video_id": video_id},
+                    agent=AGENT_NAME,
+                    timeout=settings.research_tool_timeout_seconds,
+                )
             except Exception as exc:
                 errors[key] = str(exc)
                 timings[key] = round((time.perf_counter() - started) * 1000, 1)
                 return None
-            timings[key] = timer.duration_ms
+            timings[key] = metadata["duration_ms"]
             if not result.get("available") or not result.get("excerpt"):
                 return None
             return {

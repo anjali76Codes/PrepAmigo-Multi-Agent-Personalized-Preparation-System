@@ -262,6 +262,7 @@ class Settings:
     company_research_max_tool_rounds: int = int(os.getenv("COMPANY_RESEARCH_MAX_TOOL_ROUNDS", "3") or 3)
 
     # --- Planner agent (agents/planner_agent.py) ---
+    backend_api_url: str = os.getenv("BACKEND_API_URL", "http://localhost:3000").strip()
     # every generated plan is written here as <plan_id>.json for review;
     # relative paths resolve against agents-service/ (not the cwd), and it
     # sits under .data/ so it's gitignored. Empty disables saving.

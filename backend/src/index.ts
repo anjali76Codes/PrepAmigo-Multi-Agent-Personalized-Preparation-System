@@ -12,12 +12,12 @@ const app = express();
 // CORS MUST come before routes
 app.use(
   cors({
-    origin: [config.FRONTEND_URL || "http://localhost:5173", "http://localhost:5173"],
+    origin: [config.FRONTEND_URL ||"http://localhost:5173"],
     credentials: true,
   }),
 );
 
-// Standard express parsing middlewares
+// Standard express parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

@@ -54,11 +54,19 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from agents.company_brief import company_focus
 from core.config import get_llm, llm_concurrency, settings
-from graph.events import INTERNAL_LLM_CONFIG, AgentEvent, EventCallback, dispatch_event, emit_to_graph_stream, make_event
+from graph.events import (
+    INTERNAL_LLM_CONFIG,
+    AgentEvent,
+    EventCallback,
+    dispatch_event,
+    emit_to_graph_stream,
+    invoke_tool_with_events,
+    make_event,
+)
 from memory.base import BaseMemoryProvider
 from memory.store import get_memory_provider
 from observability.metrics import track_tool
-from observability.timing import Timer, log_failure, log_step
+from observability.timing import log_failure, log_step
 from storage.llm_cache import forget_response
 from tools.plan_builder import parse_json_object
 from tools.text_sanitize import sanitize_data, sanitize_text
@@ -435,8 +443,16 @@ class ContentResearchAgent:
             return {"researched_materials": [], "execution_events": events, "handoffs": []}
 
         requests = await self._select_kinds(requests)
+
+        async def forward_event(event: AgentEvent) -> None:
+            events.append(event)
+            await dispatch_event(event, None)
+
         results = await self.research_many(
-            requests, on_event=events.append, memories=await self._recall_once(state, requests))
+            requests,
+            on_event=forward_event,
+            memories=await self._recall_once(state, requests),
+        )
 
         return {
             "researched_materials": [r["module"] for r in results if r],
@@ -695,22 +711,20 @@ class ContentResearchAgent:
         timings: dict[str, float] = {}
 
         async def call(kind: str) -> dict:
-            with Timer() as t:
-                # a per-call cap, independent of (and smaller than) the
-                # overall step deadline: one slow/hanging SerpApi engine
-                # must not eat the whole step's budget away from the other
-                # kinds running alongside it in this same gather
-                result = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        self.tools[kind].invoke,
-                        # over-fetch (same single API call): off-topic and
-                        # duplicate results are dropped below, then trimmed
-                        {("topic" if kind in ("books", "papers") else "query"): ctx["queries"][kind],
-                         "limit": ctx["limits"][kind] * OVERFETCH_FACTOR},
-                    ),
-                    timeout=settings.research_tool_timeout_seconds,
-                )
-            timings[kind] = t.duration_ms
+            query = ctx["queries"][kind]
+            limit = ctx["limits"][kind] * OVERFETCH_FACTOR
+            tool_input = {
+                ("topic" if kind in ("books", "papers") else "query"): query,
+                "limit": limit,
+            }
+            result, metadata = await invoke_tool_with_events(
+                self.tools[kind],
+                tool_input,
+                agent=AGENT_NAME,
+                timeout=settings.research_tool_timeout_seconds,
+                fallback_name=kind,
+            )
+            timings[kind] = metadata["duration_ms"]
             return result
 
         outcomes = await asyncio.gather(*(call(kind) for kind in kinds), return_exceptions=True)
@@ -828,16 +842,18 @@ class ContentResearchAgent:
         timings: dict[str, float] = {}
 
         async def call(video: dict) -> dict | None:
-            with Timer() as t:
-                try:
-                    result = await asyncio.wait_for(
-                        asyncio.to_thread(self.tools["transcript"].invoke, {"video_id": video["video_id"]}),
-                        timeout=settings.research_tool_timeout_seconds,
-                    )
-                except Exception as exc:
-                    errors[f"transcript:{video['video_id']}"] = str(exc)
-                    return None
-            timings[f"transcript:{video['video_id']}"] = t.duration_ms
+            tool = self.tools["transcript"]
+            try:
+                result, metadata = await invoke_tool_with_events(
+                    tool,
+                    {"video_id": video["video_id"]},
+                    agent=AGENT_NAME,
+                    timeout=settings.research_tool_timeout_seconds,
+                )
+            except Exception as exc:
+                errors[f"transcript:{video['video_id']}"] = str(exc)
+                return None
+            timings[f"transcript:{video['video_id']}"] = metadata["duration_ms"]
             return {**result, "title": video.get("title", ""), "url": video["url"]} if result.get("available") else None
 
         results = await asyncio.gather(*(call(video) for video in videos))
