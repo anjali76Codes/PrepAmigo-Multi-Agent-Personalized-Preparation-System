@@ -6,6 +6,7 @@ import { Mascot } from '../ui/Mascot';
 import { cn } from '../../lib/utils';
 import { VIEW_W, VIEW_H, PATH_D, NODE_IMG, NODE_POSITIONS, JOURNEY_PRESETS, MASCOT_VARIANTS, type JourneyVariant, type JourneyConfig } from './AgentJourneyConstants';
 
+
 export interface JourneyStep {
     agent: string;
     text: string;

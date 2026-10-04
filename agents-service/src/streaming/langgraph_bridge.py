@@ -1,7 +1,7 @@
 """
 Generic bridge from one LangGraph chat turn to the Redis-backed SSE event
 contract (streaming/models.py, streaming/publisher.py, documented in
-docs/SSE_STREAMING_GUIDE.md).
+docs/agents/SSE_STREAMING_GUIDE.md).
 
 This is the "standard component" every specialist streams through: it
 reads graph.streaming.stream_turn's normalized route/step/final items,
@@ -79,6 +79,14 @@ async def bridge_graph_turn(graph: Any, inputs: dict, config: dict) -> AsyncIter
                 }
             elif item["agent"] == "interview_intelligence":
                 yield EventType.COMPLETED, {"message": item["content"]}
+            elif item["agent"] == "company_research":
+                task_context = item.get("task_context") or {}
+                yield EventType.COMPLETED, {
+                    "agent": item["agent"],
+                    "status": "success",
+                    "message": item["content"],
+                    "company_profile": task_context.get("company_profile") or {},
+                }
             else:
                 yield EventType.COMPLETED, {
                     "agent": item["agent"], "status": "success", "message": item["content"]

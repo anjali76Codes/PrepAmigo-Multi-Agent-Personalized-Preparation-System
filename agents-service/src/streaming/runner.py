@@ -1,7 +1,10 @@
 import asyncio
+import json
 import logging
 import os
 from typing import Any, Dict, Optional
+
+from observability.metrics import collect_metrics
 
 from .models import EventType
 from .publisher import EventPublisher, get_event_publisher
@@ -114,6 +117,7 @@ async def execute_agent_stream(
     workflow_input: Optional[Dict[str, Any]] = None,
     workflow_text_input: Optional[str] = None,
     resume_input: Optional[Dict[str, Any]] = None,
+    plan_days: Optional[int] = None,
 ) -> None:
     """Executes the agent workflow. Uses dummy simulation if configured or
     if LLM is unavailable. The real path is agent-agnostic: whichever
@@ -163,6 +167,8 @@ async def execute_agent_stream(
             inputs["workflow_input"] = workflow_input or {}
         if user_id:
             inputs["user_id"] = user_id
+        if plan_days:
+            inputs["plan_total_days"] = plan_days
 
     await pub.emit_event(
         run_id=run_id,
@@ -171,8 +177,13 @@ async def execute_agent_stream(
     )
 
     try:
-        async for event_type, payload in bridge_graph_turn(graph, inputs, config):
-            await pub.emit_event(run_id=run_id, event_type=event_type, payload=payload)
+        with collect_metrics() as run_metrics:
+            try:
+                async for event_type, payload in bridge_graph_turn(graph, inputs, config):
+                    await pub.emit_event(run_id=run_id, event_type=event_type, payload=payload)
+            finally:
+                # per-agent time/token/cache breakdown, for the server log
+                logger.info("Run %s metrics %s", run_id, json.dumps(run_metrics.summary()))
     except Exception as exc:
         # the traceback goes to the server log only; a client-facing
         # payload should never carry raw internals (see graph/errors.py)

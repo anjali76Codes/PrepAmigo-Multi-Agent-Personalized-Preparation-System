@@ -21,9 +21,9 @@ from graph.errors import friendly_error_detail
 from observability import configure_logging
 from streaming.publisher import get_event_publisher
 from streaming.runner import execute_agent_stream
-from auth import verify_token
-from job_intelligence_router import router as job_intelligence_router
-from skill_gap_router import router as skill_gap_router
+from core.auth import verify_token
+from routers.job_intelligence_router import router as job_intelligence_router
+from routers.skill_gap_router import router as skill_gap_router
 from agents.interview_prep_fields import WORKFLOW_FIELDS
 
 configure_logging()
@@ -52,6 +52,8 @@ class ExecuteAgentRequest(BaseModel):
     workflow_input: dict[str, Any] = Field(default_factory=dict)
     workflow_text_input: str | None = Field(default=None, max_length=4000)
     resume_input: dict[str, Any] | None = None
+    # interview_prep plan length in days; omitted = PLAN_TOTAL_DAYS
+    plan_days: int | None = Field(default=None, ge=1, le=366)
 
     @model_validator(mode="after")
     def validate_execution_mode(self):
@@ -160,7 +162,7 @@ def interview_prep_fields():
 async def chat(request: ChatRequest, auth_payload: Any = Depends(verify_token)):
     """Synchronous turn: waits for the full reply. For step-by-step
     progress use /internal/agent/execute, which streams over the
-    Redis-backed SSE pipeline documented in docs/SSE_STREAMING_GUIDE.md."""
+    Redis-backed SSE pipeline documented in docs/agents/SSE_STREAMING_GUIDE.md."""
     from langchain_core.messages import HumanMessage
 
     user_id = _resolve_user_id(auth_payload, request.user_id)
@@ -227,5 +229,6 @@ async def execute_agent_async(
         workflow_input=request.workflow_input,
         workflow_text_input=request.workflow_text_input,
         resume_input=request.resume_input,
+        plan_days=request.plan_days,
     )
     return {"status": "accepted", "runId": request.runId}

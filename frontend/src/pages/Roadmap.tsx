@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Link } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn } from '../utils/utils';
 
 export interface ProblemItem {
   id: string;

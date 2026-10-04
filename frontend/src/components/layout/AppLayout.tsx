@@ -41,7 +41,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKe
 }
 
 
-import { useAuth } from "../../lib/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 
 export function AppLayout() {
   const { loading, logout } = useAuth();

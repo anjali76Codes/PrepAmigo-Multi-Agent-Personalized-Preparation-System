@@ -14,9 +14,34 @@ Usage:
 async call (wrap the `await`, not the coroutine object) and never
 swallows the wrapped exception — `t.ok` just records whether one happened.
 """
+import asyncio
 import logging
 import time
 from typing import Any
+
+# failures that say "the network or the model server is slow/unreachable",
+# not "there is a bug here": logged as one line, without a traceback
+_EXPECTED_ERROR_NAMES = {"ResponseError", "ConnectError", "ReadTimeout", "ConnectTimeout", "RemoteProtocolError"}
+
+
+def describe_error(exc: BaseException) -> str:
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) and not str(exc):
+        return "timed out"
+    if "RateLimit" in type(exc).__name__:
+        return f"rate limited: {str(exc)[:300]}"
+    return f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
+
+
+def log_failure(logger: logging.Logger, message: str, exc: BaseException | None) -> None:
+    """Warn that a step failed and fell back. A timeout or connection
+    error gets one line (the 80-line traceback through the HTTP stack says
+    nothing more); anything else keeps its traceback."""
+    if exc is None:
+        logger.warning("%s", message)
+        return
+    expected = isinstance(exc, (asyncio.TimeoutError, TimeoutError, ConnectionError)) \
+        or type(exc).__name__ in _EXPECTED_ERROR_NAMES or "RateLimit" in type(exc).__name__
+    logger.warning("%s (%s)", message, describe_error(exc), exc_info=None if expected else exc)
 
 
 class Timer:

@@ -2,7 +2,7 @@ import type { RoadmapDay } from '../../data/mockData';
 import { Icon } from '../ui/Icon';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/utils';
 
 interface RoadmapDayCardProps {
   day: RoadmapDay;

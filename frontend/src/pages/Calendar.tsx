@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Link } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn } from '../utils/utils';
 
 import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
 

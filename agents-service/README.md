@@ -32,13 +32,13 @@ For OpenAI, use `LLM_PROVIDER=openai` and provide `OPENAI_API_KEY` and `OPENAI_M
 uv run uvicorn --app-dir src main:app --reload
 ```
 
-For the local interactive CLI, run `uv run python src/cli.py --user <your-id>`. The `--user` value keys long-term memory (default `demo-user`). The CLI streams the reply as it is generated and shows routing and research-step progress; `--no-stream` waits for the full reply instead. The default comes from `STREAM_RESPONSES` (on unless set to `false`).
+For the local interactive CLI, run `uv run python src/scripts/cli.py --user <your-id>`. The `--user` value keys long-term memory (default `demo-user`). The CLI streams the reply as it is generated and shows routing and research-step progress; `--no-stream` waits for the full reply instead. The default comes from `STREAM_RESPONSES` (on unless set to `false`).
 
 The service exposes:
 
 - `GET /health` for liveness information.
 - `POST /api/chat` for agent requests; waits for the full reply and returns it as JSON. Good for scripts/tests; no step-by-step progress.
-- `POST /internal/agent/execute` — the decoupled trigger for the Redis-backed SSE pipeline (`docs/SSE_STREAMING_GUIDE.md` at the repo root): accepts `{runId, query, thread_id?, user_id?}` for chat, or `workflow_mode: "interview_prep"` with `workflow_input` for structured orchestration. A same-thread `resume_input` continues an interrupted workflow with LangGraph `Command(resume=...)`. Progress and the final reply are published to Redis on `agent:events:{runId}` for the Node.js gateway to relay over SSE.
+- `POST /internal/agent/execute` — the decoupled trigger for the Redis-backed SSE pipeline (`docs/agents/SSE_STREAMING_GUIDE.md` at the repo root): accepts `{runId, query, thread_id?, user_id?}` for chat, or `workflow_mode: "interview_prep"` with `workflow_input` for structured orchestration. A same-thread `resume_input` continues an interrupted workflow with LangGraph `Command(resume=...)`. Progress and the final reply are published to Redis on `agent:events:{runId}` for the Node.js gateway to relay over SSE.
 
 Example request:
 
@@ -62,7 +62,7 @@ To add a simple (one node, then done) agent, register it in `src/agents/registry
 
 Every specialist also appends a compact `AgentHandoff` (`src/graph/state.py`) to `state["handoffs"]` — `{agent, kind, summary, data}`, where `data` is small and structured (ids, urls, counts), not the full reply. That's the state-based handover contract: a downstream node or agent later in the turn reads a previous agent's structured output from `handoffs` instead of re-parsing its chat message. It's reset each turn like `execution_events`. Today every turn is single-hop (one specialist runs, then the turn ends), so `handoffs` mostly documents intent for now — but any new agent gets it for free by subclassing `BaseAgent`, or (for a fixed-pipeline agent like research) building one the same shape. `company_research` doesn't emit one yet (it predates the contract and overrides `__call__` directly).
 
-Requests for learning resources (for example "find me resources to learn dynamic programming for Google") go to the Content Research Agent, described below. A request for both company context and current role-market signals (for example "prepare me for a backend interview at Datadog in Seattle") goes to the parallel Interview Prep Orchestrator. A general company-dossier request goes to Company Research (`src/agents/company_research_agent.py`); test it standalone with `uv run python src/cli.py --company "Datadog"`. The flight-search agent is kept in `src/agents/flight_booking_agent.py` but is not wired into the graph.
+Requests for learning resources (for example "find me resources to learn dynamic programming for Google") go to the Content Research Agent, described below. A request for both company context and current role-market signals (for example "prepare me for a backend interview at Datadog in Seattle") goes to the parallel Interview Prep Orchestrator. A general company-dossier request goes to Company Research (`src/agents/company_research_agent.py`); test it standalone with `uv run python src/scripts/cli.py --company "Datadog"`. The flight-search agent is kept in `src/agents/flight_booking_agent.py` but is not wired into the graph.
 
 Requests about a company's specific interview rounds, role-based question patterns, candidate experiences, or reported hiring-process changes go to `src/agents/interview_intelligence_node.py`. It runs Google Search, Google Related Questions, Google News, and YouTube searches concurrently; immediately follows a fresh Search result token with Google AI Overview when available; fetches available transcripts for top matching videos; then synthesizes one source-linked brief. Candidate reports are treated as anecdotes, AI Overview claims are checked against references, and missing sources are reported as coverage gaps. Only the final `completed` SSE event carries the Markdown report, in its `message` field.
 
@@ -100,9 +100,84 @@ Resources fed to the synthesis prompt are grouped by type and each snippet is ca
 
 **Not connected to the user knowledge graph.** `src/graph/knowledge_graph.py` (schema, proficiency tracking, prerequisite gaps — all still in place and tested) is reserved for the skill-gap/assessment agents; the research agent no longer reads or writes it. `state["knowledge_graph_snapshot"]` stays in `AgentState` for whichever agent picks that up.
 
-### Research tool cache
+### Job requirements come from the company's own postings
 
-Every live SerpApi call and YouTube transcript fetch goes through `src/tools/cache.py` first — a generic, namespace-keyed, file-based cache (not SerpApi-specific; any tool's response can use it). A hit skips the network call entirely. Each entry is one pretty-printed JSON file under `RESEARCH_CACHE_DIR` (default `.data/research_cache/<namespace>/<hash>.json`), so it's inspectable and doubles as an offline fixture: run once against the live API, then iterate without spending SerpApi credits. Configure with `RESEARCH_CACHE_ENABLED` (default on), `RESEARCH_CACHE_DIR`, `RESEARCH_CACHE_TTL_SECONDS` (default 7 days; `0` never expires).
+A job search for "<company> <role>" also returns other employers' adverts that rank for those words. Job intelligence keeps only postings whose employer is the target company. If there are none, the others are discarded, not shown to the model even as background: used as requirements they made a Google SDE plan out of one consultancy's WebSphere and Axway stack, and as "background" they still turned it into Agile, Git and CI/CD. The requirements then come from what is known about the company and the role plus the company research brief (which is why direct company research always runs before job intelligence), core competencies first, and the profile is marked `isFallback`. Extraction runs at temperature 0 so the same company and role give the same skills.
+
+### Compact research write-ups
+
+Inside `interview_prep` a module is a short note: Overview, Key Concepts, Practice (`RESEARCH_COMPACT_MAX_OUTPUT_TOKENS`, ~350 tokens). The model returns it as JSON and `note_markdown` lays it out, so the sections and their order never depend on the model. No transcript is fetched for it. The plan takes its links from the search results and its schedule from the planner, so the full reference sheet (every link re-listed, plus a study plan) is only written for a chat reply. A gap the candidate partly has (skill-gap status `partial`) is researched at intermediate depth and planned past the beginner basics.
+
+In the plan, each reference goes on the day whose subject it covers (`plan_builder.place_references`); general ones fill the emptiest days from the start of the topic, and days nothing was written about (usually the closing practice and review days) have none.
+
+### What counts as a resource
+
+- **Books** come from Open Library (`BOOKS_SOURCE=catalogue`; free, no key), and only established ones: at least `BOOK_MIN_EDITIONS` editions or `BOOK_MIN_READERS` readers who shelved it. A catalogue lists everything ever registered, so a new tool with no real book yet gets no book. **Papers** come from arXiv (`PAPERS_SOURCE=arxiv`), matched as a phrase, and must mention the whole topic. Neither uses a SerpApi credit; a topic costs two credits (docs, videos).
+- `COMPANY_MODULE=on` adds one module on the target company's own platform, searched on its official site and GitHub (both taken from the company profile) plus arXiv for its research, and puts it first in the plan.
+- All text in a plan is sanitized (`tools/text_sanitize.py`): emoji, invisible and control characters removed, typographic punctuation and odd spaces converted to plain ASCII, letters of any language kept, URLs never altered.
+- Results that are job adverts or sales pages are dropped whatever their topic match (`tools/relevance.not_learning_material`), and the docs query excludes them at the source (`-jobs -vacancy -careers -pricing`).
+- `RESEARCH_JUDGE_LLM=fast|default` adds one small model call per topic that rejects what word matching cannot: a consultancy page titled exactly like the topic, a news clip, a homonym. Off by default. If the call fails or rejects everything, nothing is dropped.
+- A write-up must contain a `## Overview` section. Planning notes instead of a module are retried once, then that topic is reported as unresearched rather than stored.
+- The plan places at most `PLAN_MAX_BOOKS` book and `PLAN_MAX_PAPERS` paper references (default 2 each), one per topic on its first day. The resource pack keeps all of them.
+
+### Caching
+
+Two caches share one store (`src/tools/cache.py`, entries under `RESEARCH_CACHE_DIR`, default `.data/research_cache/<namespace>/<hash>.json`, readable JSON):
+
+| Layer | Where | Covers | Key | TTL |
+|---|---|---|---|---|
+| API responses | `tools/serpapi_client.serpapi_search` (the one SerpApi boundary) | every agent's SerpApi calls: company research, job intelligence, content research | exact request params | news/jobs `SERPAPI_FRESH_CACHE_TTL_SECONDS` (1 day), everything else `RESEARCH_CACHE_TTL_SECONDS` (7 days) |
+| Transcripts | `tools/research_tools.fetch_youtube_transcript` | YouTube transcripts | video id | never expires |
+| LLM responses | `storage/llm_cache.py`, attached to every model by `config.get_llm` | every agent's model calls | provider + model + temperature + token cap + reasoning flag + tool bindings + full prompt | `LLM_CACHE_TTL_SECONDS` (7 days) |
+
+- A repeated run with unchanged inputs makes no SerpApi calls and no model calls. When an input changes (a different resume or role, a fresh news result), only the steps whose prompts change go back to the model.
+- Not cached: SerpApi errors, `no_cache` calls (the short-lived AI Overview token), empty model replies, and model answers a caller rejected. The planner, skill gap, job intelligence and evaluator call `forget_response` when they can't parse an answer, so a bad answer isn't replayed for a week.
+- Every entry stores how long the original call took (`latency_ms`). A hit returns in milliseconds, and the run metrics report it as a hit with that original time as "saved".
+- To bypass for one run: `--no-cache` on the CLI (nothing is read from or written to any cache), or the settings `RESEARCH_CACHE_ENABLED=false` (both layers) and `LLM_CACHE_ENABLED=false` (model calls only). To clear: delete the directory (or just `llm/`).
+
+**Moving to Redis (planned, not implemented).** Only the storage layer changes: `ResponseCache` talks to a `CacheBackend` with three methods (`read`, `write`, `delete`), and `FileCacheBackend` is the only one today. A `RedisCacheBackend` would:
+
+1. Use the existing `REDIS_URL` connection (the SSE publisher already depends on Redis), with key `prepamigo:cache:<namespace>:<hash>` and the same JSON entry as the value.
+2. `write` with `SET key value EX <ttl>`, so Redis expires entries itself (`0` → no `EX`). `read`/`delete` map to `GET`/`DEL`.
+3. Be selected by a `CACHE_BACKEND=file|redis` setting in `get_response_cache()`.
+4. Fall back to a miss on any Redis error, so the cache is never a hard dependency.
+
+Because the cache is shared, all API workers then reuse each other's SerpApi and LLM results. The file backend stays the default for local development, where the JSON files double as offline fixtures. For `ResponseCache`, its callers and the metrics, nothing changes.
+
+### Company research modes and the fast model
+
+`COMPANY_RESEARCH_MODE` picks how `interview_prep` researches the company:
+
+- `agent` (default): the tool-calling loop. The model picks each search, one per turn, then writes a dossier: 3-4 model calls that each resend the growing conversation.
+- `direct` (`src/agents/company_brief.py`): both searches run at once, then one small model call writes a structured brief (summary, products, tech stack, engineering focus, recent developments). The evidence in the prompt and the answer are both capped, so a run costs roughly 2-3k tokens. The brief's stack and focus are added to the skill-gap, research and planner prompts. If the model call fails or is rate limited, the search-based profile is used without a brief.
+
+`COMPANY_RESEARCH_LLM=fast` sends that one call to the `FAST_LLM_*` model, any OpenAI-compatible endpoint (for Groq: `FAST_LLM_BASE_URL=https://api.groq.com/openai/v1`). With `FAST_LLM_*` unset, or `COMPANY_RESEARCH_LLM=default`, the main model is used. The chat-mode company research agent is unchanged in both modes.
+
+### Per-agent models
+
+Each agent can use a different model, set in `.env`:
+
+| Agent | Settings | Notes |
+|---|---|---|
+| Planner | `PLANNER_LLM=default\|fast`, `PLANNER_MODEL=<model>` | Short JSON per chunk, so a small quick model suits it. With `fast`, chunks run `FAST_LLM_MAX_CONCURRENCY` at a time; otherwise `LLM_MAX_CONCURRENCY` (1 on Ollama by default). |
+| Job intelligence | `JOB_INTELLIGENCE_LLM`, `JOB_INTELLIGENCE_MODEL` | One extraction call, ~1.6k tokens. |
+| Skill gap | `SKILL_GAP_LLM` | `fast` sends the resume text to that provider. |
+| Company brief | `COMPANY_RESEARCH_LLM` | Needs `COMPANY_RESEARCH_MODE=direct`. |
+| Research write-ups | `RESEARCH_MODEL=<model>` | Main provider only: ~14k tokens a run. |
+| Result check, search scope, evaluator | `RESEARCH_JUDGE_LLM`, `RESEARCH_SCOPE_LLM`, `EVALUATOR_LLM` | `off` skips the call. |
+
+`*_LLM=fast` uses the `FAST_LLM_*` endpoint; `*_MODEL` names another model on the main provider and is ignored when `*_LLM=fast`.
+
+### Run metrics
+
+`--prep` ends with a per-agent table (`src/observability/metrics.py`). API runs write the same data to the log as `Run <id> metrics {...}`.
+
+- Wall, LLM and Tools time per agent. LLM and Tools count the time at least one call was in flight, so parallel calls are counted once. Other is the remainder: parsing, memory writes, and waiting for an LLM slot.
+- LLM calls, input and output tokens actually spent (cache hits excluded), and peak context (the largest single prompt).
+- API calls, the slowest live call, and the time saved by cache hits. `(Nc)` means N of the calls were served from the cache.
+- The three slowest calls of the run.
+
+LLM calls are recorded by a callback on every model from `get_llm`. API calls are recorded by `cached_fetch` and `track_tool`, and each one is attributed to the agent whose `agent_scope` it ran in.
 
 Research tools use `SERPAPI_API_KEY`. Without it they return results labelled `"source": "mock"` that link to real search pages.
 
@@ -113,6 +188,31 @@ Long-term memory is chosen by `MEMORY_PROVIDER`:
 - `mem0_oss`: the self-hosted mem0 engine, using the configured LLM provider. Install an embedding model first (`ollama pull nomic-embed-text` for Ollama). Vectors and history are stored under `MEM0_DATA_DIR` unless `MEM0_QDRANT_URL` is set.
 
 If a mem0 mode cannot start (missing or rejected key, unreachable model), the service logs a warning and uses `local`.
+
+## Planner Agent (study plan JSON)
+
+The last stage of `interview_prep` (`src/agents/planner_agent.py`) turns the skill-gap report and research modules into a plan in the backend's own `plan → sprints → sprint_days` shape.
+
+**Plan length and scaling.** A plan is `PLAN_TOTAL_DAYS` long (default 45), or whatever a run asks for (`--days` on the CLI, `plan_days` on `/internal/agent/execute`). The days are split across skill gaps by priority (a missing skill gets twice a partial one), and each gap's days are cut into sprints of at most `PLAN_SPRINT_MAX_DAYS`. Plan length never multiplies the expensive work:
+
+- The plan goes deep rather than wide: at most `PLAN_MAX_TOPICS` gaps (default 6, highest priority first), and never more than fit with `PLAN_MIN_DAYS_PER_TOPIC` days each (default 3). The rest are listed under `coverage.not_scheduled`.
+- Research stays one module per gap, for at most `RESEARCH_MAX_GAPS` gaps (highest priority first). A long gap reuses its module's resources across its days. Gaps past the cap are still planned, without references.
+- Day wording comes from small LLM calls: one per chunk of up to `PLANNER_DAYS_PER_CALL` days of one topic. Each prompt holds only that topic's concepts plus the titles already planned for it. A failed chunk falls back on its own.
+- Stages that fan out (research write-ups, planner chunks, company+job) run up to `LLM_MAX_CONCURRENCY` calls at once: 1 by default on Ollama, where parallel requests measured no faster.
+
+**Where it's saved:** every run writes `agents-service/.data/plans/<plan id>.json` (`PLAN_OUTPUT_DIR`; gitignored, resolved against `agents-service/` regardless of where you run from). The CLI's `--prep` output prints the path. The same dict is in `state["study_plan"]` and `task_context["preparation_plan"]`. File layout:
+
+- `plan`: the backend contract (`src/schemas/study_plan.py`, mirroring the Zod schemas in `backend/src/utils/planApi.ts` and parser_agent's `CompletePlan`). The backend creates it through three strict endpoints (`POST /plans`, `/plans/:id/sprints`, `/sprints/:id/days`), so the caller posts each level's own fields; ids, `user_id`, `status` and completion are set server-side.
+- `resource_pack`: all curated resources grouped by type, deduped.
+- `learning_modules`: each research module's markdown.
+- `coverage`: days per topic; which gaps were researched (a gap whose research failed or was past the cap is still planned, with no references); `not_scheduled` lists gaps left out because the plan had fewer days than gaps.
+- `narrative_source`: `llm`, `partial` or `fallback`, i.e. whose wording the days use.
+
+**Reliability.** The LLM never produces the plan's structure. Sprint/day counts, dates, day numbering and references are computed in code, and the result is validated against `StudyPlan`, which checks the backend's field limits *and* the arithmetic (totals, date ranges, contiguous day numbers) that LLM-written JSON gets wrong while still passing type checks. The model only writes each day's title and objectives, grounded in the module's Key Concepts. That text is parsed per topic, and anything unusable falls back to concept-based wording for that topic alone. Swapping `OLLAMA_MODEL` can change the wording, never the shape. Ollama's schema-constrained output mode isn't relied on: on `nemotron-3-nano:30b-cloud` it was ignored outright.
+
+**Code layout.** `src/tools/plan_builder.py` is the deterministic plan builder: topic selection, day allocation, fallback wording, sprint/date assembly and validation, with no LLM and no I/O. `src/agents/planner_agent.py` only asks the model for day wording and hands it to the builder, and the orchestrator saves the result (`src/storage/json_store.py`).
+
+**Model speed.** Thinking models write a hidden reasoning trace before every answer. `OLLAMA_REASONING=false` (default) turns it off; on the research synthesis prompt that measured 12.9s / 4,005 tokens with it vs 3.4s / 938 without, with an equal or longer visible answer.
 
 ## Tests
 

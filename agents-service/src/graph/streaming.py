@@ -108,4 +108,9 @@ async def stream_turn(
                     rest = _remainder(final, streamed.get(node, ""))
                     if rest:
                         yield {"type": "token", "agent": node, "content": rest}
-                    yield {"type": "final", "agent": node, "content": final}
+                    yield {
+                        "type": "final",
+                        "agent": node,
+                        "content": final,
+                        "task_context": update.get("task_context") or {},
+                    }

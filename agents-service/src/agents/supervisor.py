@@ -14,7 +14,7 @@ import re
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from agents.registry import DEFAULT_SPECIALIST, SPECIALISTS, SPECIALIST_NAMES
-from config import get_llm
+from core.config import get_llm
 from graph.events import INTERNAL_LLM_CONFIG
 from prompts.system_prompts import SUPERVISOR_PROMPT
 

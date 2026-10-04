@@ -1,0 +1,9 @@
+.superpowers
+.env
+# Repo-wide ignores. Each service has its own .gitignore for its own files.
+
+# Run logs and local agent data (caches, plans, vector stores). A run started
+# from the repo root writes ./.data/, which no service-level .gitignore covers.
+.data/
+*.log
+logs/

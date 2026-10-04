@@ -4,7 +4,7 @@ import re
 from datetime import date as date_type
 
 from langchain_core.tools import tool
-from config import settings
+from core.config import settings
 from tools.serpapi_client import serpapi_search, using_dummy_data
 
 LOCATION_PATTERN = re.compile(r"^[A-Za-z0-9 -]{2,12}$")

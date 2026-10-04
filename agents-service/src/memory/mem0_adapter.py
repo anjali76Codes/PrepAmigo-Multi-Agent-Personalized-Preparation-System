@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from config import Settings, settings
+from core.config import Settings, settings
 from memory.base import BaseMemoryProvider, MemoryInput, MemoryRecord, require_user_id
 
 COLLECTION_NAME = "prepamigo_memories"
