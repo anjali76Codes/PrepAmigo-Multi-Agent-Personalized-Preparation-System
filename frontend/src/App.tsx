@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { AppLayout } from "./components/layout/AppLayout";
@@ -13,6 +13,7 @@ import { Preps } from "./pages/Preps";
 import { PrepDetails } from "./pages/PrepDetails";
 import { Calendar } from "./pages/Calendar";
 import { Roadmap } from "./pages/Roadmap";
+import { Assessment } from "./pages/Assessment";
 import { Progress } from "./pages/Progress";
 import { Notifications } from "./pages/Notifications";
 import { Settings } from "./pages/Settings";
@@ -74,15 +75,15 @@ function AnimatedRoutes() {
             <Route path="progress" element={<Progress />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="roadmap" element={<Navigate to="/roadmap" replace />} />
-            <Route path="calendar" element={<Navigate to="/calendar" replace />} />
-            <Route path="assessment" element={<Navigate to="/assessment" replace />} />
+            {/* <Route path="roadmap" element={<Navigate to="/roadmap" replace />} />
+            <Route path="calendar" element={<Navigate to="/calendar" replace />} /> */}
+            <Route path="assessment" element={<Assessment />} />
             <Route path=":sprintId/:levelId" element={<LevelDetail />} />
           </Route>
 
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/calendar" element={<Calendar />} />
-          <Route path="/assessment" element={<div className="p-8 text-carbon-900 font-bold text-2xl">Assessment</div>} />
+          <Route path="/assessment" element={<Assessment />} />
 
           <Route path="/resource-pack">
             <Route index element={<ResourcePackHome />} />

@@ -35,21 +35,35 @@ export function DayTaskCard({
   const getIconForType = (type: string) => {
     switch (type) {
       case "Video":
-        return "play-circle-outline";
+        return "play-circle";
       case "Article":
-        return "document-text-outline";
+        return "document-text";
       case "Note":
-        return "journal-outline";
+        return "journal";
       default:
-        return "link-outline";
+        return "link";
+    }
+  };
+
+  const handleCardClick = () => {
+    if (variant === "compact" && resources.length > 0) {
+      setIsExpanded(!isExpanded);
     }
   };
 
   return (
-    <div className={`bg-white border ${completed ? "border-border/40 bg-surface-muted/50" : "border-border"} rounded-2xl p-4 transition-all hover:shadow-sm flex flex-col gap-3`}>
-      <div className="flex items-start gap-4">
+    <div 
+      className={`bg-white border ${completed ? "border-border/40 bg-surface-muted/50" : "border-border"} rounded-2xl transition-all hover:shadow-sm flex flex-col overflow-hidden`}
+    >
+      <div 
+        className={`flex items-start gap-4 p-4 ${variant === "compact" && resources.length > 0 ? "cursor-pointer hover:bg-bg/50" : ""}`}
+        onClick={handleCardClick}
+      >
         <button
-          onClick={onToggleComplete}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete?.();
+          }}
           aria-label="Toggle completed"
           className={`mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
             completed ? "bg-navy-700 border-navy-700 text-white" : "border-carbon-300 hover:border-navy-700 bg-white"
@@ -63,13 +77,9 @@ export function DayTaskCard({
         </div>
 
         {variant === "compact" && resources.length > 0 && (
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-expanded={isExpanded}
-            className="p-1 rounded-md text-carbon-500 hover:bg-surface-muted transition-colors"
-          >
+          <div className="p-1 rounded-md text-carbon-400">
             <Icon name="chevron-down" className={`text-xl transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-          </button>
+          </div>
         )}
       </div>
 
@@ -81,26 +91,32 @@ export function DayTaskCard({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-2 pl-10 flex flex-col gap-3">
-              {Object.entries(groupedResources).map(([type, items]) => (
-                <div key={type} className="flex flex-col gap-1">
-                  <h4 className="text-xs font-bold text-carbon-500 uppercase tracking-wider">{type}s</h4>
-                  <div className="flex flex-col gap-1">
-                    {items.map((item) => (
-                      <a
-                        key={item.id}
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-navy-600 hover:text-navy-800 hover:underline py-1"
-                      >
-                        <Icon name={getIconForType(type)} className="text-base" />
-                        <span>{item.title}</span>
-                      </a>
-                    ))}
+            <div className="px-4 pb-4 pt-1">
+              <div className="bg-surface rounded-xl p-4 border border-border/60 flex flex-col gap-4">
+                {Object.entries(groupedResources).map(([type, items]) => (
+                  <div key={type} className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Icon name="folder-outline" className="text-carbon-400 text-sm" />
+                      <h4 className="text-xs font-bold text-carbon-600 uppercase tracking-wider">{type}s</h4>
+                    </div>
+                    <div className="flex flex-col gap-1.5 pl-6">
+                      {items.map((item) => (
+                        <a
+                          key={item.id}
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 hover:underline py-1"
+                        >
+                          <Icon name={getIconForType(type)} className="text-base text-navy-500" />
+                          <span>{item.title}</span>
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
