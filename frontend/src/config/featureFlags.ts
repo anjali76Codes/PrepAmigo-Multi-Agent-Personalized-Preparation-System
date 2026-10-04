@@ -1,7 +1,5 @@
-/**
- * Central feature-flag config.
- * Read env vars here; never call import.meta.env directly for flags elsewhere in the app.
- */
+// Central feature-flag config.
+// Read env vars here; never call import.meta.env directly for flags elsewhere in the app.
 export const featureFlags = {
   /** When true, the Google OAuth / JWT auth flow is active. */
   enableAuth: import.meta.env.VITE_ENABLE_AUTH === 'true',
