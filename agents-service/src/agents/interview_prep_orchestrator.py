@@ -199,13 +199,16 @@ class InterviewPrepOrchestrator:
         response = None
         try:
             response = await asyncio.wait_for(
-                get_llm(temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=12
+                get_llm(temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
+                timeout=settings.interview_prep_extract_timeout_seconds,
             )
             content = _message_text(response).strip()
-            if content.startswith("```"):
-                content = content.split("\n", 1)[-1]
-            if content.endswith("```"):
-                content = content[:-3]
+            if "```json" in content:
+                content = content.split("```json", 1)[1].split("```", 1)[0]
+            elif "```" in content:
+                content = content.split("```", 1)[1].split("```", 1)[0]
+            elif "{" in content and "}" in content:
+                content = content[content.find("{"):content.rfind("}") + 1]
             parsed = json.loads(content.strip())
             if isinstance(parsed, dict):
                 return workflow_fields.normalize_workflow_fields(parsed)
@@ -491,10 +494,29 @@ class InterviewPrepOrchestrator:
 
         company = canonical_company(values.get("company", ""), company_profile.get("name", ""))
         role = values.get("role", "")
-        resume_text = (state.get("task_context") or {}).get("candidate_resume_text", "")
+        task_context = dict(state.get("task_context") or {})
+        wf_input = state.get("workflow_input") or {}
+
+        resume_text = (
+            task_context.get("candidate_resume_text")
+            or wf_input.get("resume_text")
+            or wf_input.get("candidate_resume_text")
+            or ""
+        )
+        has_user_resume = bool(resume_text.strip())
+
+        if not has_user_resume:
+            # Baseline resume so skill-gap analysis and planner can build a comprehensive study plan
+            resume_text = (
+                f"Candidate Software Engineer\n"
+                f"Target Role: {role}\n"
+                f"Skills: Core Programming, Software Engineering Fundamentals, Git, Basic System Design\n"
+                f"Experience: Software Engineer with 2 years of general development experience.\n"
+                f"Education: Bachelor's Degree in Computer Science\n"
+            )
+            task_context["candidate_resume_text"] = resume_text
 
         # Merge upstream results into task_context so downstream nodes can read them
-        task_context = dict(state.get("task_context") or {})
         if company_profile:
             task_context["company_profile"] = company_profile
         if job_intelligence:
@@ -506,7 +528,7 @@ class InterviewPrepOrchestrator:
         await dispatch_event(
             make_event("interview_prep", "skill_gap_analysis", "running", {
                 "message": f"Analyzing skill gaps for {role} at {company}...",
-                "has_resume": bool(resume_text.strip()),
+                "has_resume": has_user_resume,
             }),
             None,
         )
@@ -766,7 +788,10 @@ class InterviewPrepOrchestrator:
                 raise _SkipEvaluator()
             llm = get_llm(temperature=0, max_tokens=120,
                           profile="fast" if settings.evaluator_llm == "fast" else "default")
-            response = await asyncio.wait_for(llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=10)
+            response = await asyncio.wait_for(
+                llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
+                timeout=settings.interview_prep_evaluator_timeout_seconds,
+            )
             content = _message_text(response).strip()
             if content.startswith("```"):
                 content = content.split("\n", 1)[-1]

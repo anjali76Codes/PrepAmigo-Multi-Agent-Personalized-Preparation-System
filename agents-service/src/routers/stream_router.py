@@ -34,7 +34,24 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-TERMINAL_EVENTS = {"completed", "failed"}
+TERMINAL_EVENTS = {"completed", "failed", "waiting"}
+
+
+def _format_sse(raw: str) -> str:
+    """Format raw JSON event into standard SSE packet with optional id and event lines."""
+    try:
+        event = json.loads(raw)
+        lines = []
+        event_id = event.get("id")
+        event_type = event.get("type")
+        if event_id:
+            lines.append(f"id: {event_id}\n")
+        if event_type:
+            lines.append(f"event: {event_type}\n")
+        lines.append(f"data: {raw}\n\n")
+        return "".join(lines)
+    except Exception:
+        return f"data: {raw}\n\n"
 
 
 async def _event_stream(run_id: str) -> AsyncIterator[str]:
@@ -47,7 +64,7 @@ async def _event_stream(run_id: str) -> AsyncIterator[str]:
         # ── 1. Replay missed events from Redis history ────────────────────────
         history = await redis_client.lrange(history_key, 0, -1)
         for raw in history:
-            yield f"data: {raw}\n\n"
+            yield _format_sse(raw)
             try:
                 event = json.loads(raw)
                 if event.get("type") in TERMINAL_EVENTS:
@@ -80,7 +97,7 @@ async def _event_stream(run_id: str) -> AsyncIterator[str]:
                             "detail": "Agent execution timed out or worker disconnected.",
                         },
                     })
-                    yield f"data: {timeout_event}\n\n"
+                    yield _format_sse(timeout_event)
                     return
 
                 # ── Poll for next message (non-blocking, 100ms window) ─────────
@@ -88,7 +105,7 @@ async def _event_stream(run_id: str) -> AsyncIterator[str]:
                 if message and message.get("type") == "message":
                     raw = message["data"]
                     last_event_time = loop.time()
-                    yield f"data: {raw}\n\n"
+                    yield _format_sse(raw)
                     try:
                         event = json.loads(raw)
                         if event.get("type") in TERMINAL_EVENTS:
@@ -101,7 +118,7 @@ async def _event_stream(run_id: str) -> AsyncIterator[str]:
                     idle = loop.time() - last_event_time
                     if idle >= settings.sse_ping_interval_seconds:
                         ping = json.dumps({"type": "ping", "runId": run_id})
-                        yield f"data: {ping}\n\n"
+                        yield _format_sse(ping)
                         last_event_time = loop.time()  # reset so we don't flood pings
                     await asyncio.sleep(0.05)
         finally:

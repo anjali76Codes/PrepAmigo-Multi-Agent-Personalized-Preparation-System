@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { featureFlags } from "../config/featureFlags";
 
 interface User {
   sub: string;
@@ -11,6 +12,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!featureFlags.enableAuth) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
       credentials: "include",
     })

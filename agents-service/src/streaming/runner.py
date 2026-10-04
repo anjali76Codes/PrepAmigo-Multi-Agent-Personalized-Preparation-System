@@ -186,18 +186,31 @@ async def execute_agent_stream(
     if resume_input is not None:
         inputs: Any = Command(resume=resume_input)
     else:
-        inputs = {
-            "messages": [HumanMessage(content=query)],
-            "workflow_mode": workflow_mode,
-            "workflow_input": workflow_input or {},
-            "workflow_text_input": workflow_text_input,
-            "interview_prep_input": {},
-            "workflow_clarification_rounds": 0,
-        }
-        if user_id:
-            inputs["user_id"] = user_id
-        if plan_days:
-            inputs["plan_total_days"] = plan_days
+        snapshot = None
+        if graph is not None and hasattr(graph, "aget_state"):
+            try:
+                snapshot = await graph.aget_state(config)
+            except Exception:
+                snapshot = None
+        if snapshot is not None and "interview_prep_pause" in (snapshot.next or ()):
+            inputs = Command(resume={"answer": query})
+        else:
+            wf_input = workflow_input or {}
+            resume_text = wf_input.get("resume_text") or wf_input.get("candidate_resume_text")
+            inputs = {
+                "messages": [HumanMessage(content=query)],
+                "workflow_mode": workflow_mode,
+                "workflow_input": wf_input,
+                "workflow_text_input": workflow_text_input,
+                "interview_prep_input": {},
+                "workflow_clarification_rounds": 0,
+            }
+            if resume_text:
+                inputs["task_context"] = {"candidate_resume_text": str(resume_text).strip()}
+            if user_id:
+                inputs["user_id"] = user_id
+            if plan_days:
+                inputs["plan_total_days"] = plan_days
 
     await pub.emit_event(
         run_id=run_id,

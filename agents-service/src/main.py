@@ -235,3 +235,33 @@ async def execute_agent_async(
         plan_days=request.plan_days,
     )
     return {"status": "accepted", "runId": request.runId}
+
+
+class ExtractResumeRequest(BaseModel):
+    filename: str
+    base64_data: str
+
+
+@app.post("/internal/agent/extract-resume")
+async def extract_resume(req: ExtractResumeRequest):
+    import base64
+    from routers.skill_gap_router import extract_text_from_pdf, extract_text_from_docx
+
+    try:
+        raw_bytes = base64.b64decode(req.base64_data)
+        fname = req.filename.lower()
+        if fname.endswith(".pdf"):
+            text = extract_text_from_pdf(raw_bytes)
+        elif fname.endswith(".docx"):
+            text = extract_text_from_docx(raw_bytes)
+        elif fname.endswith(".txt") or fname.endswith(".md"):
+            text = raw_bytes.decode("utf-8", errors="ignore")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format (.pdf, .docx, .txt, .md)")
+
+        return {"success": True, "text": text, "filename": req.filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to extract resume text: {e}")
+        raise HTTPException(status_code=400, detail=str(e))

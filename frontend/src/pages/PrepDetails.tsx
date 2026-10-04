@@ -12,6 +12,7 @@ import { ResourcePack } from '../components/preps/ResourcePack';
 import { AssessmentCard } from '../components/preps/AssessmentCard';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { usePlan } from '../hooks/usePlans';
 
 export function PrepDetails() {
   const { prepId } = useParams();
@@ -20,10 +21,20 @@ export function PrepDetails() {
   const shouldReduceMotion = useReducedMotion();
 
   const { preps, notifications: mockNotifications } = useAppContext();
-  const prep = preps.find(p => p.id === prepId);
+  const { prep: fetchedPrep, loading } = usePlan(prepId);
+  const prep = preps.find(p => p.id === prepId) || fetchedPrep;
 
   const searchParams = new URLSearchParams(location.search);
   const activeTab = searchParams.get('tab') || 'overview';
+
+  if (loading && !prep) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-carbon-500">
+        <Icon name="sync-outline" className="text-3xl animate-spin text-chrome mb-3" />
+        <p className="text-sm font-semibold">Loading your preparation plan...</p>
+      </div>
+    );
+  }
 
   if (!prep) {
     return (

@@ -20,6 +20,7 @@ export interface AgentStreamEvent {
 export interface RunAgentRequestBody {
   query: string;
   threadId?: string;
+  resumeText?: string;
 }
 
 export interface RunAgentResponse {

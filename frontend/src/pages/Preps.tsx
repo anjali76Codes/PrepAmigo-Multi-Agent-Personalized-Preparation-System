@@ -22,9 +22,11 @@ export function Preps() {
           </RevealStaggerItem>
 
           <RevealStaggerItem>
-            <Button variant="primary" className="bg-chrome-accent hover:bg-chrome-accent/90 text-chrome border-none rounded-full shadow-pop">
-              <Icon name="add" className="text-xl mr-1" /> New Prep
-            </Button>
+            <Link to="/dashboard/chat">
+              <Button variant="primary" className="bg-chrome-accent hover:bg-chrome-accent/90 text-chrome border-none rounded-full shadow-pop">
+                <Icon name="add" className="text-xl mr-1" /> New Prep
+              </Button>
+            </Link>
           </RevealStaggerItem>
         </RevealStagger>
 

@@ -4,7 +4,195 @@ import { AuthenticatedRequest } from "../types/authenticated-request.js";
 import { config } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 import { redisClient, createRedisSubscriber } from "../config/redis.js";
+import { Types } from "mongoose";
+import { User } from "../models/User.js";
+import { Plan } from "../models/Plan.js";
+import { Sprint } from "../models/Sprint.js";
+import { SprintDay, ReferenceType } from "../models/SprintDay.js";
+import { PlanProgress } from "../models/PlanProgress.js";
 import { AgentStreamEvent, InterviewPrepField, InterviewPrepRequestBody, RunAgentRequestBody } from "./types.js";
+
+const VALID_REFERENCE_TYPES: ReadonlySet<string> = new Set([
+  "video",
+  "article",
+  "documentation",
+  "problem",
+  "course",
+  "book",
+]);
+
+function normalizeReferenceType(type: unknown): ReferenceType {
+  if (typeof type === "string" && VALID_REFERENCE_TYPES.has(type.toLowerCase())) {
+    return type.toLowerCase() as ReferenceType;
+  }
+  return "documentation";
+}
+
+const savedRunPlanMap = new Map<string, string>(); // runId -> mongoPlanId
+
+export async function persistGeneratedPlan(
+  rawStudyPlan: any,
+  runId: string,
+  userId?: string | null,
+): Promise<string | null> {
+  if (savedRunPlanMap.has(runId)) {
+    return savedRunPlanMap.get(runId)!;
+  }
+
+  try {
+    const planObj = rawStudyPlan?.plan || rawStudyPlan;
+    if (!planObj || typeof planObj !== "object") return null;
+
+    let targetUserId: Types.ObjectId;
+    if (userId && Types.ObjectId.isValid(userId)) {
+      targetUserId = new Types.ObjectId(userId);
+    } else {
+      const defaultUser = await User.findOneAndUpdate(
+        { email: "local-development-user@localhost.invalid" },
+        { $setOnInsert: { name: "Local developer" } },
+        { new: true, upsert: true, setDefaultsOnInsert: true },
+      );
+      targetUserId = defaultUser._id;
+    }
+
+    const startDate = new Date(planObj.start_date || Date.now());
+    const totalDaysNum = Number(planObj.total_days) || 30;
+    const endDate = new Date(planObj.end_date || startDate.getTime() + totalDaysNum * 86400000);
+
+    const plan = await Plan.create({
+      user_id: targetUserId,
+      plan_name: (planObj.plan_name || `${planObj.company || "Target"} ${planObj.role || "Role"} Preparation`).trim(),
+      company: (planObj.company || "Target Company").trim(),
+      role: (planObj.role || "Target Role").trim(),
+      total_days: totalDaysNum,
+      start_date: startDate,
+      end_date: endDate,
+      sprints: [],
+      status: "in_progress",
+      completion_percent: 0,
+    });
+
+    const sprintList = Array.isArray(planObj.sprints) ? planObj.sprints : [];
+    for (const s of sprintList) {
+      const sprintNumber = Number(s.sprint_number) || 1;
+      const sprintStartDate = new Date(s.start_date || startDate);
+      const sprintEndDate = new Date(s.end_date || endDate);
+      const sprintDaysList = Array.isArray(s.sprint_days) ? s.sprint_days : [];
+      const sprintTotalDays = Number(s.total_days) || (sprintDaysList.length > 0 ? sprintDaysList.length : 7);
+
+      const sprint = await Sprint.create({
+        plan_id: plan._id,
+        sprint_number: sprintNumber,
+        sprint_name: (s.sprint_name || `Sprint ${sprintNumber}`).trim(),
+        start_date: sprintStartDate,
+        end_date: sprintEndDate,
+        total_days: sprintTotalDays,
+        sprint_days: [],
+        status: sprintNumber === 1 ? "in_progress" : "pending",
+        completion_percent: 0,
+      });
+
+      const dayIds: Types.ObjectId[] = [];
+      for (const d of sprintDaysList) {
+        const dayNumber = Number(d.day_number) || 1;
+        const dayDate = new Date(d.scheduled_date || sprintStartDate);
+
+        const rawReferences = Array.isArray(d.references) ? d.references : [];
+        const cleanedReferences = rawReferences.map((ref: any) => ({
+          type: normalizeReferenceType(ref?.type),
+          title: String(ref?.title || "Reference Material").trim().slice(0, 300),
+          url: String(ref?.url || "https://example.com").trim().slice(0, 2048),
+          source: ref?.source ? String(ref.source).trim().slice(0, 200) : undefined,
+          description: ref?.description ? String(ref.description).trim().slice(0, 2000) : undefined,
+          is_required: ref?.is_required !== false,
+        }));
+
+        const sprintDay = await SprintDay.create({
+          sprint_id: sprint._id,
+          day_number: dayNumber,
+          scheduled_date: dayDate,
+          topic_title: String(d.topic_title || `Day ${dayNumber}`).trim().slice(0, 200),
+          topic_description: d.topic_description ? String(d.topic_description).trim().slice(0, 4000) : undefined,
+          objectives: Array.isArray(d.objectives)
+            ? d.objectives.map((obj: any) => String(obj).trim().slice(0, 500)).filter(Boolean).slice(0, 30)
+            : [],
+          estimated_minutes: Number(d.estimated_minutes) > 0 ? Number(d.estimated_minutes) : 60,
+          references: cleanedReferences.slice(0, 50),
+          status: dayNumber === 1 && sprintNumber === 1 ? "in_progress" : "pending",
+        });
+
+        dayIds.push(sprintDay._id);
+      }
+
+      await Sprint.updateOne({ _id: sprint._id }, { $set: { sprint_days: dayIds } });
+      await Plan.updateOne({ _id: plan._id }, { $push: { sprints: sprint._id } });
+    }
+
+    await PlanProgress.findOneAndUpdate(
+      { user_id: targetUserId, plan_id: plan._id },
+      {
+        $setOnInsert: {
+          user_id: targetUserId,
+          plan_id: plan._id,
+          xp_points: 0,
+          completed_day_count: 0,
+          completed_day_dates: [],
+          weekly_bonus_count: 0,
+          streak_count: 0,
+          longest_streak: 0,
+          trophies: [],
+        },
+      },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+
+    await User.updateOne({ _id: targetUserId }, { $addToSet: { plans: plan._id } });
+
+    const mongoPlanId = plan._id.toString();
+    savedRunPlanMap.set(runId, mongoPlanId);
+    logger.info(`[Agent Gateway] Persisted study plan ${mongoPlanId} for runId ${runId} with ${sprintList.length} sprints`);
+    return mongoPlanId;
+  } catch (err) {
+    logger.error(`[Agent Gateway] Failed to persist study plan for runId ${runId}:`, err);
+    return null;
+  }
+}
+
+function listenAndPersistPlanInBackground(runId: string, userId?: string | null): void {
+  const channelKey = `agent:events:${runId}`;
+  const sub = createRedisSubscriber();
+  sub.subscribe(channelKey).catch((err) => {
+    logger.warn(`[Agent Gateway] Background subscriber error for runId ${runId}:`, err);
+  });
+
+  const cleanup = async () => {
+    try {
+      await sub.unsubscribe(channelKey);
+      await sub.quit();
+    } catch {}
+  };
+
+  const timer = setTimeout(cleanup, 300000); // 5-minute cleanup
+
+  sub.on("message", async (_channel: string, msg: string) => {
+    try {
+      const event: AgentStreamEvent = JSON.parse(msg);
+      if (event.type === "completed") {
+        clearTimeout(timer);
+        const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
+        if (studyPlan) {
+          await persistGeneratedPlan(studyPlan, runId, userId);
+        }
+        await cleanup();
+      } else if (event.type === "failed") {
+        clearTimeout(timer);
+        await cleanup();
+      }
+    } catch (err) {
+      logger.error(`[Agent Gateway] Background plan listener message error for runId ${runId}:`, err);
+    }
+  });
+}
 
 /** Helper to format and write SSE messages compliant with standard SSE protocol */
 function sendSSEMessage(res: Response, event: AgentStreamEvent): void {
@@ -51,13 +239,29 @@ export async function runAgentHandler(
   res: Response,
 ): Promise<void> {
   try {
-    const { query, threadId } = req.body;
+    const { query, threadId, resumeText } = req.body;
     if (!query || typeof query !== "string" || query.trim().length === 0) {
       res.status(400).json({ error: "query is required and cannot be empty" });
       return;
     }
 
     const runId = uuidv4();
+
+    let userId: string | null = null;
+    const authReq = req as unknown as AuthenticatedRequest;
+    if (authReq.user?.id || authReq.user?.sub) {
+      userId = (authReq.user?.id || authReq.user?.sub)?.toString() || null;
+    } else if (!config.ENABLE_AUTH) {
+      try {
+        const defaultUser = await User.findOne({ email: "local-development-user@localhost.invalid" });
+        if (defaultUser) userId = defaultUser._id.toString();
+      } catch {
+        // Non-blocking in dev
+      }
+    }
+
+    // Start background listener to persist plan when completed
+    listenAndPersistPlanInBackground(runId, userId);
 
     // Trigger Python LangGraph service asynchronously (non-blocking)
     const pythonEndpoint = `${config.AGENTS_SERVICE_URL}/internal/agent/execute`;
@@ -68,6 +272,8 @@ export async function runAgentHandler(
         runId,
         query: query.trim(),
         thread_id: threadId || null,
+        user_id: userId,
+        workflow_input: resumeText ? { resume_text: String(resumeText).slice(0, 50000) } : {},
       }),
     })
       .then(async (response) => {
@@ -98,6 +304,31 @@ export async function runAgentHandler(
   } catch (error: any) {
     logger.error("[Agent Gateway] Error initiating agent run:", error);
     res.status(500).json({ error: "Failed to initiate agent run" });
+  }
+}
+
+export async function parseResumeHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { filename, base64Data } = req.body;
+    if (!base64Data || !filename) {
+      res.status(400).json({ success: false, error: "Missing filename or base64Data" });
+      return;
+    }
+    const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/extract-resume`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, base64_data: base64Data }),
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      res.status(response.status).json({ success: false, error: errText });
+      return;
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    logger.error("[Agent Gateway] Failed to parse resume:", error);
+    res.status(500).json({ success: false, error: error?.message || "Failed to parse resume" });
   }
 }
 
@@ -168,6 +399,7 @@ function triggerInterviewPrep(
         input.role && `role ${input.role}`,
         input.location && `location ${input.location}`,
       ].filter(Boolean).join(", ") || "my next role"}.`;
+  listenAndPersistPlanInBackground(run.runId, userId);
   fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/execute`, {
     method: "POST",
     headers: pythonAuthHeaders(req),
@@ -418,6 +650,17 @@ export async function streamAgentHandler(
         try {
           const event: AgentStreamEvent = JSON.parse(item);
 
+          if (event.type === "completed") {
+            const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
+            if (studyPlan) {
+              const savedPlanId = await persistGeneratedPlan(studyPlan, runId);
+              if (savedPlanId) {
+                event.payload.plan_id = savedPlanId;
+                if (event.payload.result) event.payload.result.plan_id = savedPlanId;
+              }
+            }
+          }
+
           if (shouldSend) {
             sendSSEMessage(res, event);
           } else if (event.id === lastEventId) {
@@ -444,12 +687,24 @@ export async function streamAgentHandler(
     logger.info(`[Agent Gateway] Subscribing to Redis channel: ${channelKey}`);
     await subscriber.subscribe(channelKey);
 
-    subscriber.on("message", (_channel: string, message: string) => {
+    subscriber.on("message", async (_channel: string, message: string) => {
       if (isClosed || res.writableEnded) return;
 
       try {
         const event: AgentStreamEvent = JSON.parse(message);
         logger.info(`[Agent Gateway] Received live event '${event.type}' from Redis for runId ${runId}`);
+
+        if (event.type === "completed") {
+          const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
+          if (studyPlan) {
+            const savedPlanId = await persistGeneratedPlan(studyPlan, runId);
+            if (savedPlanId) {
+              event.payload.plan_id = savedPlanId;
+              if (event.payload.result) event.payload.result.plan_id = savedPlanId;
+            }
+          }
+        }
+
         sendSSEMessage(res, event);
 
         // Reset inactivity watchdog when a live domain event arrives

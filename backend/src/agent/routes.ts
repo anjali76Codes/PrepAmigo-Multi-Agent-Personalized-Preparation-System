@@ -4,6 +4,7 @@ import {
 	resumeInterviewPrepHandler,
 	interviewPrepFieldsHandler,
 	runAgentHandler,
+	parseResumeHandler,
 	startInterviewPrepHandler,
 	streamAgentHandler,
 } from "./controller.js";
@@ -11,6 +12,7 @@ import {
 const agentRouter = Router();
 
 agentRouter.post("/run", runAgentHandler);
+agentRouter.post("/parse-resume", parseResumeHandler);
 agentRouter.post("/interview-prep", requireAuth as any, startInterviewPrepHandler as any);
 agentRouter.post("/interview-prep/resume", requireAuth as any, resumeInterviewPrepHandler as any);
 agentRouter.get("/interview-prep/fields", requireAuth as any, interviewPrepFieldsHandler as any);

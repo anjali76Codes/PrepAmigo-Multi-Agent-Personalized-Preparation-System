@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Icon } from '../ui/Icon';
 import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { FlashcardDeck } from '../practice/FlashcardDeck';
 import { AgentJourney, type JourneyStep } from './AgentJourney'; // NEW
@@ -72,11 +74,13 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
                     </ul>
                   </div>
                 </div>
-                {/* <Link to="/dashboard/preps/prep-1">
-                  <Button variant="primary">
-                    View Roadmap <Icon name="arrow-forward-outline" />
-                  </Button>
-                </Link> */}
+                <div className="pt-2">
+                  <Link to={`/dashboard/preps/${msg.data.planId || 'prep-1'}`}>
+                    <Button variant="primary" className="flex items-center gap-2">
+                      View Roadmap <Icon name="arrow-forward-outline" />
+                    </Button>
+                  </Link>
+                </div>
               </Card>
             )}
 

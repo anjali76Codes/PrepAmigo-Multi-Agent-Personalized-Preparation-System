@@ -9,9 +9,15 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]  # agents-service/
+REPO_ROOT = Path(__file__).resolve().parents[3]     # repository root/
+
+# Try loading from agents-service/.env first, then repo root/.env, then current working directory
+load_dotenv(PACKAGE_ROOT / ".env")
+load_dotenv(REPO_ROOT / ".env")
 load_dotenv()
 
-SERVICE_ROOT = Path(__file__).resolve().parents[1]
+SERVICE_ROOT = PACKAGE_ROOT
 
 
 def service_path(value: str) -> Path:
@@ -234,6 +240,15 @@ class Settings:
     # single-LLM-call budget above
     interview_prep_branch_timeout_seconds: float = float(
         os.getenv("INTERVIEW_PREP_BRANCH_TIMEOUT_SECONDS", "90") or 90
+    )
+    # budget for the LLM call that extracts interview-prep fields (company, role, location)
+    # from a free-form chat query. Gives sufficient headroom for local/cloud Ollama models.
+    interview_prep_extract_timeout_seconds: float = float(
+        os.getenv("INTERVIEW_PREP_EXTRACT_TIMEOUT_SECONDS", "60") or 60
+    )
+    # budget for the ReAct evaluator LLM call
+    interview_prep_evaluator_timeout_seconds: float = float(
+        os.getenv("INTERVIEW_PREP_EVALUATOR_TIMEOUT_SECONDS", "30") or 30
     )
     # budget for the one LLM call that turns job postings into required
     # skills. Everything downstream depends on it (no required skills = no
