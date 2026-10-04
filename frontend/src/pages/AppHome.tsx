@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Mascot } from '../components/ui/Mascot';
 import { Alert } from '../components/ui/Alert';
 import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
-import { AgentJourney } from '../components/chat/AgentJourney';
+import { SprintMap } from '../components/chat/AgentJourney';
 import { unifiedGoal } from '../data/newMockData';
 import { getGoalProgressPct, getGoalTotalXP, getDaysLeft, getSprintNodeStates } from '../data/selectors';
 
@@ -86,13 +86,12 @@ export function AppHome() {
 
                     {/* AgentJourney Map */}
                     <div className="relative w-full mt-2 bg-surface-muted/30 rounded-xl overflow-hidden flex items-center">
-                      <AgentJourney
-                        interactive
-                        steps={sprint.levels.map(() => ({ agent: '', text: '' }))}
+                      <SprintMap
+                        sprintId={sprint.id}
                         nodeStates={nodeStates}
+                        levelIds={sprint.levels.map(l => l.id)}
                         onNodeClick={(levelId) => navigate(`/dashboard/${sprint.id}/${levelId}`)}
                         className="border-none shadow-none bg-transparent"
-                        minHeight="200px"
                       />
                     </div>
                   </div>

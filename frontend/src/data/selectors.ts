@@ -71,13 +71,7 @@ export const getSprintNodeStates = (sprint: Sprint, completedTasks: Set<string>)
     }
   });
 
-  // Make future nodes after current locked/upcoming
-  // let's say immediate next is locked, rest are upcoming (or all locked)
-  for(let i=0; i<states.length; i++) {
-     if(states[i] === 'locked' && i > 0 && states[i-1] !== 'current') {
-         states[i] = 'upcoming';
-     }
-  }
+
 
   return states;
 };

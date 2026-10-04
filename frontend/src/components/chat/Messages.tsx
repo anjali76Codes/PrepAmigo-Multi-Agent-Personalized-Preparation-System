@@ -3,7 +3,7 @@ import { Icon } from '../ui/Icon';
 import { Card } from '../ui/Card';
 import { Alert } from '../ui/Alert';
 import { FlashcardDeck } from '../practice/FlashcardDeck';
-import { AgentJourney, type JourneyStep } from './AgentJourney'; // NEW
+import { ChatJourney, type JourneyStep } from './AgentJourney';
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
 
 export interface Message {
@@ -45,10 +45,10 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
 
             {/* NEW: agent journey shown as the response while agents work */}
             {msg.scenario === 'agent-journey' && msg.data && (
-              <AgentJourney
+              <ChatJourney
                 steps={msg.data.steps as JourneyStep[]}
-                activeIndex={msg.data.activeIndex}          // controlled (optional)
-                autoPlay={msg.data.activeIndex === undefined} // demo mode if not controlled
+                activeIndex={msg.data.activeIndex}
+                autoPlay={msg.data.activeIndex === undefined}
                 finalAction={msg.data.finalAction}
                 onComplete={() => onJourneyComplete?.(msg.id)}
               />
