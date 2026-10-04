@@ -42,17 +42,32 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKe
 
 
 import { useAuth } from "../../hooks/useAuth";
+import { featureFlags } from "../../config/featureFlags";
 
 export function AppLayout() {
-  const { loading, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const outlet = useOutlet();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  if (loading) return null; // or a spinner
+  // Authentication guard controlled via featureFlags (VITE_ENABLE_AUTH)
+  if (featureFlags.enableAuth) {
+    if (loading) {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-carbon-900 text-white">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-chrome-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-carbon-400">Loading session…</p>
+          </div>
+        </div>
+      );
+    }
 
-  // if (!user) return <Navigate to="/login" replace />;
+    if (!user) {
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+  }
 
   const handleLogout = async () => {
     const success = await logout();

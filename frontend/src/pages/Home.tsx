@@ -10,18 +10,34 @@ import { InterviewTrap } from "../components/home/InterviewTrap";
 import { PromptToPlan } from "../components/home/PromptToPlan";
 import { Gamification } from "../components/home/Gamification";
 import { BottomCTA } from "../components/home/BottomCTA";
+import { useAuth } from "../hooks/useAuth";
+import { featureFlags } from "../config/featureFlags";
 
 export function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { scrollY } = useScroll();
   const scale = useTransform(scrollY, [0, 500], [1, 0.9]);
   const filter = useTransform(scrollY, [0, 500], ["blur(0px)", "blur(8px)"]);
 
   const handleChatSubmit = (message: string) => {
-    if (message.trim()) {
-      navigate("/dashboard/chat");
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    // Persist pending query for chat auto-firing
+    sessionStorage.setItem("prepamigo_pending_query", trimmed);
+
+    // If auth is enabled and the user is logged out, route through login
+    if (featureFlags.enableAuth && !user) {
+      navigate("/login", {
+        state: { initialQuery: trimmed, from: "/dashboard/chat" },
+      });
+      return;
     }
+
+    // Otherwise navigate directly to chat with the initial query
+    navigate("/dashboard/chat", { state: { initialQuery: trimmed } });
   };
 
   return (
