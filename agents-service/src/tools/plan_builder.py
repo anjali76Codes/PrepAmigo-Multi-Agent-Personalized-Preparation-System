@@ -384,12 +384,19 @@ def assemble_plan(
         "sprints": sprints,
     })
 
+    separated = plan.to_separated()
+
     return {
         "id": f"plan-{uuid.uuid4().hex[:12]}",
         "schema_version": SCHEMA_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "narrative_source": narrative_source,
-        "plan": plan.model_dump(mode="json"),
+        "plan": sanitize_data(separated["plan"]),
+        "sprints": sanitize_data(separated["sprints"]),
+        "sprint_days": sanitize_data(separated["sprint_days"]),
+        "sprint": sanitize_data(separated["sprints"]),
+        "sprintday": sanitize_data(separated["sprint_days"]),
+        "nested_plan": plan.model_dump(mode="json"),
         "resource_pack": sanitize_data(resource_pack(modules)),
         "learning_modules": sanitize_data([
             {"topic": m.get("topic", ""), "depth": m.get("depth"), "content_markdown": m.get("content_markdown", "")}

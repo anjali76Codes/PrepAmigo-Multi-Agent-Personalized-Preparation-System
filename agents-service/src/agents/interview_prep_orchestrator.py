@@ -27,9 +27,9 @@ from guardrails.validators import run_guardrails
 from observability.metrics import agent_scope
 from observability.timing import log_failure
 from storage.llm_cache import forget_response
-from prompts.system_prompts import COMPANY_RESEARCH_PROMPT
 from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
+from tools.plan_db_sync import sync_generated_plan_to_db
 
 logger = logging.getLogger(__name__)
 
@@ -700,27 +700,35 @@ class InterviewPrepOrchestrator:
         saved_path = None
         if settings.plan_output_dir:
             try:
-                saved_path = str(save_json(service_path(settings.plan_output_dir), f"{output['id']}.json", output))
-                logger.info("Study plan %s saved to %s", output["id"], saved_path)
+                out_dir = service_path(settings.plan_output_dir)
+                saved_path = str(save_json(out_dir, f"{output['id']}.json", output))
+                save_json(out_dir, "plan.json", output)
+                logger.info("Study plan %s saved to %s and plan.json", output["id"], saved_path)
             except OSError:
                 # the plan is still in state; a disk problem shouldn't fail the run
                 logger.warning("Could not save study plan %s", output["id"], exc_info=True)
 
+        # Execute automated sequential DB sync to store plan in MongoDB
+        db_sync_result = await sync_generated_plan_to_db(output)
+        output["db_sync"] = db_sync_result
+
         plan = output["plan"]
+        sprints = output.get("sprints") or plan.get("sprints", [])
         await dispatch_event(
             make_event("interview_prep", "planning_stage", "completed", {
-                "message": f"Study plan ready: {plan['total_days']} day(s) across {len(plan['sprints'])} sprint(s).",
+                "message": f"Study plan ready: {plan['total_days']} day(s) across {len(sprints)} sprint(s).",
                 "plan_id": output["id"],
                 "total_days": plan["total_days"],
-                "sprints": len(plan["sprints"]),
+                "sprints": len(sprints),
                 "narrative_source": output["narrative_source"],
                 "unresearched": output["coverage"]["unresearched"],
                 "saved_path": saved_path,
+                "db_sync": db_sync_result,
             }),
             None,
         )
 
-        return {"study_plan": output, "study_plan_path": saved_path}
+        return {"study_plan": output, "study_plan_path": saved_path, "db_sync": db_sync_result}
 
     async def evaluate(self, state: dict[str, Any]) -> dict[str, Any]:
         with agent_scope("evaluate"):

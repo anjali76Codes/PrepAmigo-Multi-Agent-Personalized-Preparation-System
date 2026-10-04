@@ -215,15 +215,68 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     json_path = OUTPUT_DIR / "complete_plan.json"
+    plan_json_path = OUTPUT_DIR / "plan.json"
+
+    # Build separated DB entities
+    plan_obj = {
+        "user_id": user_id,
+        "plan_name": f"{outline.company} {outline.role} Preparation Plan",
+        "company": outline.company,
+        "role": outline.role,
+        "total_days": outline.total_days,
+        "start_date": outline.start_date,
+        "end_date": outline.end_date,
+        "completion_percent": 0,
+        "status": "pending",
+    }
+    sprints_obj = []
+    days_obj = []
+    for s in sprints:
+        sprints_obj.append({
+            "sprint_number": s.sprint_number,
+            "sprint_name": s.sprint_name,
+            "start_date": s.start_date,
+            "end_date": s.end_date,
+            "total_days": s.total_days,
+            "completion_percent": s.completion_percent,
+            "status": s.status,
+        })
+        for d in s.sprint_days:
+            days_obj.append({
+                "sprint_number": s.sprint_number,
+                "day_number": d.day_number,
+                "scheduled_date": d.scheduled_date,
+                "topic_title": d.topic_title,
+                "topic_description": d.topic_description,
+                "objectives": d.objectives,
+                "estimated_minutes": d.estimated_minutes,
+                "references": [r.model_dump() for r in d.references],
+                "status": d.status,
+                "completed_at": d.completed_at,
+            })
+
+    separated_payload = {
+        "plan": plan_obj,
+        "sprints": sprints_obj,
+        "sprint_days": days_obj,
+        "sprint": sprints_obj,
+        "sprintday": days_obj,
+        "nested_plan": validated_plan.model_dump(mode="json"),
+    }
+
     with json_path.open("w", encoding="utf-8") as output_file:
-        json.dump(validated_plan.model_dump(mode="json"), output_file, indent=2)
+        json.dump(separated_payload, output_file, indent=2)
+        output_file.write("\n")
+
+    with plan_json_path.open("w", encoding="utf-8") as output_file:
+        json.dump(separated_payload, output_file, indent=2)
         output_file.write("\n")
 
     markdown_path = OUTPUT_DIR / "complete_plan.md"
     markdown_path.write_text(
         _merge_markdown(outline_path, sprint_paths), encoding="utf-8"
     )
-    logger.info("Wrote %s and %s", json_path, markdown_path)
+    logger.info("Wrote %s, %s and %s", json_path, plan_json_path, markdown_path)
 
 
 if __name__ == "__main__":

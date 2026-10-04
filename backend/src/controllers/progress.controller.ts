@@ -21,7 +21,7 @@ export async function createPlanProgressHandler(req: AuthenticatedRequest, res: 
     const progress = await PlanProgress.findOneAndUpdate(
       { user_id: userId, plan_id: new Types.ObjectId(planId) },
       { $setOnInsert: { user_id: userId, plan_id: new Types.ObjectId(planId) } },
-      { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true },
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true, runValidators: true },
     );
     res.status(201).json({ success: true, message: "Plan progress initialized.", id: progress._id, progress_id: progress._id, data: progress });
   } catch (error) {
