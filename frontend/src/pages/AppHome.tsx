@@ -1,20 +1,23 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Mascot } from '../components/ui/Mascot';
 import { Alert } from '../components/ui/Alert';
 import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
 import { AgentJourney } from '../components/chat/AgentJourney';
-import { useAppContext } from '../context/AppContext';
+import { unifiedGoal } from '../data/newMockData';
+import { getGoalProgressPct, getGoalTotalXP, getDaysLeft, getSprintNodeStates } from '../data/selectors';
 
 export function AppHome() {
-  const { preps: mockPreps } = useAppContext();
-  const prep = mockPreps[0]; // Primary active prep
+  const navigate = useNavigate();
+  
+  // Create a mock completed tasks set. Ideally this comes from AppContext.
+  const completedTasks = new Set<string>();
 
   const missedTasks = 1;
-  const daysLeft = 45;
-  const progressPct = 65;
-  const xp = prep.learningContext.progress.xp;
+  const daysLeft = getDaysLeft(unifiedGoal);
+  const progressPct = getGoalProgressPct(unifiedGoal, completedTasks);
+  const xp = getGoalTotalXP(unifiedGoal, completedTasks);
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
@@ -69,35 +72,31 @@ export function AppHome() {
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {prep.roadmap.sprints.map((sprint, idx) => (
-                  <div key={idx} className="bg-white rounded-2xl p-5 border border-border shadow-sm flex flex-col gap-4">
+                {unifiedGoal.sprints.map((sprint) => {
+                  const nodeStates = getSprintNodeStates(sprint, completedTasks);
+                  return (
+                  <div key={sprint.id} className="bg-white rounded-2xl p-5 border border-border shadow-sm flex flex-col gap-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-bold text-lg text-carbon-900">{sprint.title}</h3>
-                        <p className="text-sm text-carbon-500">{sprint.focus}</p>
+                        <p className="text-sm text-carbon-500">{sprint.goal}</p>
                       </div>
-                      <span className="text-xs font-bold bg-lavender-100 text-navy-700 px-2 py-1 rounded-md">{sprint.days.length} Days</span>
+                      <span className="text-xs font-bold bg-lavender-100 text-navy-700 px-2 py-1 rounded-md">{sprint.levels.length} Levels</span>
                     </div>
 
                     {/* AgentJourney Map */}
                     <div className="relative w-full mt-2 bg-surface-muted/30 rounded-xl overflow-hidden flex items-center">
                       <AgentJourney
                         interactive
-                        steps={[
-                          { agent: '', text: '' },
-                          { agent: '', text: '' },
-                          { agent: '', text: '' },
-                          { agent: '', text: '' },
-                          { agent: '', text: '' }
-                        ]}
-                        nodeStates={['completed', 'completed', 'current', 'locked', 'locked']}
-                        onNodeClick={(_, index) => window.location.assign(`/dashboard/sprint-${idx + 1}/level-${index + 1}`)}
+                        steps={sprint.levels.map(() => ({ agent: '', text: '' }))}
+                        nodeStates={nodeStates}
+                        onNodeClick={(levelId) => navigate(`/dashboard/${sprint.id}/${levelId}`)}
                         className="border-none shadow-none bg-transparent"
-                        maxHeight="120px"
+                        minHeight="200px"
                       />
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </RevealStaggerItem>
 

@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useOutlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "../ui/Logo";
@@ -6,6 +6,40 @@ import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { PageBackground } from "../ui/PageBackground";
 import { SearchBar } from "./SearchBar";
+import React from "react";
+import { Mascot } from "../ui/Mascot";
+import { ErrorState } from "../ui/ErrorState";
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKey?: string }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: React.ReactNode; resetKey?: string }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidUpdate(prevProps: { resetKey?: string }) {
+    if (this.props.resetKey !== prevProps.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-6 overflow-y-auto">
+          <Mascot size="lg" variant="sad.png" />
+          <ErrorState 
+            title="Oops! Something went wrong." 
+            description={this.state.error?.message || "An unexpected error occurred."} 
+            onRetry={() => this.setState({ hasError: false, error: null })} 
+          />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 
 import { useAuth } from "../../lib/useAuth";
 
@@ -13,6 +47,7 @@ export function AppLayout() {
   const { loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const outlet = useOutlet();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   if (loading) return null; // or a spinner
@@ -202,14 +237,20 @@ export function AppLayout() {
           </header>
 
           <main className="flex-1 overflow-hidden flex flex-col z-10 relative">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                className="flex-1 overflow-y-auto w-full h-full"
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <ErrorBoundary resetKey={location.pathname}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  className="flex-1 overflow-y-auto w-full h-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {outlet}
+                </motion.div>
+              </AnimatePresence>
+            </ErrorBoundary>
           </main>
         </div>
       </div>

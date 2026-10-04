@@ -25,6 +25,7 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
       {messages.map((msg) => (
         <motion.div
           key={msg.id}
+          id={`msg-${msg.id}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`flex gap-4 max-w-5xl mx-auto ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}

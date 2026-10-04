@@ -2,9 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, animate, useTransform } from 'framer-motion';
 import { Icon } from '../ui/Icon';
-import { Mascot } from '../ui/Mascot';
+import { Mascot, type MascotVariant } from '../ui/Mascot';
 import { cn } from '../../lib/utils';
-import { VIEW_W, VIEW_H, PATH_D, NODE_IMG, NODE_POSITIONS } from './AgentJourneyConstants';
+import { VIEW_W, VIEW_H, PATH_D, NODE_IMG } from './AgentJourneyConstants';
 
 export interface JourneyStep {
     agent: string;
@@ -30,11 +30,14 @@ interface AgentJourneyProps {
     interactive?: boolean;
     onNodeClick?: (levelId: string, index: number) => void;
     nodeStates?: ('completed' | 'current' | 'locked' | 'upcoming')[];
+    nodeCount?: number;
+    showMascot?: boolean;
+    minHeight?: string;
 }
 
-const NODE_SIZE = 70;
-const MASCOT_SIZE = 56;
-const BUBBLE_GAP = 8;
+const NODE_SIZE = 80;
+const MASCOT_SIZE = 90;
+const BUBBLE_GAP = 10;
 
 export function AgentJourney({
     steps,
@@ -49,37 +52,43 @@ export function AgentJourney({
     interactive = false,
     onNodeClick,
     nodeStates,
+    nodeCount: propNodeCount,
+    showMascot = true,
+    minHeight = '300px',
 }: AgentJourneyProps) {
     const [internal, setInternal] = useState(0);
     const pathRef = useRef<SVGPathElement>(null);
     const [pointsPct, setPointsPct] = useState<{ x: number, y: number }[]>([]);
 
+    const derivedNodeCount = nodeStates ? nodeStates.length : (propNodeCount ?? Math.max(3, Math.min(steps.length, 7)));
+    const nodeCount = Math.max(3, Math.min(7, derivedNodeCount || 5));
+
     const controlled = activeIndex !== undefined;
-    const current = controlled ? activeIndex! : internal;
-    const total = steps.length;
+    const idx = nodeStates ? nodeStates.indexOf('current') : -1;
+    const derivedCurrent = nodeStates
+        ? (idx !== -1 ? idx : (nodeStates.every(s => s === 'completed') ? nodeCount : 0))
+        : -1;
+    const current = controlled ? activeIndex! : (derivedCurrent !== -1 ? derivedCurrent : internal);
+    const total = nodeStates ? nodeCount : steps.length;
     const finished = current >= total;
 
     useLayoutEffect(() => {
         if (!pathRef.current) return;
         const len = pathRef.current.getTotalLength();
-        const pts = steps.map((_, i) => {
+        const count = Math.max(nodeCount, 2);
+        const pts = Array.from({ length: nodeCount }).map((_, i) => {
             // The SVG is a traced outline (a loop), so the visual "end" of the path is at exactly 50% (0.5) of the total length.
-            const baseFraction = NODE_POSITIONS[i] ?? Math.min(i / Math.max(steps.length - 1, 1), 1);
+            const baseFraction = i / (count - 1);
             const fraction = baseFraction * 0.5; // Scale down to max 0.5
             const p = pathRef.current!.getPointAtLength(fraction * len);
 
-            // Apply the transform values from the original SVG path
-            // (No transform needed for this new SVG)
-            const transformedX = p.x;
-            const transformedY = p.y;
-
             return {
-                x: (transformedX / VIEW_W) * 100,
-                y: (transformedY / VIEW_H) * 100
+                x: (p.x / VIEW_W) * 100,
+                y: (p.y / VIEW_H) * 100
             };
         });
         setPointsPct(pts);
-    }, [steps.length]);
+    }, [nodeCount]);
 
     useEffect(() => {
         if (controlled || !autoPlay || internal >= total) return;
@@ -93,36 +102,43 @@ export function AgentJourney({
     }, [finished]);
 
     // calculate current path fraction for progress, capped at 0.5 because it's a loop
-    const baseCurrentFraction = finished ? 1 : (NODE_POSITIONS[current] ?? Math.min(current / Math.max(total - 1, 1), 1));
+    const baseCurrentFraction = finished ? 1 : Math.min(current / Math.max(nodeCount - 1, 1), 1);
     const currentFraction = baseCurrentFraction * 0.5;
 
     const mascotX = useMotionValue(50);
     const mascotY = useMotionValue(0);
+    const fraction = useMotionValue(0);
     const mascotLeft = useTransform(mascotX, (v) => `${v}%`);
     const mascotTop = useTransform(mascotY, (v) => `${v}%`);
 
     useEffect(() => {
         if (!pathRef.current) return;
         const len = pathRef.current.getTotalLength();
-        const controls = animate(mascotX.get() === 50 && mascotY.get() === 0 ? 0 : currentFraction, currentFraction, {
-            duration: 0.8,
+        let cancelled = false;
+        const controls = animate(fraction, currentFraction, {
+            duration: 1.5,
             ease: 'easeInOut',
             onUpdate: (v) => {
-                const p = pathRef.current!.getPointAtLength(v * len);
+                if (cancelled || !pathRef.current) return;
+                const p = pathRef.current.getPointAtLength(v * len);
                 mascotX.set((p.x / VIEW_W) * 100);
                 mascotY.set((p.y / VIEW_H) * 100);
             }
         });
-        return controls.stop;
+        return () => {
+            cancelled = true;
+            controls.stop();
+        };
     }, [currentFraction]);
 
     const mascotIndex = Math.min(Math.max(current, 0), total - 1);
     const mp = pointsPct[mascotIndex] ?? { x: 50, y: 0 };
     const bubbleSide: 'left' | 'right' = mp.x > 50 ? 'left' : 'right';
 
-    const mood = finished ? 'cheer' : current < 0 ? 'idle' : 'think';
+    const MASCOT_VARIANTS: MascotVariant[] = ["Chilling.png", "Chilling.png", "thinking.gif", "working.gif", "Thinking.png", "Motivated.png"];
+    const currentMascotVariant = MASCOT_VARIANTS[mascotIndex] || "OK.png";
     const bubbleText = finished ? finishText : steps[mascotIndex]?.text ?? '';
-    const showBubble = current >= 0 || finished;
+    const showBubble = (current >= 0 || finished) && bubbleText;
 
     const last = pointsPct[total - 1];
 
@@ -142,9 +158,9 @@ export function AgentJourney({
 
     return (
         <div
-            className={cn('w-full flex justify-center items-center bg-surface border border-border rounded-card p-4 overflow-hidden', className)}
+            className={cn('w-full flex justify-center items-center bg-surface border border-border rounded-card p-4 overflow-hidden', className, interactive && 'pb-8')}
         >
-            <div className="relative w-full" style={{ height: maxHeight, minHeight: '300px' }}>
+            <div className="relative w-full" style={{ height: maxHeight, minHeight }}>
                 {/* Winding pathway SVG */}
                 <svg
                     className="absolute inset-0 w-full h-full pointer-events-none"
@@ -183,10 +199,12 @@ export function AgentJourney({
                     const isLocked = nodeStates ? nodeStates[i] === 'locked' : false;
                     const isUpcoming = nodeStates ? nodeStates[i] === 'upcoming' : false;
 
-                    const handleNodeClick = () => {
+                    const stateName = isDone ? 'completed' : isLocked ? 'locked' : isUpcoming ? 'upcoming' : 'current';
+                    const handleNodeClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+                        e.stopPropagation();
                         if (!interactive || !onNodeClick) return;
                         if (isLocked) {
-                            alert("Complete the previous level first");
+                            // alert replaced by just returning for now, or could use toast
                             return;
                         }
                         onNodeClick(`level-${i + 1}`, i);
@@ -195,27 +213,29 @@ export function AgentJourney({
                     const interactiveProps = interactive ? {
                         role: "button",
                         tabIndex: 0,
-                        "aria-label": `Sprint Node ${i + 1}`,
+                        "aria-label": `Level ${i + 1}, ${stateName}`,
                         onClick: handleNodeClick,
                         onKeyDown: (e: React.KeyboardEvent) => {
                             if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                handleNodeClick();
+                                handleNodeClick(e);
                             }
                         }
                     } : {};
 
+                    const currentSize = interactive ? 56 : NODE_SIZE;
+
                     return (
                         <div
-                            key={steps[i]?.agent + i}
+                            key={i}
                             className={cn(
-                                "absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2",
-                                interactive && "cursor-pointer focus-visible:outline-chrome-accent outline-offset-4 rounded-full"
+                                "absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 group",
+                                interactive && "cursor-pointer focus-visible:ring-2 focus-visible:outline-none ring-chrome-accent ring-offset-4 rounded-full"
                             )}
                             style={{ left: `${p.x}%`, top: `${p.y}%` }}
                             {...interactiveProps}
                         >
-                            <div className="relative flex items-center justify-center" style={{ width: NODE_SIZE, height: NODE_SIZE }}>
+                            <div className="relative flex items-center justify-center" style={{ width: currentSize, height: currentSize }}>
                                 {isActive && (
                                     <motion.div
                                         className="absolute inset-0 rounded-full bg-navy-700/30"
@@ -246,16 +266,22 @@ export function AgentJourney({
                                         <Icon name="lock-closed-outline" className="w-4 h-4 px-1" />
                                     </div>
                                 )}
+                                {isLocked && interactive && (
+                                    <div className="absolute top-[-30px] opacity-0 group-hover:opacity-100 transition-opacity bg-navy-900 text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none z-20">
+                                        Complete the previous level first
+                                    </div>
+                                )}
                             </div>
                             <div
                                 className={cn(
-                                    'absolute text-[11px] font-bold text-center leading-tight whitespace-nowrap transition-colors duration-300',
-                                    'bg-surface border border-border px-2.5 py-1 rounded-full shadow-sm',
+                                    'absolute font-bold text-center leading-tight whitespace-nowrap transition-colors duration-300',
+                                    'bg-surface border border-border rounded-full shadow-sm',
+                                    interactive ? 'text-[10px] px-2 py-0.5' : 'text-[11px] px-2.5 py-1',
                                     isActive ? 'text-foreground' : isDone ? 'text-navy-700' : 'text-muted-foreground'
                                 )}
                                 style={{ top: '100%', marginTop: 3 }}
                             >
-                                {steps[i]?.agent}
+                                {interactive ? `Level ${i + 1}` : (steps[i]?.agent || `Level ${i + 1}`)}
                             </div>
                         </div>
                     );
@@ -293,17 +319,17 @@ export function AgentJourney({
                 )}
 
                 {/* Mascot + its bubble */}
-                {pointsPct.length > 0 && (
+                {showMascot && pointsPct.length > 0 && (
                     <motion.div
                         className="absolute z-10 -translate-x-1/2 -translate-y-full mb-6"
                         style={{ left: mascotLeft, top: mascotTop, width: MASCOT_SIZE, height: MASCOT_SIZE }}
                     >
                         <motion.div
-                            animate={finished ? { y: [0, -8, 0] } : { rotate: [-4, 4, -4] }}
-                            transition={{ duration: finished ? 0.6 : 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                            animate={finished ? { y: [0, -4, 0] } : { rotate: [-2, 2, -2] }}
+                            transition={{ duration: finished ? 1.5 : 3, repeat: Infinity, ease: 'easeInOut' }}
                             className="w-full h-full flex justify-center items-center"
                         >
-                            <Mascot size="md" variant={mood === "cheer" ? "Celebration.png" : mood === "think" ? "Thinking.png" : "OK.png"} className="shadow-sm" style={{ width: MASCOT_SIZE, height: MASCOT_SIZE }} />
+                            <Mascot size="md" variant={currentMascotVariant} style={{ width: MASCOT_SIZE, height: MASCOT_SIZE }} />
                         </motion.div>
 
                         <AnimatePresence mode="wait">

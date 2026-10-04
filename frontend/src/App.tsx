@@ -65,31 +65,31 @@ function AnimatedRoutes() {
 
         <Route element={<AppLayout />}>
           <Route path="/dashboard">
-            <Route index element={<PageTransition><AppHome /></PageTransition>} />
-            <Route path="chat" element={<PageTransition><Chat /></PageTransition>} />
-            <Route path="interview-prep" element={<PageTransition><InterviewPrep /></PageTransition>} />
-            <Route path="preps" element={<PageTransition><Preps /></PageTransition>} />
-            <Route path="preps/:prepId" element={<PageTransition><PrepDetails /></PageTransition>} />
-            <Route path="practice" element={<PageTransition><Roadmap /></PageTransition>} />
-            <Route path="progress" element={<PageTransition><Progress /></PageTransition>} />
-            <Route path="notifications" element={<PageTransition><Notifications /></PageTransition>} />
-            <Route path="settings" element={<PageTransition><Settings /></PageTransition>} />
+            <Route index element={<AppHome />} />
+            <Route path="chat" element={<Chat />} />
+            <Route path="interview-prep" element={<InterviewPrep />} />
+            <Route path="preps" element={<Preps />} />
+            <Route path="preps/:prepId" element={<PrepDetails />} />
+            <Route path="practice" element={<Roadmap />} />
+            <Route path="progress" element={<Progress />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="settings" element={<Settings />} />
             <Route path="roadmap" element={<Navigate to="/roadmap" replace />} />
             <Route path="calendar" element={<Navigate to="/calendar" replace />} />
             <Route path="assessment" element={<Navigate to="/assessment" replace />} />
-            <Route path=":sprintId/:levelId" element={<PageTransition><LevelDetail /></PageTransition>} />
+            <Route path=":sprintId/:levelId" element={<LevelDetail />} />
           </Route>
 
-          <Route path="/roadmap" element={<PageTransition><Roadmap /></PageTransition>} />
-          <Route path="/calendar" element={<PageTransition><Calendar /></PageTransition>} />
-          <Route path="/assessment" element={<PageTransition><div className="p-8 text-carbon-900 font-bold text-2xl">Assessment</div></PageTransition>} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/assessment" element={<div className="p-8 text-carbon-900 font-bold text-2xl">Assessment</div>} />
 
           <Route path="/resource-pack">
-            <Route index element={<PageTransition><ResourcePackHome /></PageTransition>} />
-            <Route path="notes" element={<PageTransition><NotesDirectory /></PageTransition>} />
-            <Route path="chat/history" element={<PageTransition><ResourceChatHistory /></PageTransition>} />
-            <Route path="chat" element={<PageTransition><ResourceChat /></PageTransition>} />
-            <Route path="chat/:chatId" element={<PageTransition><ResourceChat /></PageTransition>} />
+            <Route index element={<ResourcePackHome />} />
+            <Route path="notes" element={<NotesDirectory />} />
+            <Route path="chat/history" element={<ResourceChatHistory />} />
+            <Route path="chat" element={<ResourceChat />} />
+            <Route path="chat/:chatId" element={<ResourceChat />} />
           </Route>
         </Route>
       </Routes>
