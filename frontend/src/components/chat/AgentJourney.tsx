@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, animate, useTransform } from 'framer-motion';
 import { Icon } from '../ui/Icon';
 import { Mascot } from '../ui/Mascot';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/utils';
 import { NODE_IMG, NODE_POSITIONS, JOURNEY_PRESETS, MASCOT_VARIANTS, type JourneyVariant, type JourneyConfig } from './AgentJourneyConstants';
 
 
@@ -39,12 +39,12 @@ export interface AgentJourneyProps extends Partial<JourneyConfig> {
 function getPositionAt(t: number, positions: number[]): number {
     if (t <= 0) return positions[0];
     if (t >= 1) return positions[positions.length - 1];
-    
+
     const n = positions.length;
     const scaled = t * (n - 1);
     const index = Math.floor(scaled);
     const frac = scaled - index;
-    
+
     if (index >= n - 1) return positions[n - 1];
     return positions[index] + (positions[index + 1] - positions[index]) * frac;
 }
@@ -79,6 +79,9 @@ export function AgentJourney(props: AgentJourneyProps) {
         pathD,
         viewW,
         viewH,
+        strokeWidth,
+        strokeColor,
+        strokeTrackColor,
     } = config;
 
     const [internal, setInternal] = useState(0);
@@ -112,7 +115,7 @@ export function AgentJourney(props: AgentJourneyProps) {
     useLayoutEffect(() => {
         if (!pathRef.current) return;
         const len = pathRef.current.getTotalLength();
-        
+
         // Measure bounding box of the visible path (t from 0 to 0.5)
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         const SAMPLES = 100;
@@ -127,7 +130,7 @@ export function AgentJourney(props: AgentJourneyProps) {
         // Add padding for nodes and labels in viewBox units (approximate mapping)
         const vbPadX = 30; // space for node radius
         const vbPadY = 40; // space for node radius + label at bottom
-        
+
         const box = {
             x: minX - vbPadX,
             y: minY - vbPadY / 2,
@@ -140,13 +143,13 @@ export function AgentJourney(props: AgentJourneyProps) {
         const pts = Array.from({ length: nodeCount }).map((_, i) => {
             const t = i / (count - 1);
             let posFraction = 0;
-            
+
             if (nodePositions && nodePositions.length === count) {
                 posFraction = nodePositions[i];
             } else {
                 posFraction = getPositionAt(t, nodePositions || NODE_POSITIONS);
             }
-            
+
             const fraction = posFraction * 0.5;
             const p = pathRef.current!.getPointAtLength(fraction * len);
 
@@ -238,9 +241,9 @@ export function AgentJourney(props: AgentJourneyProps) {
             ref={containerRef}
             className={cn('w-full flex justify-center items-center bg-surface border border-border rounded-card overflow-hidden', padding, className)}
         >
-            <div 
-                className="relative w-full" 
-                style={{ 
+            <div
+                className="relative w-full"
+                style={{
                     height: maxHeight,
                     minHeight
                 }}
@@ -256,10 +259,10 @@ export function AgentJourney(props: AgentJourneyProps) {
                         ref={pathRef}
                         d={pathD}
                         fill="none"
-                        strokeWidth={2}
+                        strokeWidth={strokeWidth}
                         strokeLinecap="round"
                         className="text-navy-700/20"
-                        stroke="currentColor"
+                        stroke={strokeTrackColor}
                         initial={{ pathLength: 0.5 }}
                     />
                     {/* Progress path */}
@@ -267,10 +270,10 @@ export function AgentJourney(props: AgentJourneyProps) {
                         <motion.path
                             d={pathD}
                             fill="none"
-                            strokeWidth={2}
+                            strokeWidth={strokeWidth}
                             strokeLinecap="round"
-                            stroke="currentColor"
-                            className="text-navy-700"
+                            stroke={strokeColor}
+                            // className="text-navy-700"
                             initial={{ pathLength: 0 }}
                             animate={{ pathLength: currentFraction }}
                             transition={{ duration: 0.8, ease: 'easeInOut' }}

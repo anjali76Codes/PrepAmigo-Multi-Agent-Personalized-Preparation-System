@@ -14,7 +14,7 @@ export function PrepDetails() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
 
-  const { preps, notifications: mockNotifications } = useAppContext();
+  const { preps } = useAppContext();
   const prep = preps.find(p => p.id === prepId);
 
   const searchParams = new URLSearchParams(location.search);
