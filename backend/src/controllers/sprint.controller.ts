@@ -9,7 +9,10 @@ import { badId, findOwnedSprint, getUserId, handleFailure, invalidBody, routePar
 export async function createSprintHandler(req: AuthenticatedRequest, res: Response): Promise<void> {
   const userId = getUserId(req, res);
   if (!userId) return;
-  const body = { ...(req.body ?? {}), plan_id: routeParam(req.params.planId) || req.body?.plan_id };
+  const rawBody = req.body?.sprint && typeof req.body.sprint === "object" ? req.body.sprint : req.body;
+  const planIdParam = routeParam(req.params.planId);
+  const planIdBody = rawBody?.planId || rawBody?.plan_id || req.body?.planId || req.body?.plan_id;
+  const body = { ...(rawBody ?? {}), plan_id: planIdParam || planIdBody };
   const parsed = sprintBodySchema.safeParse(body);
   if (!parsed.success) return invalidBody(res, parsed.error);
 
@@ -22,7 +25,14 @@ export async function createSprintHandler(req: AuthenticatedRequest, res: Respon
     const { plan_id: _planId, ...sprintData } = parsed.data;
     const sprint = await Sprint.create({ ...sprintData, plan_id: plan._id, sprint_days: [] });
     await Plan.updateOne({ _id: plan._id, user_id: userId }, { $addToSet: { sprints: sprint._id } });
-    res.status(201).json({ success: true, message: "Sprint created successfully.", id: sprint._id, sprint_id: sprint._id, data: sprint });
+    res.status(201).json({
+      success: true,
+      message: "Sprint created successfully.",
+      id: sprint._id,
+      sprintId: sprint._id,
+      sprint_id: sprint._id,
+      data: sprint,
+    });
   } catch (error) {
     handleFailure(res, "Create sprint", error);
   }

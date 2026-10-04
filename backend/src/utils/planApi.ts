@@ -17,7 +17,9 @@ export const planBodySchema = z.object({
   total_days: z.coerce.number().int().min(1),
   start_date: z.coerce.date(),
   end_date: z.coerce.date(),
-}).strict().refine((data) => data.end_date >= data.start_date, {
+  completion_percent: z.coerce.number().min(0).max(100).optional(),
+  status: z.enum(["pending", "in_progress", "completed"]).optional(),
+}).passthrough().refine((data) => data.end_date >= data.start_date, {
   message: "end_date must be on or after start_date",
   path: ["end_date"],
 });
@@ -29,30 +31,34 @@ export const sprintBodySchema = z.object({
   start_date: z.coerce.date(),
   end_date: z.coerce.date(),
   total_days: z.coerce.number().int().min(1),
-}).strict().refine((data) => data.end_date >= data.start_date, {
+  completion_percent: z.coerce.number().min(0).max(100).optional(),
+  status: z.enum(["pending", "in_progress", "completed"]).optional(),
+}).passthrough().refine((data) => data.end_date >= data.start_date, {
   message: "end_date must be on or after start_date",
   path: ["end_date"],
 });
 
-const referenceBodySchema = z.object({
+export const referenceBodySchema = z.object({
   type: z.enum(["video", "article", "documentation", "problem", "course", "book"]),
   title: z.string().trim().min(1).max(300),
   url: z.string().trim().url().max(2048),
-  source: z.string().trim().max(200).optional(),
-  description: z.string().trim().max(2000).optional(),
+  source: z.string().trim().max(200).optional().nullable(),
+  description: z.string().trim().max(2000).optional().nullable(),
   is_required: z.boolean().default(true),
-}).strict();
+}).passthrough();
 
 export const sprintDayBodySchema = z.object({
   sprint_id: objectIdSchema,
   day_number: z.coerce.number().int().min(1),
   scheduled_date: z.coerce.date(),
   topic_title: z.string().trim().min(1).max(200),
-  topic_description: z.string().trim().max(4000).optional(),
+  topic_description: z.string().trim().max(4000).optional().nullable(),
   objectives: z.array(z.string().trim().min(1).max(500)).max(30).default([]),
-  estimated_minutes: z.coerce.number().int().min(1).max(1440).optional(),
+  estimated_minutes: z.coerce.number().int().min(1).max(1440).optional().nullable(),
   references: z.array(referenceBodySchema).max(50).default([]),
-}).strict();
+  status: z.enum(["pending", "in_progress", "completed"]).optional(),
+  completed_at: z.coerce.date().optional().nullable(),
+}).passthrough();
 
 export function getUserId(req: AuthenticatedRequest, res: Response): Types.ObjectId | null {
   const value = req.user?.id || req.user?.sub;
