@@ -5,7 +5,7 @@ import { ChatInput } from '../components/chat/ChatInput';
 import { Messages } from '../components/chat/Messages';
 import type { Message } from '../components/chat/Messages';
 import type { JourneyStep, JourneyAction } from '../components/chat/AgentJourney';
-import { LearningContextPanel } from '../components/preps/LearningContextPanel';
+
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
 import { cn } from '../utils/utils';
@@ -67,20 +67,27 @@ export function Chat() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [highlightField, setHighlightField] = useState<'role' | 'summary' | 'gaps' | 'all' | null>(null);
-  const [highlightSource, setHighlightSource] = useState<string>('');
+  
+  
 
   const { preps: mockPreps } = useAppContext();
-  const mockContext = mockPreps[0].learningContext;
+  
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevLengthRef = useRef(0);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > prevLengthRef.current) {
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg?.scenario === 'agent-journey') {
+           document.getElementById(`msg-${lastMsg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
       }, 100);
     }
+    prevLengthRef.current = messages.length;
   }, [messages]);
 
   const suggestions = [
@@ -152,31 +159,31 @@ export function Chat() {
 
         await runJourney(JOURNEYS.setup, {
           keep: true,
-          finalAction: { label: 'View Roadmap', to: '/app/preps/prep-1' },
+          finalAction: { label: 'View Roadmap', to: '/roadmap' },
         });
         addAgentMessage({
           content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
           scenario: 'setup',
           data: { role, company },
         });
-        setHighlightField('all');
-        setHighlightSource('Planner');
+        ;('all');
+        ;('Planner');
       } else if (lower.includes('scored badly') || lower.includes('adjust my plan')) {
         await runJourney(JOURNEYS['plan-update']);
         addAgentMessage({
           content: "I've adjusted your roadmap to spend more time on your weak areas.",
           scenario: 'plan-update',
         });
-        setHighlightField('gaps');
-        setHighlightSource('Assessment');
+        ;('gaps');
+        ;('Assessment');
       } else if (lower.includes('missed')) {
         await runJourney(JOURNEYS['missed-task']);
         addAgentMessage({
           content: "No worries! I've shifted your tasks to maintain a balanced workload.",
           scenario: 'missed-task',
         });
-        setHighlightField('summary');
-        setHighlightSource('Progress');
+        ;('summary');
+        ;('Progress');
       } else if (lower.includes('revision cards')) {
         await runJourney(JOURNEYS.flashcards);
         addAgentMessage({
@@ -184,8 +191,8 @@ export function Chat() {
           scenario: 'flashcards',
           data: mockPreps[0].assessments.flashcardDecks[0],
         });
-        setHighlightField('gaps');
-        setHighlightSource('Planner');
+        ;('gaps');
+        ;('Planner');
       } else {
         await runJourney(JOURNEYS.fallback);
         addAgentMessage({
@@ -255,7 +262,7 @@ export function Chat() {
 
           <motion.div
             layout
-            layoutId="chat-input-morph"
+            layoutId="prepamigo-input"
             transition={{ type: 'spring', stiffness: 260, damping: 30 }}
             className={cn('w-full relative z-20', hasStarted ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto')}
           >
@@ -294,7 +301,7 @@ export function Chat() {
         </div>
       </div>
 
-      <div className="w-full md:w-96 border-l border-border bg-surface flex flex-col h-full overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)]">
+      {/* <div className="w-full md:w-96 border-l border-border bg-surface flex flex-col h-full overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)]">
         <div className="p-6 border-b border-border bg-bg shrink-0">
           <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-3">
             <Icon name="person" className="text-chrome-accent text-xl" /> Live Context
@@ -315,7 +322,7 @@ export function Chat() {
             />
           </motion.div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

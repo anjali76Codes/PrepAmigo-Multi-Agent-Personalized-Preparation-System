@@ -7,11 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set ENABLE_AUTH=true in .env to require JWT auth in development.
-# Production always requires authentication even if the flag is omitted or false.
+# Set ENABLE_AUTH=true to require JWT auth; false (or unset) bypasses auth.
 ENABLE_AUTH = os.getenv("ENABLE_AUTH", "false").strip().lower() in {"1", "true", "yes", "on"}
-if os.getenv("ENVIRONMENT", "development").strip().lower() == "production":
-    ENABLE_AUTH = True
 
 # This should match the JWT_SECRET in your backend/.env
 JWT_SECRET = os.getenv("JWT_SECRET")
