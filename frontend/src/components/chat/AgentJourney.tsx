@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useMotionValue, animate, useTransform } from '
 import { Icon } from '../ui/Icon';
 import { Mascot } from '../ui/Mascot';
 import { cn } from '../../lib/utils';
-import { VIEW_W, VIEW_H, PATH_D, NODE_IMG, NODE_POSITIONS, JOURNEY_PRESETS, MASCOT_VARIANTS, type JourneyVariant, type JourneyConfig } from './AgentJourneyConstants';
+import { NODE_IMG, NODE_POSITIONS, JOURNEY_PRESETS, MASCOT_VARIANTS, type JourneyVariant, type JourneyConfig } from './AgentJourneyConstants';
 
 
 export interface JourneyStep {
@@ -76,6 +76,9 @@ export function AgentJourney(props: AgentJourneyProps) {
         nodeCount: propNodeCount,
         nodePositions,
         levelIds,
+        pathD,
+        viewW,
+        viewH,
     } = config;
 
     const [internal, setInternal] = useState(0);
@@ -228,7 +231,7 @@ export function AgentJourney(props: AgentJourneyProps) {
         actualNodeSize = Math.max(44, Math.min(nodeSize, maxSafeSize));
     }
 
-    const vbString = viewBox ? `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}` : `0 0 ${VIEW_W} ${VIEW_H}`;
+    const vbString = viewBox ? `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}` : `0 0 ${viewW} ${viewH}`;
 
     return (
         <div
@@ -251,7 +254,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                     {/* Background path */}
                     <motion.path
                         ref={pathRef}
-                        d={PATH_D}
+                        d={pathD}
                         fill="none"
                         strokeWidth={2}
                         strokeLinecap="round"
@@ -262,7 +265,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                     {/* Progress path */}
                     {viewBox && (
                         <motion.path
-                            d={PATH_D}
+                            d={pathD}
                             fill="none"
                             strokeWidth={2}
                             strokeLinecap="round"

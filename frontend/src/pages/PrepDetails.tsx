@@ -4,12 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { PrepOverview } from '../components/preps/PrepOverview';
 import { SkillGapMap } from '../components/preps/SkillGapMap';
 import { AffectedTopics } from '../components/preps/AffectedTopics';
-import { PlanUpdateTimeline } from '../components/preps/PlanUpdateTimeline';
 import { LearningContextPanel } from '../components/preps/LearningContextPanel';
-import { RoadmapView } from '../components/preps/RoadmapView';
-import { PlanCalendar } from '../components/preps/PlanCalendar';
-import { ResourcePack } from '../components/preps/ResourcePack';
-import { AssessmentCard } from '../components/preps/AssessmentCard';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 
@@ -40,11 +35,7 @@ export function PrepDetails() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'eye-outline' },
-    { id: 'skill-gaps', label: 'Skill Gaps', icon: 'git-network-outline' },
-    { id: 'roadmap', label: 'Roadmap', icon: 'map-outline' },
-    { id: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
-    { id: 'resources', label: 'Resource Pack', icon: 'book-outline' },
-    { id: 'assessments', label: 'Assessments', icon: 'clipboard-outline' }
+    { id: 'skill-gaps', label: 'Skill Gaps', icon: 'git-network-outline' }
   ];
 
   const renderTabContent = () => {
@@ -54,6 +45,25 @@ export function PrepDetails() {
           <div className="grid md:grid-cols-4 gap-6">
             <div className="md:col-span-3 space-y-6">
               <PrepOverview context={prep.learningContext} />
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
+                <Button variant="outline" onClick={() => navigate('/roadmap')} className="flex flex-col items-center justify-center p-6 h-auto gap-3 bg-surface hover:bg-bg border-border text-carbon-700 hover:text-chrome transition-all shadow-sm">
+                  <Icon name="map-outline" className="text-3xl" />
+                  <span className="font-bold">Roadmap</span>
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/calendar')} className="flex flex-col items-center justify-center p-6 h-auto gap-3 bg-surface hover:bg-bg border-border text-carbon-700 hover:text-chrome transition-all shadow-sm">
+                  <Icon name="calendar-outline" className="text-3xl" />
+                  <span className="font-bold">Calendar</span>
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/resource-pack')} className="flex flex-col items-center justify-center p-6 h-auto gap-3 bg-surface hover:bg-bg border-border text-carbon-700 hover:text-chrome transition-all shadow-sm">
+                  <Icon name="book-outline" className="text-3xl" />
+                  <span className="font-bold">Resource Pack</span>
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/assessment')} className="flex flex-col items-center justify-center p-6 h-auto gap-3 bg-surface hover:bg-bg border-border text-carbon-700 hover:text-chrome transition-all shadow-sm">
+                  <Icon name="clipboard-outline" className="text-3xl" />
+                  <span className="font-bold">Assessments</span>
+                </Button>
+              </div>
             </div>
             <div className="space-y-6">
               <LearningContextPanel context={prep.learningContext} />
@@ -71,54 +81,7 @@ export function PrepDetails() {
             </div>
           </div>
         );
-      case 'roadmap':
-        return (
-          <div className="space-y-8 grid grid-cols-4 gap-6">
-            <div className="col-span-3">
-              <RoadmapView roadmap={prep.roadmap} />
-            </div>
-            <div className="col-span-1">
-              <PlanUpdateTimeline updates={mockNotifications} />
-            </div>
-          </div>
-        );
-      case 'calendar':
-        return (
-          <div className="space-y-6">
-            <div className="flex justify-end">
-              <Button onClick={() => navigate('/calendar')} className="flex items-center gap-2">
-                <Icon name="calendar-outline" />
-                View Full Calendar
-              </Button>
-            </div>
-            <PlanCalendar entries={prep.calendarEntries} />
-          </div>
-        );
-      case 'resources':
-        return (
-          <div className="space-y-6 max-w-4xl">
-            {prep.learningContext.resources.map(pack => (
-              <ResourcePack key={pack.topic} pack={pack} />
-            ))}
-          </div>
-        );
-      case 'assessments':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold text-carbon-900 mb-4">Weekly Quizzes</h3>
-              {prep.assessments.quizzes.map(quiz => (
-                <AssessmentCard key={quiz.id} item={quiz} type="quiz" />
-              ))}
-            </div>
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold text-carbon-900 mb-4">Flashcard Decks</h3>
-              {prep.assessments.flashcardDecks.map(deck => (
-                <AssessmentCard key={deck.id} item={deck} type="flashcard" />
-              ))}
-            </div>
-          </div>
-        );
+
       default:
         return null;
     }
