@@ -1,4 +1,4 @@
-import { useOutlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useOutlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "../ui/Logo";

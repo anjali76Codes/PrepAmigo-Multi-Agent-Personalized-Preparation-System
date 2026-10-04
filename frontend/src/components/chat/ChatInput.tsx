@@ -163,6 +163,7 @@ export interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  showOptions?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
