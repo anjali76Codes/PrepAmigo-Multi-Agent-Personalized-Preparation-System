@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../ui/Icon";
 import { DirectorySearch } from "./DirectorySearch";
 import { FolderTile } from "./FolderIcon";
-import { buildTree, filterTree, searchTree, allFolderIds, pathToId, nodesAlong, domainOf, type TreeNode } from "../../lib/resourceTree";
+import { buildTree, filterTree, searchTree, allFolderIds, pathToId, nodesAlong, type TreeNode } from "../../lib/resourceTree";
 import { SearchResults } from "./SearchResults";
 import { cn } from "../../utils/utils";
 
