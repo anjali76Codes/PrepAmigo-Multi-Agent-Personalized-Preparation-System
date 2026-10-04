@@ -91,7 +91,7 @@ async def main():
             day_numbers = [str(d.get('day_number')) for d in sprint_days]
             final_report += f"## Evaluation for Days {day_numbers[0]}-{day_numbers[-1]}\n\n"
             final_report += eval_result + "\n\n---\n\n"
-            print(f"✅ Chunk {idx+1} evaluation complete.")
+            print(f" Chunk {idx+1} evaluation complete.")
 
     with open("evaluation_report.md", "w", encoding="utf-8") as f:
         f.write(final_report)
