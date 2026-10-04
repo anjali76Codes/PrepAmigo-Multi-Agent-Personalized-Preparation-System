@@ -163,6 +163,7 @@ export interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  showOptions?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -478,8 +479,8 @@ export function ChatInput({
           disabled
             ? "border-border/40 opacity-60 cursor-not-allowed"
             : isFocused
-            ? "border-carbon-300 shadow-[0_0_0_4px_rgba(0,0,0,0.05)]"
-            : "border-border hover:border-carbon-300/70"
+              ? "border-carbon-300 shadow-[0_0_0_4px_rgba(0,0,0,0.05)]"
+              : "border-border hover:border-carbon-300/70"
         )}
       >
         {/* Textarea */}
