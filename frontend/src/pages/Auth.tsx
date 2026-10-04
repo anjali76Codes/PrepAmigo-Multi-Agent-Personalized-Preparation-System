@@ -12,7 +12,8 @@ async function handleGoogleAuth(
   credentialResponse: any,
   navigate: ReturnType<typeof useNavigate>,
   setError: (err: string | null) => void,
-  setLoading: (loading: boolean) => void
+  setLoading: (loading: boolean) => void,
+  initialQuery?: string
 ) {
   setError(null);
   setLoading(true);
@@ -26,7 +27,9 @@ async function handleGoogleAuth(
 
     const data = await res.json();
     if (res.ok) {
-      navigate("/dashboard/chat");
+      navigate("/dashboard/chat", {
+        state: initialQuery ? { initialQuery } : undefined,
+      });
     } else {
       setError(data.error || "Google authentication failed");
     }
@@ -81,9 +84,14 @@ function Field({
 }
 
 export function Auth() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const navigate = useNavigate();
   const isLogin = pathname === '/login';
+
+  const initialQuery =
+    (state as { initialQuery?: string })?.initialQuery ||
+    sessionStorage.getItem("prepamigo_pending_query") ||
+    undefined;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -127,7 +135,9 @@ export function Auth() {
       const data = await res.json();
 
       if (res.ok) {
-        navigate("/dashboard/chat");
+        navigate("/dashboard/chat", {
+          state: initialQuery ? { initialQuery } : undefined,
+        });
       } else {
         setFormError(data.error || (isLogin ? "Login failed" : "Signup failed"));
       }
@@ -214,7 +224,7 @@ export function Auth() {
 
               <div className="mb-6 flex flex-col items-center">
                 <GoogleLogin
-                  onSuccess={(res) => handleGoogleAuth(res, navigate, setFormError, setLoading)}
+                  onSuccess={(res) => handleGoogleAuth(res, navigate, setFormError, setLoading, initialQuery)}
                   onError={() => setFormError("Google Sign In was cancelled or failed")}
                   shape="pill"
                   text={isLogin ? "signin_with" : "signup_with"}

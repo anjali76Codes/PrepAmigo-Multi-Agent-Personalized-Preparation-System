@@ -10,7 +10,7 @@ export function Icon({ name, className, tone = 'default', ...props }: IconProps)
   return (
     <ion-icon
       name={name}
-      className={cn('inline-block', tone === 'inverse' ? 'text-on-chrome' : 'text-current', className)}
+      className={cn('inline-block pointer-events-none select-none', tone === 'inverse' ? 'text-on-chrome' : 'text-current', className)}
       {...props}
     />
   );
