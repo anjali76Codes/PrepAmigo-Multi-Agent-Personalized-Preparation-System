@@ -86,7 +86,7 @@ export function PrepDetails() {
         return (
           <div className="space-y-6">
             <div className="flex justify-end">
-              <Button onClick={() => navigate('/dashboard/calendar')} className="flex items-center gap-2">
+              <Button onClick={() => navigate('/calendar')} className="flex items-center gap-2">
                 <Icon name="calendar-outline" />
                 View Full Calendar
               </Button>
