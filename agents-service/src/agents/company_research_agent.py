@@ -21,10 +21,10 @@ import json
 import logging
 from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from agents.base import BaseAgent
-from graph.events import emit_to_graph_stream, make_event
+from graph.events import emit_to_graph_stream, emit_tool_event, make_event, summarize_tool_result
 from prompts.system_prompts import COMPANY_RESEARCH_PROMPT
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS, normalize_company_profile
 
@@ -112,7 +112,49 @@ class CompanyResearchAgent(BaseAgent):
 
         turn_start = max((i for i, m in enumerate(messages) if isinstance(m, HumanMessage)), default=-1) + 1
 
-        for msg in messages[turn_start:]:
+        current_turn = messages[turn_start:]
+        last_ai_index = max(
+            (index for index, message in enumerate(current_turn)
+             if getattr(message, "type", None) == "ai"),
+            default=-1,
+        )
+        for index, msg in enumerate(current_turn):
+            if isinstance(msg, ToolMessage) and index > last_ai_index:
+                content = getattr(msg, "content", "")
+                parsed_result = {}
+                if isinstance(content, str):
+                    try:
+                        parsed_result = json.loads(content)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                metadata = parsed_result.get("search_metadata") if isinstance(parsed_result, dict) else None
+                result_error = bool(
+                    isinstance(parsed_result, dict)
+                    and (
+                        parsed_result.get("error")
+                        or parsed_result.get("status") == "error"
+                        or (isinstance(metadata, dict) and metadata.get("status") == "Error")
+                    )
+                )
+                failed = getattr(msg, "status", None) == "error" or bool(result_error)
+                tool_name = getattr(msg, "name", None)
+                error_detail = (
+                    (parsed_result.get("error") or parsed_result.get("message"))
+                    if isinstance(parsed_result, dict)
+                    else None
+                )
+                if tool_name:
+                    emit_tool_event(
+                        self.name,
+                        tool_name,
+                        "failed" if failed else "completed",
+                        {
+                            "tool_call_id": getattr(msg, "tool_call_id", None),
+                            **summarize_tool_result(parsed_result or content),
+                            **({"error": str(error_detail or content)[:240]} if failed else {}),
+                        },
+                    )
+
             tool_name = getattr(msg, "name", None)
             content = getattr(msg, "content", None)
             if not content or not isinstance(content, str):

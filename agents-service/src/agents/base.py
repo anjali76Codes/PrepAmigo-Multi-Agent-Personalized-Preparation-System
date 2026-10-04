@@ -5,6 +5,7 @@ node functions, so LLM/memory/tool-binding logic lives in one place.
 """
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from core.config import get_llm
+from graph.events import emit_to_graph_stream, make_event
 from prompts.system_prompts import MEMORY_CONTEXT_PROMPT
 
 # short-term context sent to the LLM; older turns are covered by
@@ -35,6 +36,7 @@ class BaseAgent:
         self.llm = llm.bind_tools(self.tools) if self.tools else llm
 
     async def __call__(self, state: dict) -> dict:
+        emit_to_graph_stream(make_event(self.name, "generate_response", "running"))
         messages = [SystemMessage(content=self.system_prompt)]
         memories = state.get("memory_context") or []
         if memories:
@@ -43,8 +45,13 @@ class BaseAgent:
             messages.append(SystemMessage(content=MEMORY_CONTEXT_PROMPT.format(facts=facts)))
         messages.extend(recent_messages(state["messages"], self.history_limit))
         # async so reply tokens reach graph.astream(stream_mode="messages")
-        response = await self.llm.ainvoke(messages)
+        try:
+            response = await self.llm.ainvoke(messages)
+        except Exception:
+            emit_to_graph_stream(make_event(self.name, "generate_response", "failed"))
+            raise
         reply = response.content if isinstance(response.content, str) else str(response.content)
+        emit_to_graph_stream(make_event(self.name, "generate_response", "completed"))
         handoff = {
             "agent": self.name,
             "kind": "chat_reply",

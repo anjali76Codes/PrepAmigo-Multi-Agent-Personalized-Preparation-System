@@ -19,7 +19,6 @@ from typing import Any, Optional
 from langchain_core.tools import tool
 
 from core.config import settings
-from graph.events import emit_to_graph_stream, make_event
 from tools.serpapi_client import serpapi_search, using_dummy_data
 
 logger = logging.getLogger(__name__)
@@ -121,18 +120,6 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
     """
     search_q = query or f"{company_name} company engineering tech stack"
     logger.info("[CompanyResearchTools] google_search: %s (q='%s')", company_name, search_q)
-    emit_to_graph_stream(
-        make_event(
-            "company_research",
-            "search_company_overview",
-            "running",
-            {
-                "tool": "search_company_overview",
-                "company": company_name,
-                "message": f"Searching company facts, tech stack, and engineering culture for {company_name}...",
-            },
-        )
-    )
 
     result = _serpapi_search({
         "engine": "google",
@@ -145,19 +132,6 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
     metadata = result.get("search_metadata", {})
     if metadata.get("status") == "Error" or "error" in result:
         err_msg = str(result.get("error") or "Failed to retrieve Google Search results")
-        emit_to_graph_stream(
-            make_event(
-                "company_research",
-                "search_company_overview",
-                "failed",
-                {
-                    "tool": "search_company_overview",
-                    "company": company_name,
-                    "error": err_msg,
-                    "message": f"Google Search for {company_name} encountered an issue: {err_msg}",
-                },
-            )
-        )
         return json.dumps({
             "status": "error",
             "search_metadata": metadata,
@@ -245,22 +219,6 @@ def search_company_overview(company_name: str, query: Optional[str] = None) -> s
             if sl.get("link"):
                 sitelinks.append({"title": sl.get("title", ""), "link": sl.get("link", "")})
 
-    emit_to_graph_stream(
-        make_event(
-            "company_research",
-            "search_company_overview",
-            "completed",
-            {
-                "tool": "search_company_overview",
-                "company": company_name,
-                "status": "success",
-                "message": f"Retrieved overview and tech stack data for {company_name}.",
-                "has_knowledge_graph": bool(knowledge_graph),
-                "organic_count": len(organic_results),
-            },
-        )
-    )
-
     search_info = result.get("search_information") or {}
     corrected = corrected_company_name(
         company_name, search_q, search_info.get("spelling_fix") or search_info.get("showing_results_for")
@@ -301,18 +259,6 @@ def search_company_news(company_name: str, query: Optional[str] = None) -> str:
     """
     news_q = query or company_name
     logger.info("[CompanyResearchTools] google_news: %s (q='%s')", company_name, news_q)
-    emit_to_graph_stream(
-        make_event(
-            "company_research",
-            "search_company_news",
-            "running",
-            {
-                "tool": "search_company_news",
-                "company": company_name,
-                "message": f"Searching recent developments and news for {company_name}...",
-            },
-        )
-    )
 
     result = _serpapi_search({
         "engine": "google_news",
@@ -324,19 +270,6 @@ def search_company_news(company_name: str, query: Optional[str] = None) -> str:
     metadata = result.get("search_metadata", {})
     if metadata.get("status") == "Error" or "error" in result:
         err_msg = str(result.get("error") or "Failed to retrieve Google News results")
-        emit_to_graph_stream(
-            make_event(
-                "company_research",
-                "search_company_news",
-                "failed",
-                {
-                    "tool": "search_company_news",
-                    "company": company_name,
-                    "error": err_msg,
-                    "message": f"Google News search for {company_name} encountered an issue: {err_msg}",
-                },
-            )
-        )
         return json.dumps({
             "status": "error",
             "search_metadata": metadata,
@@ -375,21 +308,6 @@ def search_company_news(company_name: str, query: Optional[str] = None) -> str:
             ]
 
         news_results.append(entry)
-
-    emit_to_graph_stream(
-        make_event(
-            "company_research",
-            "search_company_news",
-            "completed",
-            {
-                "tool": "search_company_news",
-                "company": company_name,
-                "status": "success",
-                "message": f"Retrieved recent news and developments for {company_name}.",
-                "news_count": len(news_results),
-            },
-        )
-    )
 
     return json.dumps({
         "status": "success",
