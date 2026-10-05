@@ -26,7 +26,11 @@ def service_path(value: str) -> Path:
 class Settings:
     llm_provider: str = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
     ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1").strip()
-    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+    ollama_base_url: str = os.getenv(
+        "OLLAMA_BASE_URL",
+        os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+    ).strip()
+    ollama_api_key: str = os.getenv("OLLAMA_API_KEY", "").strip()
     # thinking models (e.g. nemotron-3-nano) write a hidden reasoning trace
     # before every answer by default — measured on the research synthesis
     # prompt: ~4,000 output tokens / 12.9s with it, ~940 / 3.4s without,
@@ -483,9 +487,15 @@ def get_llm(temperature: float = 0.2, max_tokens: int | None = None, profile: st
         options["reasoning"] = settings.ollama_reasoning == "true"
     if max_tokens:
         options["num_predict"] = max_tokens
+    client_kwargs: dict = {}
+    if settings.ollama_api_key:
+        client_kwargs["headers"] = {
+            "Authorization": f"Bearer {settings.ollama_api_key}"
+        }
     return ChatOllama(
         model=model,
         base_url=settings.ollama_base_url,
+        client_kwargs=client_kwargs,
         **options,
         **common,
     )
