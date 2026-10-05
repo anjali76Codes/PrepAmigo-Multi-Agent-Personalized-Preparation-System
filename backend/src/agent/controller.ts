@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { AuthenticatedRequest } from "../types/authenticated-request.js";
 import { config } from "../config/env.js";
@@ -22,13 +23,23 @@ const VALID_REFERENCE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 function normalizeReferenceType(type: unknown): ReferenceType {
-  if (typeof type === "string" && VALID_REFERENCE_TYPES.has(type.toLowerCase())) {
-    return type.toLowerCase() as ReferenceType;
+  if (typeof type === "string") {
+    const lower = type.toLowerCase().trim();
+    if (VALID_REFERENCE_TYPES.has(lower)) {
+      return lower as ReferenceType;
+    }
+    if (lower.includes("video") || lower.includes("youtube")) return "video";
+    if (lower.includes("book") || lower.includes("paper")) return "book";
+    if (lower.includes("article") || lower.includes("blog") || lower.includes("post")) return "article";
+    if (lower.includes("problem") || lower.includes("leetcode") || lower.includes("exercise") || lower.includes("task")) return "problem";
+    if (lower.includes("course") || lower.includes("tutorial")) return "course";
   }
   return "documentation";
 }
 
 const savedRunPlanMap = new Map<string, string>(); // runId -> mongoPlanId
+const savingRunPlanMap = new Map<string, Promise<string | null>>(); // runId -> in-flight save promise
+const runUserMap = new Map<string, string>(); // runId -> userId
 
 export async function persistGeneratedPlan(
   rawStudyPlan: any,
@@ -38,124 +49,162 @@ export async function persistGeneratedPlan(
   if (savedRunPlanMap.has(runId)) {
     return savedRunPlanMap.get(runId)!;
   }
+  if (savingRunPlanMap.has(runId)) {
+    return savingRunPlanMap.get(runId)!;
+  }
 
-  try {
-    const planObj = rawStudyPlan?.plan || rawStudyPlan;
-    if (!planObj || typeof planObj !== "object") return null;
+  const savePromise = (async () => {
+    try {
+      if (!rawStudyPlan || typeof rawStudyPlan !== "object") return null;
 
-    let targetUserId: Types.ObjectId;
-    if (userId && Types.ObjectId.isValid(userId)) {
-      targetUserId = new Types.ObjectId(userId);
-    } else {
-      const defaultUser = await User.findOneAndUpdate(
-        { email: "local-development-user@localhost.invalid" },
-        { $setOnInsert: { name: "Local developer" } },
-        { new: true, upsert: true, setDefaultsOnInsert: true },
-      );
-      targetUserId = defaultUser._id;
-    }
+      // 1. Access the plan part of the JSON and save to Plan collection
+      const planData = rawStudyPlan.plan || rawStudyPlan.nested_plan || rawStudyPlan;
 
-    const startDate = new Date(planObj.start_date || Date.now());
-    const totalDaysNum = Number(planObj.total_days) || 30;
-    const endDate = new Date(planObj.end_date || startDate.getTime() + totalDaysNum * 86400000);
+      const resolvedUserId = userId || runUserMap.get(runId) || planData.user_id || rawStudyPlan.user_id;
+      let targetUserId: Types.ObjectId;
+      if (resolvedUserId && Types.ObjectId.isValid(resolvedUserId)) {
+        targetUserId = new Types.ObjectId(resolvedUserId);
+      } else {
+        const defaultUser = await User.findOneAndUpdate(
+          { email: "local-development-user@localhost.invalid" },
+          { $setOnInsert: { name: "Local developer" } },
+          { new: true, upsert: true, setDefaultsOnInsert: true },
+        );
+        targetUserId = defaultUser._id;
+      }
 
-    const plan = await Plan.create({
-      user_id: targetUserId,
-      plan_name: (planObj.plan_name || `${planObj.company || "Target"} ${planObj.role || "Role"} Preparation`).trim(),
-      company: (planObj.company || "Target Company").trim(),
-      role: (planObj.role || "Target Role").trim(),
-      total_days: totalDaysNum,
-      start_date: startDate,
-      end_date: endDate,
-      sprints: [],
-      status: "in_progress",
-      completion_percent: 0,
-    });
+      const totalDays = Number(planData.total_days) || 30;
+      const startDate = new Date(planData.start_date || Date.now());
+      const endDate = new Date(planData.end_date || startDate.getTime() + totalDays * 86400000);
 
-    const sprintList = Array.isArray(planObj.sprints) ? planObj.sprints : [];
-    for (const s of sprintList) {
-      const sprintNumber = Number(s.sprint_number) || 1;
-      const sprintStartDate = new Date(s.start_date || startDate);
-      const sprintEndDate = new Date(s.end_date || endDate);
-      const sprintDaysList = Array.isArray(s.sprint_days) ? s.sprint_days : [];
-      const sprintTotalDays = Number(s.total_days) || (sprintDaysList.length > 0 ? sprintDaysList.length : 7);
-
-      const sprint = await Sprint.create({
-        plan_id: plan._id,
-        sprint_number: sprintNumber,
-        sprint_name: (s.sprint_name || `Sprint ${sprintNumber}`).trim(),
-        start_date: sprintStartDate,
-        end_date: sprintEndDate,
-        total_days: sprintTotalDays,
-        sprint_days: [],
-        status: sprintNumber === 1 ? "in_progress" : "pending",
+      const plan = await Plan.create({
+        user_id: targetUserId,
+        plan_name: (planData.plan_name || `${planData.company || "Target"} ${planData.role || "Role"} Preparation`).trim(),
+        company: (planData.company || "Target Company").trim(),
+        role: (planData.role || "Target Role").trim(),
+        total_days: totalDays,
+        start_date: startDate,
+        end_date: endDate,
+        sprints: [],
+        status: "in_progress",
         completion_percent: 0,
       });
 
-      const dayIds: Types.ObjectId[] = [];
-      for (const d of sprintDaysList) {
-        const dayNumber = Number(d.day_number) || 1;
-        const dayDate = new Date(d.scheduled_date || sprintStartDate);
+      // 2. Access sprints and sprint_days parts of the JSON
+      const rawSprints: any[] = Array.isArray(rawStudyPlan.sprints)
+        ? rawStudyPlan.sprints
+        : Array.isArray(rawStudyPlan.sprint)
+        ? rawStudyPlan.sprint
+        : Array.isArray(planData.sprints)
+        ? planData.sprints
+        : [];
 
-        const rawReferences = Array.isArray(d.references) ? d.references : [];
-        const cleanedReferences = rawReferences.map((ref: any) => ({
-          type: normalizeReferenceType(ref?.type),
-          title: String(ref?.title || "Reference Material").trim().slice(0, 300),
-          url: String(ref?.url || "https://example.com").trim().slice(0, 2048),
-          source: ref?.source ? String(ref.source).trim().slice(0, 200) : undefined,
-          description: ref?.description ? String(ref.description).trim().slice(0, 2000) : undefined,
-          is_required: ref?.is_required !== false,
-        }));
+      const rawDays: any[] = Array.isArray(rawStudyPlan.sprint_days)
+        ? rawStudyPlan.sprint_days
+        : Array.isArray(rawStudyPlan.sprintday)
+        ? rawStudyPlan.sprintday
+        : Array.isArray(rawStudyPlan.days)
+        ? rawStudyPlan.days
+        : Array.isArray(planData.sprint_days)
+        ? planData.sprint_days
+        : [];
 
-        const sprintDay = await SprintDay.create({
-          sprint_id: sprint._id,
-          day_number: dayNumber,
-          scheduled_date: dayDate,
-          topic_title: String(d.topic_title || `Day ${dayNumber}`).trim().slice(0, 200),
-          topic_description: d.topic_description ? String(d.topic_description).trim().slice(0, 4000) : undefined,
-          objectives: Array.isArray(d.objectives)
-            ? d.objectives.map((obj: any) => String(obj).trim().slice(0, 500)).filter(Boolean).slice(0, 30)
-            : [],
-          estimated_minutes: Number(d.estimated_minutes) > 0 ? Number(d.estimated_minutes) : 60,
-          references: cleanedReferences.slice(0, 50),
-          status: dayNumber === 1 && sprintNumber === 1 ? "in_progress" : "pending",
+      const createdSprintIds: Types.ObjectId[] = [];
+
+      for (let idx = 0; idx < rawSprints.length; idx++) {
+        const s = rawSprints[idx];
+        const sprintNumber = Number(s.sprint_number) || (idx + 1);
+
+        // Days for this sprint: nested in sprint OR matching sprint_number from sprint_days
+        const sprintDaysList: any[] = Array.isArray(s.sprint_days) && s.sprint_days.length > 0
+          ? s.sprint_days
+          : rawDays.filter((d: any) => d && Number(d.sprint_number) === sprintNumber);
+
+        // Place sprint object in Sprint collection
+        const sprint = await Sprint.create({
+          plan_id: plan._id,
+          sprint_number: sprintNumber,
+          sprint_name: (s.sprint_name || `Sprint ${sprintNumber}`).trim(),
+          start_date: new Date(s.start_date || startDate),
+          end_date: new Date(s.end_date || endDate),
+          total_days: Number(s.total_days) || (sprintDaysList.length > 0 ? sprintDaysList.length : 7),
+          sprint_days: [],
+          status: sprintNumber === 1 ? "in_progress" : "pending",
+          completion_percent: 0,
         });
 
-        dayIds.push(sprintDay._id);
+        // Place sprint day objects in SprintDay collection
+        const dayIds: Types.ObjectId[] = [];
+        for (const d of sprintDaysList) {
+          const dayNumber = Number(d.day_number) || (dayIds.length + 1);
+
+          const rawReferences = Array.isArray(d.references) ? d.references : [];
+          const cleanedReferences = rawReferences.map((ref: any) => ({
+            type: normalizeReferenceType(ref?.type),
+            title: String(ref?.title || "Reference Material").trim().slice(0, 300),
+            url: String(ref?.url || "https://example.com").trim().slice(0, 2048),
+            source: ref?.source ? String(ref.source).trim().slice(0, 200) : undefined,
+            description: ref?.description ? String(ref.description).trim().slice(0, 2000) : undefined,
+            is_required: ref?.is_required !== false,
+          }));
+
+          const sprintDay = await SprintDay.create({
+            sprint_id: sprint._id,
+            day_number: dayNumber,
+            scheduled_date: new Date(d.scheduled_date || sprint.start_date),
+            topic_title: String(d.topic_title || `Day ${dayNumber}`).trim().slice(0, 200),
+            topic_description: d.topic_description ? String(d.topic_description).trim().slice(0, 4000) : undefined,
+            objectives: Array.isArray(d.objectives)
+              ? d.objectives.map((obj: any) => String(obj).trim().slice(0, 500)).filter(Boolean).slice(0, 30)
+              : [],
+            estimated_minutes: Number(d.estimated_minutes) > 0 ? Number(d.estimated_minutes) : 60,
+            references: cleanedReferences.slice(0, 50),
+            status: dayNumber === 1 && sprintNumber === 1 ? "in_progress" : "pending",
+          });
+
+          dayIds.push(sprintDay._id);
+        }
+
+        await Sprint.updateOne({ _id: sprint._id }, { $set: { sprint_days: dayIds } });
+        createdSprintIds.push(sprint._id);
       }
 
-      await Sprint.updateOne({ _id: sprint._id }, { $set: { sprint_days: dayIds } });
-      await Plan.updateOne({ _id: plan._id }, { $push: { sprints: sprint._id } });
-    }
+      await Plan.updateOne({ _id: plan._id }, { $set: { sprints: createdSprintIds } });
 
-    await PlanProgress.findOneAndUpdate(
-      { user_id: targetUserId, plan_id: plan._id },
-      {
-        $setOnInsert: {
-          user_id: targetUserId,
-          plan_id: plan._id,
-          xp_points: 0,
-          completed_day_count: 0,
-          completed_day_dates: [],
-          weekly_bonus_count: 0,
-          streak_count: 0,
-          longest_streak: 0,
-          trophies: [],
+      await PlanProgress.findOneAndUpdate(
+        { user_id: targetUserId, plan_id: plan._id },
+        {
+          $setOnInsert: {
+            user_id: targetUserId,
+            plan_id: plan._id,
+            xp_points: 0,
+            completed_day_count: 0,
+            completed_day_dates: [],
+            weekly_bonus_count: 0,
+            streak_count: 0,
+            longest_streak: 0,
+            trophies: [],
+          },
         },
-      },
-      { upsert: true, setDefaultsOnInsert: true },
-    );
+        { upsert: true, setDefaultsOnInsert: true },
+      );
 
-    await User.updateOne({ _id: targetUserId }, { $addToSet: { plans: plan._id } });
+      await User.updateOne({ _id: targetUserId }, { $addToSet: { plans: plan._id } });
 
-    const mongoPlanId = plan._id.toString();
-    savedRunPlanMap.set(runId, mongoPlanId);
-    logger.info(`[Agent Gateway] Persisted study plan ${mongoPlanId} for runId ${runId} with ${sprintList.length} sprints`);
-    return mongoPlanId;
-  } catch (err) {
-    logger.error(`[Agent Gateway] Failed to persist study plan for runId ${runId}:`, err);
-    return null;
-  }
+      const mongoPlanId = plan._id.toString();
+      savedRunPlanMap.set(runId, mongoPlanId);
+      logger.info(`[Agent Gateway] Persisted study plan ${mongoPlanId} for runId ${runId} with ${createdSprintIds.length} sprints`);
+      return mongoPlanId;
+    } catch (err) {
+      logger.error(`[Agent Gateway] Failed to persist study plan for runId ${runId}:`, err);
+      return null;
+    } finally {
+      savingRunPlanMap.delete(runId);
+    }
+  })();
+
+  savingRunPlanMap.set(runId, savePromise);
+  return savePromise;
 }
 
 function listenAndPersistPlanInBackground(runId: string, userId?: string | null): void {
@@ -255,6 +304,26 @@ async function emitFailureToRedis(runId: string, errorMessage: string): Promise<
   }
 }
 
+function pythonAuthHeaders(req: AuthenticatedRequest): Record<string, string> {
+  const sessionToken = (req as any).cookies?.session;
+  let bearerToken = req.headers?.authorization || (sessionToken ? `Bearer ${sessionToken}` : undefined);
+  if (!bearerToken && req.user?.id) {
+    try {
+      const generated = jwt.sign(
+        { sub: req.user.id, id: req.user.id, email: req.user.email || "user@prepamigo.local" },
+        config.JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+      bearerToken = `Bearer ${generated}`;
+    } catch {
+      // fallback
+    }
+  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (bearerToken) headers.Authorization = bearerToken;
+  return headers;
+}
+
 /**
  * POST /api/agent/run
  * Generates runId, triggers Python agent service asynchronously, and returns runId immediately.
@@ -276,7 +345,10 @@ export async function runAgentHandler(
     const authReq = req as unknown as AuthenticatedRequest;
     if (authReq.user?.id || authReq.user?.sub) {
       userId = (authReq.user?.id || authReq.user?.sub)?.toString() || null;
-    } else if (!config.ENABLE_AUTH) {
+    } else if (config.ENABLE_AUTH) {
+      res.status(401).json({ error: "Authentication required to run the preparation agent." });
+      return;
+    } else {
       try {
         const defaultUser = await User.findOne({ email: "local-development-user@localhost.invalid" });
         if (defaultUser) userId = defaultUser._id.toString();
@@ -285,20 +357,35 @@ export async function runAgentHandler(
       }
     }
 
+    // Auto-ingest profile resume if not explicitly attached in chat
+    let effectiveResumeText = resumeText;
+    if (!effectiveResumeText && userId && Types.ObjectId.isValid(userId)) {
+      try {
+        const dbUser = await User.findById(userId).select("profile.resume_text");
+        if (dbUser?.profile?.resume_text) {
+          effectiveResumeText = dbUser.profile.resume_text;
+          logger.info(`[Agent Gateway] Using stored profile resume for user ${userId}`);
+        }
+      } catch (err) {
+        logger.warn(`[Agent Gateway] Could not load user profile resume:`, err);
+      }
+    }
+
     // Start background listener to persist plan when completed
+    if (userId) runUserMap.set(runId, userId);
     listenAndPersistPlanInBackground(runId, userId);
 
     // Trigger Python LangGraph service asynchronously (non-blocking)
     const pythonEndpoint = `${config.AGENTS_SERVICE_URL}/internal/agent/execute`;
     fetch(pythonEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pythonAuthHeaders(authReq),
       body: JSON.stringify({
         runId,
         query: query.trim(),
         thread_id: threadId || null,
         user_id: userId,
-        workflow_input: resumeText ? { resume_text: String(resumeText).slice(0, 50000) } : {},
+        workflow_input: effectiveResumeText ? { resume_text: String(effectiveResumeText).slice(0, 50000) } : {},
       }),
     })
       .then(async (response) => {
@@ -341,7 +428,7 @@ export async function parseResumeHandler(req: Request, res: Response): Promise<v
     }
     const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/extract-resume`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pythonAuthHeaders(req as unknown as AuthenticatedRequest),
       body: JSON.stringify({ filename, base64_data: base64Data }),
     });
     if (!response.ok) {
@@ -385,13 +472,6 @@ function workflowInput(body: InterviewPrepRequestBody): Record<string, string> {
   return fields;
 }
 
-function pythonAuthHeaders(req: AuthenticatedRequest): Record<string, string> {
-  const sessionToken = (req as any).cookies?.session;
-  const bearerToken = req.headers.authorization || (sessionToken ? `Bearer ${sessionToken}` : undefined);
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (bearerToken) headers.Authorization = bearerToken;
-  return headers;
-}
 
 async function reserveWorkflowRun(
   userId: string,
@@ -424,6 +504,7 @@ function triggerInterviewPrep(
         input.role && `role ${input.role}`,
         input.location && `location ${input.location}`,
       ].filter(Boolean).join(", ") || "my next role"}.`;
+  if (userId) runUserMap.set(run.runId, userId);
   listenAndPersistPlanInBackground(run.runId, userId);
   fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/execute`, {
     method: "POST",
@@ -678,7 +759,8 @@ export async function streamAgentHandler(
           if (event.type === "completed") {
             const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
             if (studyPlan) {
-              const savedPlanId = await persistGeneratedPlan(studyPlan, runId);
+              const streamUserId = (req as any).user?.id || (req as any).user?.sub || runUserMap.get(runId);
+              const savedPlanId = await persistGeneratedPlan(studyPlan, runId, streamUserId);
               if (savedPlanId) {
                 event.payload.plan_id = savedPlanId;
                 if (event.payload.result) event.payload.result.plan_id = savedPlanId;
@@ -722,7 +804,8 @@ export async function streamAgentHandler(
         if (event.type === "completed") {
           const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
           if (studyPlan) {
-            const savedPlanId = await persistGeneratedPlan(studyPlan, runId);
+            const streamUserId = (req as any).user?.id || (req as any).user?.sub || runUserMap.get(runId);
+            const savedPlanId = await persistGeneratedPlan(studyPlan, runId, streamUserId);
             if (savedPlanId) {
               event.payload.plan_id = savedPlanId;
               if (event.payload.result) event.payload.result.plan_id = savedPlanId;

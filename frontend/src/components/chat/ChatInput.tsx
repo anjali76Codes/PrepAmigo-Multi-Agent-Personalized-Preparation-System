@@ -361,6 +361,7 @@ export function ChatInput({
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
         const response = await fetch(`${apiUrl}/api/agent/parse-resume`, {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filename: name, base64Data: base64 }),
         });

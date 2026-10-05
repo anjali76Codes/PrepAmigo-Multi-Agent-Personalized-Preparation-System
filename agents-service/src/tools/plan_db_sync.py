@@ -201,9 +201,21 @@ class PlanDBSyncClient:
             }
 
 
-async def sync_generated_plan_to_db(plan_output: dict[str, Any], base_url: str | None = None) -> dict[str, Any] | None:
+async def sync_generated_plan_to_db(
+    plan_output: dict[str, Any],
+    base_url: str | None = None,
+    auth_token: str | None = None,
+) -> dict[str, Any] | None:
     """Convenience helper to sync a generated study plan to MongoDB if backend is running."""
-    client = PlanDBSyncClient(base_url=base_url)
+    # When authentication is enabled and no explicit auth token is supplied,
+    # plan persistence is handled directly by the Node.js backend streaming listener.
+    if getattr(settings, "enable_auth", False) and not auth_token:
+        logger.debug(
+            "Skipping Python-side direct DB sync because ENABLE_AUTH is true and persistence is delegated to the Express backend."
+        )
+        return {"success": True, "mode": "delegated_to_backend"}
+
+    client = PlanDBSyncClient(base_url=base_url, auth_token=auth_token)
     try:
         result = await client.sync_plan(plan_output)
         return result

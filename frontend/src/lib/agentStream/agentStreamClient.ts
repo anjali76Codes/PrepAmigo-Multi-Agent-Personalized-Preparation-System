@@ -85,6 +85,13 @@ export class AgentStreamClient {
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("prepamigo_pending_query", query);
+          window.location.href = "/login";
+        }
+        throw new Error("Authentication required. Please sign in to run the preparation pipeline.");
+      }
       const errText = await response.text();
       throw new Error(`Failed to initiate agent run [${response.status}]: ${errText}`);
     }

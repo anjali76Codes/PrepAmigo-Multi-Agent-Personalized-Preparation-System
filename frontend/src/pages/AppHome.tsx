@@ -5,19 +5,39 @@ import { Mascot } from '../components/ui/Mascot';
 import { Alert } from '../components/ui/Alert';
 import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
 import { SprintMap } from '../components/chat/AgentJourney';
-import { unifiedGoal } from '../data/newMockData';
-import { getGoalProgressPct, getGoalTotalXP, getDaysLeft, getSprintNodeStates } from '../data/selectors';
+import { useAppContext } from '../context/AppContext';
 
 export function AppHome() {
   const navigate = useNavigate();
+  const { activePrep } = useAppContext();
   
-  // Create a mock completed tasks set. Ideally this comes from AppContext.
-  const completedTasks = new Set<string>();
+  // Real stats from activePrep
+  const allDays = (activePrep?.roadmap?.sprints || []).flatMap((s: any) => s.days || []);
+  const totalDays = allDays.length || activePrep?.durationDays || 30;
+  const completedCount = allDays.filter((d: any) => d.status === 'done').length;
+  const progressPct = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
+  const xp = (activePrep?.learningContext?.progress?.xp || 0) + completedCount * 50;
+  const daysLeft = Math.max(0, totalDays - completedCount);
+  const missedTasks = 0;
 
-  const missedTasks = 1;
-  const daysLeft = getDaysLeft(unifiedGoal);
-  const progressPct = getGoalProgressPct(unifiedGoal, completedTasks);
-  const xp = getGoalTotalXP(unifiedGoal, completedTasks);
+  const sprints = (activePrep?.roadmap?.sprints || []).map((s: any, idx: number) => {
+    const days = s.days || [];
+    const lvlCount = Math.ceil(days.length / 3) || 1;
+    const levels = Array.from({ length: lvlCount }).map((_, i) => ({
+      id: `level-${i + 1}`,
+      title: `Level ${i + 1}`,
+      status: days.slice(i * 3, (i + 1) * 3).every((d: any) => d.status === 'done')
+        ? ('completed' as const)
+        : ('unlocked' as const),
+    }));
+    return {
+      id: s.id || `sprint-${idx + 1}`,
+      title: s.title || `Sprint ${idx + 1}`,
+      goal: s.focus || `Sprint ${idx + 1} preparation`,
+      levels,
+      days,
+    };
+  });
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
@@ -28,7 +48,9 @@ export function AppHome() {
           <div className="relative z-10 flex-1 min-w-0">
             <h3 className="text-2xl md:text-3xl font-extrabold text-navy-900 mb-2">Welcome home!</h3>
             <p className="text-base md:text-lg text-navy-800/80 font-medium max-w-xl">
-              Ready to pick up where you left off? PrepAmigo has everything lined up for you today.
+              {activePrep
+                ? `You're preparing for ${activePrep.learningContext?.targetRole || 'your target role'} at ${activePrep.learningContext?.companyInfo?.name || 'your target company'}.`
+                : 'Ready to kick off your preparation? PrepAmigo is ready to build your custom roadmap.'}
             </p>
           </div>
 
@@ -48,7 +70,7 @@ export function AppHome() {
             <div className="bg-white/60 backdrop-blur-sm border border-navy-900/10 rounded-xl px-4 py-2 flex items-center gap-2">
               <Icon name="calendar" className="text-navy-500" />
               <span className="font-bold text-navy-900">{daysLeft} days left</span>
-              <span className="text-sm font-medium text-navy-700/80">until your interview</span>
+              <span className="text-sm font-medium text-navy-700/80">in your roadmap</span>
             </div>
           </div>
 
@@ -71,32 +93,47 @@ export function AppHome() {
                 <Link to="/roadmap" className="text-sm text-navy-700 font-bold hover:underline flex items-center gap-1">View Full Roadmap <Icon name="arrow-forward" /></Link>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                {unifiedGoal.sprints.map((sprint) => {
-                  const nodeStates = getSprintNodeStates(sprint, completedTasks);
-                  return (
-                  <div key={sprint.id} className="bg-white rounded-2xl p-5 border border-border shadow-sm flex flex-col gap-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-lg text-carbon-900">{sprint.title}</h3>
-                        <p className="text-sm text-carbon-500">{sprint.goal}</p>
-                      </div>
-                      <span className="text-xs font-bold bg-lavender-100 text-navy-700 px-2 py-1 rounded-md">{sprint.levels.length} Levels</span>
-                    </div>
+              {sprints.length === 0 ? (
+                <div className="bg-white rounded-2xl p-8 border border-border text-center">
+                  <h3 className="text-lg font-bold text-carbon-900 mb-2">No active sprints</h3>
+                  <p className="text-sm text-carbon-500 mb-4">Start your preparation in chat to generate your study plan.</p>
+                  <Link to="/dashboard/chat">
+                    <Button variant="primary">Create Plan in Chat</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {sprints.map((sprint) => {
+                    const nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[] = sprint.levels.map((l, i) => {
+                      if (l.status === 'completed') return 'completed';
+                      if (i === 0) return 'current';
+                      return l.status === 'unlocked' ? 'upcoming' : 'locked';
+                    });
+                    return (
+                      <div key={sprint.id} className="bg-white rounded-2xl p-5 border border-border shadow-sm flex flex-col gap-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-bold text-lg text-carbon-900">{sprint.title}</h3>
+                            <p className="text-sm text-carbon-500">{sprint.goal}</p>
+                          </div>
+                          <span className="text-xs font-bold bg-lavender-100 text-navy-700 px-2 py-1 rounded-md">{sprint.levels.length} Levels</span>
+                        </div>
 
-                    {/* AgentJourney Map */}
-                    <div className="relative w-full mt-2 bg-surface-muted/30 rounded-xl overflow-hidden flex items-center">
-                      <SprintMap
-                        sprintId={sprint.id}
-                        nodeStates={nodeStates}
-                        levelIds={sprint.levels.map(l => l.id)}
-                        onNodeClick={(levelId) => navigate(`/dashboard/${sprint.id}/${levelId}`)}
-                        className="border-none shadow-none bg-transparent"
-                      />
-                    </div>
-                  </div>
-                )})}
-              </div>
+                        {/* AgentJourney Map */}
+                        <div className="relative w-full mt-2 bg-surface-muted/30 rounded-xl overflow-hidden flex items-center">
+                          <SprintMap
+                            sprintId={sprint.id}
+                            nodeStates={nodeStates}
+                            levelIds={sprint.levels.map(l => l.id)}
+                            onNodeClick={(levelId) => navigate(`/dashboard/${sprint.id}/${levelId}`)}
+                            className="border-none shadow-none bg-transparent"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </RevealStaggerItem>
 
             {/* Right Column - Quick Links */}
@@ -133,15 +170,15 @@ export function AppHome() {
                 </div>
               </Link>
 
-              <Link to="/dashboard/preps" className="block">
+              <Link to="/roadmap" className="block">
                 <div className="bg-white rounded-[2rem] p-6 flex flex-row gap-4 border border-border shadow-sm hover:scale-[1.02] transition-transform">
                   <div className="w-12 h-12 rounded-2xl bg-surface-muted text-carbon-700 flex items-center justify-center mb-2">
-                    <Icon name="map-outline" className="text-2xl" />
+                    <Icon name="git-network-outline" className="text-2xl" />
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-lg text-carbon-900">Preps</h4>
-                    <p className="text-sm text-carbon-500">Manage your active preparations</p>
+                    <h4 className="font-bold text-lg text-carbon-900">Roadmap & Sprints</h4>
+                    <p className="text-sm text-carbon-500">View your active preparation sprints</p>
                   </div>
                 </div>
               </Link>

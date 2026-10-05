@@ -177,8 +177,8 @@ export function Chat() {
 
             addAgentMessage({
               content: messageText,
-              scenario: payload?.result ? 'setup' : undefined,
-              data: payload?.result
+              scenario: (payload?.result || planId) ? 'setup' : undefined,
+              data: (payload?.result || planId)
                 ? {
                     role,
                     company,
@@ -188,11 +188,7 @@ export function Chat() {
             });
 
             void refreshPreps();
-            if (planId) {
-              setTimeout(() => {
-                navigate(`/dashboard/preps/${planId}`);
-              }, 1500);
-            }
+            // User requested: No autoredirect. The user gets a button to go to the roadmap.
 
             setIsProcessing(false);
           },
@@ -211,7 +207,7 @@ export function Chat() {
           },
         },
         threadId,
-        attachedFile?.text
+        attachedFile?.text || user?.profile?.resume_text
       );
     } catch (err: any) {
       setMessages((prev) => prev.filter((m) => m.id !== journeyId));
@@ -249,10 +245,31 @@ export function Chat() {
         {/* AgentActivity removed: the journey now lives inside the conversation */}
 
         {hasStarted && (
-          <div className="flex-1 overflow-y-auto">
-            <Messages messages={messages} />
-            <div ref={messagesEndRef} className="h-4" />
-          </div>
+          <>
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-white/70 backdrop-blur-xs shrink-0 z-20">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-bold text-navy-900 uppercase tracking-wider">Preparation Agent</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessages([]);
+                  clientRef.current?.close();
+                  clientRef.current = new AgentStreamClient();
+                }}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-border bg-bg text-carbon-700 hover:bg-lavender-100 hover:text-navy-900 transition-colors disabled:opacity-50"
+              >
+                <Icon name="add-outline" className="text-sm" />
+                <span>New Plan</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <Messages messages={messages} />
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
+          </>
         )}
 
         <div

@@ -5,12 +5,11 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { Home } from "./pages/Home";
 import { Auth } from "./pages/Auth";
 import { AppProvider } from "./context/AppContext";
+import { AuthProvider } from "./hooks/useAuth";
 import { StyleProvider } from "./components/ui/StyleProvider";
 import { StyleGuide } from "./pages/StyleGuide";
 import { AppHome } from "./pages/AppHome";
 import { Chat } from "./pages/Chat";
-import { Preps } from "./pages/Preps";
-import { PrepDetails } from "./pages/PrepDetails";
 import { Calendar } from "./pages/Calendar";
 import { Roadmap } from "./pages/Roadmap";
 import { Assessment } from "./pages/Assessment";
@@ -69,8 +68,6 @@ function AnimatedRoutes() {
             <Route index element={<AppHome />} />
             <Route path="chat" element={<Chat />} />
             <Route path="interview-prep" element={<InterviewPrep />} />
-            <Route path="preps" element={<Preps />} />
-            <Route path="preps/:prepId" element={<PrepDetails />} />
             <Route path="practice" element={<Roadmap />} />
             <Route path="progress" element={<Progress />} />
             <Route path="notifications" element={<Notifications />} />
@@ -101,11 +98,13 @@ function AnimatedRoutes() {
 function App() {
   return (
     <StyleProvider>
-      <AppProvider>
-        <BrowserRouter>
-          <AnimatedRoutes />
-        </BrowserRouter>
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <BrowserRouter>
+            <AnimatedRoutes />
+          </BrowserRouter>
+        </AppProvider>
+      </AuthProvider>
     </StyleProvider>
   );
 }

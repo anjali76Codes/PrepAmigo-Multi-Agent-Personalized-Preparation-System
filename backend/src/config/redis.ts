@@ -23,7 +23,10 @@ redisClient.on("error", (err: Error) => {
 // Factory function to create dedicated subscriber connections for SSE streams
 export function createRedisSubscriber(): Redis {
   const sub = new Redis(config.REDIS_URL, {
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: null,
+    retryStrategy(times: number) {
+      return Math.min(times * 100, 3000);
+    },
     lazyConnect: false,
   });
 

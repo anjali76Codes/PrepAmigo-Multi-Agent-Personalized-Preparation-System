@@ -327,19 +327,23 @@ def assemble_plan(
     # highest-priority topics get them). Every one found stays in the
     # resource pack.
     left = {"book": max_books, "paper": max_papers}
+    topic_references_by_day = {}
     for topic in topics:
         kind_of = lambda ref: ("paper" if ref["url"] in topic["paper_urls"]  # noqa: E731
                                else "book" if ref["type"] == "book" else "")
-        daily = [r for r in topic["references"] if left.get(kind_of(r)) is None]
+        daily = [r for r in topic["references"] if not kind_of(r)]
         companions = []
         for kind in ("book", "paper"):
             found = [r for r in topic["references"] if kind_of(r) == kind]
-            if left[kind] and found:
+            if (left[kind] is None or left[kind] > 0) and found:
                 companions.append(found[0])
-                left[kind] -= 1
+                if left[kind] is not None:
+                    left[kind] -= 1
         per_day = place_references(daily, [d["title"] for d in wording[topic["key"]][: topic["days"]]], topic["name"])
-        per_day[0] = per_day[0] + companions
-        
+        if per_day:
+            per_day[0] = per_day[0] + companions
+        topic_references_by_day[topic["key"]] = per_day
+
     # Now group all topics into 7-day sprints
     all_days = []
     for topic in topics:
@@ -350,7 +354,7 @@ def assemble_plan(
                 "topic_overview": topic["overview"],
                 "topic_effort": topic["effort"],
                 "day_wording": wording[topic["key"]][i],
-                "references": [r for j, r in enumerate(place_references(topic["references"], [d["title"] for d in wording[topic["key"]][:topic["days"]]], topic["name"])[i])],
+                "references": topic_references_by_day[topic["key"]][i],
             })
             
     parts = split_evenly(list(range(len(all_days))), -(-len(all_days) // 7))

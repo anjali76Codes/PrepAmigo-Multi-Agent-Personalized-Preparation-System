@@ -5,13 +5,15 @@ import { ChatInput } from "../components/chat/ChatInput";
 import { DirectorySearch } from "../components/resources/DirectorySearch";
 import { FolderTile } from "../components/resources/FolderIcon";
 import { buildTree, filterTree } from "../lib/resourceTree";
+import { useAppContext } from "../context/AppContext";
 import { SUGGESTED_QUESTIONS } from "../data/mockNotes";
 
 const PREVIEW_COUNT = 4;
 
 export function ResourcePackHome() {
   const navigate = useNavigate();
-  const tree = useMemo(buildTree, []);
+  const { activePrep } = useAppContext();
+  const tree = useMemo(() => buildTree(activePrep), [activePrep]);
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const matches = useMemo(() => filterTree(tree, q), [tree, q]);

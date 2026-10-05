@@ -68,11 +68,14 @@ interface PracticeTask {
 }
 
 export interface RoadmapDay {
+  id?: string;
   dayNumber: number;
   topic: string;
   objective: string;
+  objectives?: string[];
   estimatedMinutes: number;
   references: string[];
+  rawReferences?: any[];
   practiceTask: PracticeTask | null;
   status: 'done' | 'today' | 'upcoming' | 'missed' | 'rescheduled';
   date: string;

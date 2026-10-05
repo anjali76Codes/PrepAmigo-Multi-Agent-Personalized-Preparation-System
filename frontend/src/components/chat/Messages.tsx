@@ -7,6 +7,7 @@ import { Alert } from '../ui/Alert';
 import { FlashcardDeck } from '../practice/FlashcardDeck';
 import { ChatJourney, type JourneyStep } from './AgentJourney';
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
+import { useAppContext } from '../../context/AppContext';
 
 export interface Message {
   id: string;
@@ -22,6 +23,7 @@ interface MessagesProps {
 }
 
 export function Messages({ messages, onJourneyComplete }: MessagesProps) {
+  const { setActivePrepId } = useAppContext();
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-6">
       {messages.map((msg) => (
@@ -57,32 +59,36 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
             )}
 
             {msg.scenario === 'setup' && msg.data && (
-              <Card variant="default" className="p-6 space-y-4">
-                <h4 className="font-bold text-lg text-carbon-900">Prep Created: {msg.data.role} at {msg.data.company}</h4>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-bg p-4 rounded-control border border-border">
-                    <div className="text-sm text-carbon-500 mb-1">Top Expectations</div>
-                    <ul className="list-disc list-inside text-sm text-carbon-900">
-                      <li>System Design</li>
-                      <li>Data Structures</li>
-                    </ul>
-                  </div>
-                  <div className="bg-bg p-4 rounded-control border border-border">
-                    <div className="text-sm text-carbon-500 mb-1">Identified Gaps</div>
-                    <ul className="list-disc list-inside text-sm text-beige-600 font-medium">
-                      <li>System Design (High)</li>
-                      <li>Graphs (Medium)</li>
-                    </ul>
-                  </div>
+              <div className="p-4 bg-white border border-border rounded-2xl shadow-xs max-w-md space-y-3">
+                <div className="flex items-center gap-2.5 text-navy-900 font-bold text-sm">
+                  <span className="w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0">
+                    <Icon name="checkmark" className="text-base" />
+                  </span>
+                  <span>{msg.data.role} at {msg.data.company} plan ready!</span>
                 </div>
-                <div className="pt-2">
-                  <Link to={`/dashboard/preps/${msg.data.planId || 'prep-1'}`}>
-                    <Button variant="primary" className="flex items-center gap-2">
-                      View Roadmap <Icon name="arrow-forward-outline" />
+                <div className="flex items-center gap-2 pt-0.5">
+                  <Link
+                    to="/roadmap"
+                    onClick={() => {
+                      if (msg.data?.planId) setActivePrepId(msg.data.planId);
+                    }}
+                  >
+                    <Button variant="primary" size="sm" className="flex items-center gap-1.5 text-xs font-bold py-2 px-3.5 rounded-xl">
+                      Go to Roadmap <Icon name="arrow-forward-outline" />
+                    </Button>
+                  </Link>
+                  <Link
+                    to="/calendar"
+                    onClick={() => {
+                      if (msg.data?.planId) setActivePrepId(msg.data.planId);
+                    }}
+                  >
+                    <Button variant="outline" size="sm" className="flex items-center gap-1.5 text-xs py-2 px-3 rounded-xl">
+                      <Icon name="calendar-outline" /> Calendar
                     </Button>
                   </Link>
                 </div>
-              </Card>
+              </div>
             )}
 
             {msg.scenario === 'plan-update' && (

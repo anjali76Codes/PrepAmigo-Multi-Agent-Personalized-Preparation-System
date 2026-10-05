@@ -435,7 +435,7 @@ def test_no_cache_also_covers_stored_job_profiles_and_serpapis_own_cache(monkeyp
         return {"skills": [{"name": "Python"}], "coverage": "medium"}
 
     monkeypatch.setattr(job_module, "settings", Settings(serpapi_api_key="k", serpapi_enabled=True))
-    monkeypatch.setattr(job_module, "fetch_google_jobs", lambda q, loc: {"jobs_results": []})
+    monkeypatch.setattr(job_module, "fetch_google_jobs", lambda query=None, location=None, **kwargs: {"jobs_results": []})
     monkeypatch.setattr(job_module, "extract_with_llm", extraction)
     monkeypatch.setattr(job_module, "get_db", lambda: Database())
     profile = asyncio.run(job_module.get_job_intelligence_profile(

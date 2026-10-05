@@ -59,11 +59,14 @@ export function apiPlanToPrep(plan: ApiPlan): Prep {
     title: s.sprint_name,
     focus: s.sprint_name,
     days: (s.sprint_days || []).map((d) => ({
+      id: d._id,
       dayNumber: d.day_number,
       topic: d.topic_title,
       objective: d.objectives?.[0] || d.topic_description || "Study key concepts and practice.",
+      objectives: d.objectives || [],
       estimatedMinutes: d.estimated_minutes || 60,
       references: (d.references || []).map((r) => r.title || r.url),
+      rawReferences: d.references || [],
       practiceTask: d.objectives?.[1]
         ? {
             id: `task-${d._id || d.day_number}`,

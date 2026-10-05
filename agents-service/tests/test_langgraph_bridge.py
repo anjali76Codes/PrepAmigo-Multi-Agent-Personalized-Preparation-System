@@ -78,7 +78,7 @@ def test_step_event_type_is_chosen_from_the_step_name():
     # build_test_graph's specialist emits a "execute_searches" step, which
     # the keyword table maps to RESEARCHING regardless of which agent sent it
     step_events = [(kind, payload) for kind, payload in events if payload.get("step") == "execute_searches"]
-    assert step_events == [(EventType.RESEARCHING, {"agent": "research_agent", "step": "execute_searches"})]
+    assert step_events == [(EventType.RESEARCHING, {"agent": "research", "step": "execute_searches", "status": "completed"})]
 
 
 def test_a_failed_step_becomes_failed():
@@ -104,8 +104,8 @@ def test_a_failed_step_becomes_failed():
 
     events = collect(graph)
 
-    failed = next(payload for kind, payload in events if kind == EventType.FAILED)
-    assert failed == {"agent": "chat", "step": "guardrail_check", "error": "blocked"}
+    failed = next(payload for kind, payload in events if payload.get("status") == "failed")
+    assert failed == {"agent": "chat", "step": "guardrail_check", "error": "blocked", "status": "failed"}
 
 
 def test_waiting_interrupt_is_forwarded_as_a_waiting_event(monkeypatch):

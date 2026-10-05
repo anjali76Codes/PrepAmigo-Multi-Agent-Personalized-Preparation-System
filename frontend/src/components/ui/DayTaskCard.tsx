@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export interface ResourceItem {
   id: string;
-  type: "Article" | "Video" | "Link" | "Note";
+  type: "Article" | "Video" | "Link" | "Note" | "Book" | "Documentation" | "Problem" | "Course" | string;
   title: string;
   url: string;
 }
@@ -33,12 +33,21 @@ export function DayTaskCard({
   }, {} as Record<string, ResourceItem[]>);
 
   const getIconForType = (type: string) => {
-    switch (type) {
-      case "Video":
+    switch (type.toLowerCase()) {
+      case "video":
         return "play-circle";
-      case "Article":
+      case "article":
         return "document-text";
-      case "Note":
+      case "book":
+        return "book";
+      case "documentation":
+      case "docs":
+        return "code-slash";
+      case "problem":
+        return "code-working";
+      case "course":
+        return "school";
+      case "note":
         return "journal";
       default:
         return "link";
@@ -97,7 +106,9 @@ export function DayTaskCard({
                   <div key={type} className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <Icon name="folder-outline" className="text-carbon-400 text-sm" />
-                      <h4 className="text-xs font-bold text-carbon-600 uppercase tracking-wider">{type}s</h4>
+                      <h4 className="text-xs font-bold text-carbon-600 uppercase tracking-wider">
+                        {type.endsWith("s") ? type : `${type}s`}
+                      </h4>
                     </div>
                     <div className="flex flex-col gap-1.5 pl-6">
                       {items.map((item) => (

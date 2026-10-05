@@ -7,6 +7,7 @@ import { FolderTile } from "./FolderIcon";
 import { buildTree, filterTree, searchTree, allFolderIds, pathToId, nodesAlong, type TreeNode } from "../../lib/resourceTree";
 import { SearchResults } from "./SearchResults";
 import { cn } from "../../utils/utils";
+import { useAppContext } from "../../context/AppContext";
 
 function ListNode({ node, depth, open, toggle }: { node: TreeNode; depth: number; open: Set<string>; toggle: (id: string) => void }) {
     if (node.kind === "file") {
@@ -44,7 +45,8 @@ function ListNode({ node, depth, open, toggle }: { node: TreeNode; depth: number
 
 export function ResourceDirectory() {
     const [params] = useSearchParams();
-    const tree = useMemo(buildTree, []);
+    const { activePrep } = useAppContext();
+    const tree = useMemo(() => buildTree(activePrep), [activePrep]);
     const [query, setQuery] = useState("");
     const [view, setView] = useState<"grid" | "list">("grid");
     const [path, setPath] = useState<string[]>(() => {

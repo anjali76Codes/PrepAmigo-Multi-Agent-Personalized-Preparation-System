@@ -5,6 +5,7 @@ override variables that are already set."""
 import os
 
 os.environ.update({
+    "ENABLE_AUTH": "false",
     "RESEARCH_CACHE_ENABLED": "false",
     "LLM_CACHE_ENABLED": "false",
     "COMPANY_RESEARCH_MODE": "agent",

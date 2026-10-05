@@ -1,42 +1,108 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '../components/ui/Icon';
 import { Link } from 'react-router-dom';
-import { MOCK_PLAN, MOCK_SPRINTS, MOCK_SPRINT_DAYS } from '../mocks/interviewPlan.mock';
-import type { ISprint, ISprintDay } from '../mocks/interviewPlan.mock';
+import { useAppContext } from '../context/AppContext';
+import { plansApi } from '../lib/api/plans';
+import { Button } from '../components/ui/Button';
 import { DayTaskCard } from '../components/ui/DayTaskCard';
 import type { ResourceItem } from '../components/ui/DayTaskCard';
 
-export function Roadmap() {
-  const [sprints] = useState<ISprint[]>(MOCK_SPRINTS);
-  const [sprintDays, setSprintDays] = useState<ISprintDay[]>(MOCK_SPRINT_DAYS);
+function formatReferenceType(type?: string): string {
+  if (!type) return "Article";
+  const lower = type.toLowerCase();
+  if (lower.includes("video") || lower.includes("youtube")) return "Video";
+  if (lower.includes("book") || lower.includes("paper")) return "Book";
+  if (lower.includes("doc")) return "Documentation";
+  if (lower.includes("problem") || lower.includes("code") || lower.includes("leetcode")) return "Problem";
+  if (lower.includes("course") || lower.includes("tutorial")) return "Course";
+  return "Article";
+}
 
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    [MOCK_SPRINTS[0]?._id]: true,
-  });
+export function Roadmap() {
+  const { preps, activePrep, setActivePrepId, loadingPreps } = useAppContext();
+
+  // Map sprints and sprintDays from real activePrep
+  const mappedData = useMemo(() => {
+    if (!activePrep) return { sprints: [], sprintDays: [] };
+    const sprints = (activePrep.roadmap?.sprints || []).map((s, idx) => ({
+      _id: s.id,
+      sprint_number: idx + 1,
+      sprint_name: s.title || `Sprint ${idx + 1}`,
+      total_days: s.days?.length || 0,
+      status: s.days?.every((d: any) => d.status === 'done') ? ('completed' as const) : ('in_progress' as const),
+    }));
+
+    const sprintDays = (activePrep.roadmap?.sprints || []).flatMap((s) =>
+      (s.days || []).map((d: any) => ({
+        _id: d.id || `${s.id}-day-${d.dayNumber}`,
+        sprint_id: s.id,
+        day_number: d.dayNumber,
+        scheduled_date: d.date,
+        topic_title: d.topic,
+        topic_description: d.objective || '',
+        objectives: (d.objectives && d.objectives.length > 0) ? d.objectives : [d.objective].filter(Boolean),
+        estimated_minutes: d.estimatedMinutes || 60,
+        references: (d.rawReferences || []).map((r: any) => ({
+          title: r.title || r.url,
+          url: r.url,
+          type: r.type,
+          description: r.description,
+        })),
+        status: (d.status === 'done' ? 'completed' : d.status === 'today' ? 'in_progress' : 'pending') as
+          | 'completed'
+          | 'in_progress'
+          | 'pending',
+      }))
+    );
+
+    return { sprints, sprintDays };
+  }, [activePrep]);
+
+  const [localSprintDays, setLocalSprintDays] = useState<any[]>([]);
+
+  useEffect(() => {
+    setLocalSprintDays(mappedData.sprintDays);
+  }, [mappedData.sprintDays]);
+
+  const sprints = mappedData.sprints;
+  const sprintDays = localSprintDays;
+
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (sprints.length > 0 && Object.keys(openCategories).length === 0) {
+      setOpenCategories({ [sprints[0]._id]: true });
+    }
+  }, [sprints]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Solved' | 'Unsolved'>('All');
 
   // Toggle Category Accordion
   const toggleCategory = (catId: string) => {
-    setOpenCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+    setOpenCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
   };
 
   // Toggle Problem Solved
   const toggleProblemSolved = (dayId: string) => {
-    setSprintDays(prev => prev.map(d => 
-      d._id === dayId 
-        ? { ...d, status: d.status === 'completed' ? 'pending' : 'completed' } 
-        : d
-    ));
+    setLocalSprintDays((prev) =>
+      prev.map((d) =>
+        d._id === dayId ? { ...d, status: d.status === 'completed' ? 'pending' : 'completed' } : d
+      )
+    );
+    if (dayId && !dayId.includes('day-')) {
+      void plansApi.completeDay(dayId).catch((err) => {
+        console.warn('[Roadmap] Could not mark day complete on backend:', err);
+      });
+    }
   };
 
   // Expand / Collapse All
   const handleToggleExpandAll = () => {
     const allOpen = Object.values(openCategories).every(Boolean);
     const newCatState: Record<string, boolean> = {};
-    sprints.forEach(cat => {
+    sprints.forEach((cat) => {
       newCatState[cat._id] = !allOpen;
     });
     setOpenCategories(newCatState);
@@ -44,42 +110,81 @@ export function Roadmap() {
 
   // Flattened problem statistics calculation
   const totalCount = sprintDays.length;
-  const solvedCount = sprintDays.filter(p => p.status === 'completed').length;
+  const solvedCount = sprintDays.filter((p) => p.status === 'completed').length;
   const overallPercentage = totalCount > 0 ? Math.round((solvedCount / totalCount) * 100) : 0;
 
   // Next unsolved problem
-  const nextUnsolved = sprintDays.find(p => p.status !== 'completed');
+  const nextUnsolved = sprintDays.find((p) => p.status !== 'completed');
 
   // Filtered categories
   const filteredRoadmap = useMemo(() => {
-    return sprints.map(sprint => {
-      const days = sprintDays.filter(d => d.sprint_id === sprint._id);
-      
-      const filteredDays = days.filter(p => {
-        const matchesSearch = p.topic_title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              p.topic_description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = 
-          statusFilter === 'All' ? true :
-          statusFilter === 'Solved' ? p.status === 'completed' :
-          statusFilter === 'Unsolved' ? p.status !== 'completed' : true;
+    return sprints
+      .map((sprint) => {
+        const days = sprintDays.filter((d) => d.sprint_id === sprint._id);
 
-        return matchesSearch && matchesStatus;
-      });
+        const filteredDays = days.filter((p) => {
+          const matchesSearch =
+            p.topic_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.topic_description.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchesStatus =
+            statusFilter === 'All'
+              ? true
+              : statusFilter === 'Solved'
+              ? p.status === 'completed'
+              : statusFilter === 'Unsolved'
+              ? p.status !== 'completed'
+              : true;
 
-      // Distribute into levels (3 days per level)
-      const daysPerLevel = 3;
-      const lvlCount = Math.ceil(filteredDays.length / daysPerLevel);
-      const levels = Array.from({ length: lvlCount }).map((_, i) => {
-        return {
-          id: `level-${i + 1}`,
-          title: `Level ${i + 1}`,
-          days: filteredDays.slice(i * daysPerLevel, (i + 1) * daysPerLevel)
-        };
-      });
+          return matchesSearch && matchesStatus;
+        });
 
-      return { ...sprint, filteredDays, levels };
-    }).filter(sprint => sprint.filteredDays.length > 0);
+        // Distribute into levels (3 days per level)
+        const daysPerLevel = 3;
+        const lvlCount = Math.ceil(filteredDays.length / daysPerLevel);
+        const levels = Array.from({ length: lvlCount }).map((_, i) => {
+          return {
+            id: `level-${i + 1}`,
+            title: `Level ${i + 1}`,
+            days: filteredDays.slice(i * daysPerLevel, (i + 1) * daysPerLevel),
+          };
+        });
+
+        return { ...sprint, filteredDays, levels };
+      })
+      .filter((sprint) => sprint.filteredDays.length > 0);
   }, [sprints, sprintDays, searchQuery, statusFilter]);
+
+  if (loadingPreps) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-carbon-500">
+        <Icon name="sync-outline" className="text-3xl animate-spin text-navy-700 mb-3" />
+        <p className="text-sm font-semibold">Loading your roadmap...</p>
+      </div>
+    );
+  }
+
+  if (!activePrep || sprints.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-center">
+        <div className="w-16 h-16 rounded-full bg-navy-50 text-navy-700 flex items-center justify-center text-3xl mb-4">
+          <Icon name="map-outline" />
+        </div>
+        <h2 className="text-2xl font-bold text-carbon-900 mb-2">No Active Roadmap</h2>
+        <p className="text-sm text-carbon-500 max-w-md mb-6">
+          You don't have an active roadmap yet. Create your personalized preparation plan by chatting with our agent.
+        </p>
+        <Link to="/dashboard/chat">
+          <Button variant="primary" className="flex items-center gap-2">
+            Start Prep in Chat <Icon name="arrow-forward-outline" />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const planTitle = activePrep.title || 'Preparation Roadmap';
+  const roleName = activePrep.learningContext?.targetRole || 'Target Role';
+  const companyName = activePrep.learningContext?.companyInfo?.name || 'Target Company';
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
@@ -91,8 +196,33 @@ export function Roadmap() {
           <div className="flex items-center gap-2 text-xs font-semibold text-carbon-400">
             <Link to="/dashboard" className="hover:text-carbon-900 transition-colors">Prep Hub</Link>
             <span>/</span>
-            <span className="text-carbon-800">{MOCK_PLAN.plan_name}</span>
+            <span className="text-carbon-800">{planTitle}</span>
           </div>
+
+          {/* Multi-prep Selector if multiple preps exist */}
+          {preps.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <span className="text-xs font-bold text-carbon-400 uppercase tracking-wider shrink-0 mr-1">
+                Your Preps:
+              </span>
+              {preps.map((p) => {
+                const isSelected = p.id === activePrep.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setActivePrepId(p.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+                      isSelected
+                        ? "bg-navy-900 text-white border-navy-900 shadow-xs"
+                        : "bg-white text-carbon-700 border-border hover:bg-surface-muted"
+                    }`}
+                  >
+                    <span>{p.title || `${p.learningContext?.companyInfo?.name || 'Prep'}`}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Top Header Card following Screenshot 2 */}
           <div className="bg-white border border-border rounded-3xl p-6 md:p-8 shadow-sm flex flex-col lg:flex-row justify-between items-start gap-8">
@@ -100,16 +230,16 @@ export function Roadmap() {
             {/* Left Header Description */}
             <div className="space-y-4 max-w-2xl">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-carbon-900 tracking-tight">
-                {MOCK_PLAN.plan_name}
+                {planTitle}
               </h1>
               <p className="text-sm md:text-base text-carbon-500 leading-relaxed">
-                Role: {MOCK_PLAN.role} at {MOCK_PLAN.company}. A comprehensive preparation plan organized into sprints to tackle coding, system design, and behavioral questions.
+                Role: {roleName} at {companyName}. A comprehensive preparation plan organized into sprints to tackle coding, system design, and behavioral questions.
               </p>
 
               <div className="flex items-center gap-4 text-xs font-semibold text-carbon-400">
                 <span className="flex items-center gap-1.5 text-navy-700">
                   <span className="w-2 h-2 rounded-full bg-navy-700 inline-block animate-pulse" />
-                  Total {MOCK_PLAN.total_days} Days
+                  Total {activePrep.durationDays} Days
                 </span>
                 <span>•</span>
                 <span>{sprints.length} Sprints</span>
@@ -254,16 +384,16 @@ export function Roadmap() {
                                 <div className="space-y-3 pl-4">
                                   {level.days.map((problem) => {
                                     const resources: ResourceItem[] = [
-                                      ...problem.objectives.map((obj, idx) => ({
-                                        id: `obj-${idx}`,
-                                        type: "Note" as const,
+                                      ...problem.objectives.map((obj: string, idx: number) => ({
+                                        id: `obj-${problem._id}-${idx}`,
+                                        type: "Note",
                                         title: obj,
                                         url: "#"
                                       })),
-                                      ...problem.references.map((ref, idx) => ({
-                                        id: `ref-${idx}`,
-                                        type: "Article" as const,
-                                        title: ref.title,
+                                      ...problem.references.map((ref: any, idx: number) => ({
+                                        id: `ref-${problem._id}-${idx}`,
+                                        type: formatReferenceType(ref.type),
+                                        title: ref.title || ref.url,
                                         url: ref.url
                                       }))
                                     ];

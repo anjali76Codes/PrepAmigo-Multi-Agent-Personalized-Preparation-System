@@ -66,13 +66,7 @@ class JobIntelligenceProfile(BaseModel):
 
 
 def get_db():
-    global _mongo_client
-    if _mongo_client is None:
-        from pymongo import MongoClient
-
-        mongo_uri = settings.mongo_uri
-        _mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=500)
-    return _mongo_client["prepamigo"]
+    return None
 
 
 def fetch_google_jobs(query: str, location: str) -> dict[str, Any]:
@@ -308,29 +302,7 @@ async def get_job_intelligence_profile(
     company_context: str = "",
 ) -> dict[str, Any]:
     """Fetch and validate a profile; database can be injected for isolated tests."""
-    # --no-cache (tools/cache.bypass_caches) covers this agent's own stored
-    # profiles too: neither read nor written
-    if using_dummy_data() or caches_bypassed():
-        cache_enabled = False
     cache_key = request.normalized_key()
-    db = database
-    if db is None and cache_enabled:
-        try:
-            db = get_db()
-            db.client.admin.command("ping")
-        except Exception:
-            logger.info("Job Intelligence cache (MongoDB) is unavailable; continuing without cache")
-            db = None
-
-    collection = db.job_intelligence_profiles if db is not None else None
-    if collection is not None and cache_enabled and not request.force_refresh:
-        try:
-            cached = _fresh_cache_entry(collection.find_one({"normalizedQueryKey": cache_key}))
-            if cached:
-                return JobIntelligenceProfile.model_validate(cached).model_dump(mode="json")
-        except Exception:
-            logger.info("Job Intelligence cache read failed; fetching fresh data")
-
     custom_terms = [
         str(value).strip()
         for key, value in request.model_extra.items()
@@ -393,18 +365,7 @@ async def get_job_intelligence_profile(
         "fetchedAt": now,
         "expiresAt": now + timedelta(days=7),
     })
-    profile_data = profile.model_dump(mode="json")
-
-    if collection is not None:
-        try:
-            collection.update_one(
-                {"normalizedQueryKey": cache_key},
-                {"$set": profile_data},
-                upsert=True,
-            )
-        except Exception:
-            logger.info("Job Intelligence cache write skipped (MongoDB unavailable)")
-    return profile_data
+    return profile.model_dump(mode="json")
 
 
 class JobIntelligenceAgent:

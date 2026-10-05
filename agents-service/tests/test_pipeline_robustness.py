@@ -45,7 +45,10 @@ def test_company_research_timeout_keeps_the_profile_gathered_so_far(monkeypatch)
 
     class SlowCompanyGraph:
         async def astream(self, _inputs, config, stream_mode):
-            yield {"messages": [], "task_context": {"company_profile": {"name": "Acme", "description": "Makes anvils"}}}
+            yield (
+                "values",
+                {"messages": [], "task_context": {"company_profile": {"name": "Acme", "description": "Makes anvils"}}},
+            )
             await asyncio.sleep(5)  # the model's closing turn never arrives
 
     class JobAgent:

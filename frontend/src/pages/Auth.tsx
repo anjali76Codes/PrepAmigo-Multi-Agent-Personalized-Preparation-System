@@ -5,6 +5,7 @@ import { PageBackground } from '../components/ui/PageBackground';
 import { Icon } from '../components/ui/Icon';
 import { Mascot } from '../components/ui/Mascot';
 import { GoogleLogin } from "@react-oauth/google";
+import { useAuth } from "../hooks/useAuth";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -13,6 +14,7 @@ async function handleGoogleAuth(
   navigate: ReturnType<typeof useNavigate>,
   setError: (err: string | null) => void,
   setLoading: (loading: boolean) => void,
+  setUser: (user: any) => void,
   initialQuery?: string
 ) {
   setError(null);
@@ -27,6 +29,10 @@ async function handleGoogleAuth(
 
     const data = await res.json();
     if (res.ok) {
+      sessionStorage.removeItem("prepamigo_onboarding_skipped");
+      if (data.user) {
+        setUser(data.user);
+      }
       navigate("/dashboard/chat", {
         state: initialQuery ? { initialQuery } : undefined,
       });
@@ -86,6 +92,7 @@ function Field({
 export function Auth() {
   const { pathname, state } = useLocation();
   const navigate = useNavigate();
+  const { setUser, refreshUser } = useAuth();
   const isLogin = pathname === '/login';
 
   const initialQuery =
@@ -135,6 +142,12 @@ export function Auth() {
       const data = await res.json();
 
       if (res.ok) {
+        sessionStorage.removeItem("prepamigo_onboarding_skipped");
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          await refreshUser();
+        }
         navigate("/dashboard/chat", {
           state: initialQuery ? { initialQuery } : undefined,
         });
@@ -224,7 +237,7 @@ export function Auth() {
 
               <div className="mb-6 flex flex-col items-center">
                 <GoogleLogin
-                  onSuccess={(res) => handleGoogleAuth(res, navigate, setFormError, setLoading, initialQuery)}
+                  onSuccess={(res) => handleGoogleAuth(res, navigate, setFormError, setLoading, setUser, initialQuery)}
                   onError={() => setFormError("Google Sign In was cancelled or failed")}
                   shape="pill"
                   text={isLogin ? "signin_with" : "signup_with"}

@@ -129,8 +129,9 @@ def test_default_45_day_plan_is_valid_with_bounded_sprints(planner_settings):
     days = output["coverage"]["days_per_topic"]
     assert days["Claude"] == days["Salesforce"] > days["Enterprise Integration"]  # High gets more
     assert sum(days.values()) == 45
-    long_sprints = [s["sprint_name"] for s in output["sprints"] if "(part" in s["sprint_name"]]
-    assert "Claude (part 1 of 3)" in long_sprints
+    sprint_names = [s["sprint_name"] for s in output["sprints"]]
+    assert sprint_names[0] == "Sprint 1"
+    assert len(sprint_names) == 7
 
 
 def test_no_llm_call_writes_more_than_the_chunk_size_and_later_chunks_see_earlier_titles(planner_settings):
