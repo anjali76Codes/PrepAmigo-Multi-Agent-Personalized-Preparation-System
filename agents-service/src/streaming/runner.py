@@ -209,8 +209,17 @@ async def execute_agent_stream(
                 inputs["task_context"] = {"candidate_resume_text": str(resume_text).strip()}
             if user_id:
                 inputs["user_id"] = user_id
-            if plan_days:
-                inputs["plan_total_days"] = plan_days
+            from tools.duration import extract_duration_days
+
+            resolved_days = plan_days
+            if not resolved_days:
+                resolved_days = (
+                    extract_duration_days(wf_input.get("total_days") or wf_input.get("plan_days") or wf_input.get("days"))
+                    or extract_duration_days(query)
+                    or extract_duration_days(workflow_text_input)
+                )
+            if resolved_days:
+                inputs["plan_total_days"] = resolved_days
 
     await pub.emit_event(
         run_id=run_id,

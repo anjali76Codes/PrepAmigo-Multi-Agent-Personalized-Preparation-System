@@ -29,6 +29,7 @@ from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
+from tools.duration import extract_duration_days, resolve_plan_total_days
 from tools.plan_db_sync import sync_generated_plan_to_db
 
 logger = logging.getLogger(__name__)
@@ -246,6 +247,15 @@ class InterviewPrepOrchestrator:
         if missing and state.get("messages") and can_extract_conversation and not extracted_from_text:
             normalized = _merge_input(normalized, await self._extract_fields(state))
             missing = workflow_fields.missing_required_fields(normalized)
+        # Resolve requested plan duration in days (e.g. 90 days, 30 days, 60 days)
+        extracted_days = resolve_plan_total_days(
+            state,
+            [
+                state.get("workflow_text_input"),
+                resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None),
+            ],
+        )
+
         if missing:
             rounds = int(state.get("workflow_clarification_rounds") or 0) + 1
             if rounds > MAX_CLARIFICATION_ROUNDS:
@@ -259,7 +269,7 @@ class InterviewPrepOrchestrator:
                     "messages": [AIMessage(content=message)],
                 }
             question = _clarification_question(missing, normalized)
-            return {
+            res = {
                 "interview_prep_input": normalized,
                 "workflow_status": "awaiting_input",
                 "workflow_clarification_rounds": rounds,
@@ -271,14 +281,20 @@ class InterviewPrepOrchestrator:
                 "workflow_resume_input": {},
                 "messages": [AIMessage(content=question)],
             }
+            if extracted_days:
+                res["plan_total_days"] = extracted_days
+            return res
 
-        return {
+        res = {
             "interview_prep_input": normalized,
             "workflow_status": "running",
             "workflow_clarification_rounds": int(state.get("workflow_clarification_rounds") or 0),
             "workflow_question": None,
             "workflow_resume_input": {},
         }
+        if extracted_days:
+            res["plan_total_days"] = extracted_days
+        return res
 
     async def prepare(self, state: dict[str, Any]) -> dict[str, Any]:
         with agent_scope("prepare"):
@@ -710,11 +726,17 @@ class InterviewPrepOrchestrator:
             None,
         )
 
+        requested_days = (
+            state.get("plan_total_days")
+            or resolve_plan_total_days(state)
+            or settings.plan_total_days
+        )
+
         try:
             output = await self.planner_agent.build_plan(
                 materials, priority_gaps, role, company, user_id=state.get("user_id"),
                 focus=prep_focus(task_context.get("job_intelligence"), task_context.get("company_profile")),
-                total_days=state.get("plan_total_days") or settings.plan_total_days,
+                total_days=requested_days,
             )
         except Exception as exc:
             logger.warning("Planning stage failed: %s", exc, exc_info=True)

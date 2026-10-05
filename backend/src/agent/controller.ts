@@ -324,6 +324,29 @@ function pythonAuthHeaders(req: AuthenticatedRequest): Record<string, string> {
   return headers;
 }
 
+function extractPlanDays(text: string | undefined): number | undefined {
+  if (!text || typeof text !== "string") return undefined;
+  // Match "90 days", "90-day", "90 day", etc.
+  const dayMatch = text.match(/\b(\d{1,3})\s*(?:-| )?days?\b/i);
+  if (dayMatch && dayMatch[1]) {
+    const val = parseInt(dayMatch[1], 10);
+    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+  }
+  // Match "3 months", "2 months", "1 month"
+  const monthMatch = text.match(/\b(\d{1,2})\s*(?:-| )?months?\b/i);
+  if (monthMatch && monthMatch[1]) {
+    const val = parseInt(monthMatch[1], 10) * 30;
+    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+  }
+  // Match "6 weeks", "4 weeks", "1 week"
+  const weekMatch = text.match(/\b(\d{1,2})\s*(?:-| )?weeks?\b/i);
+  if (weekMatch && weekMatch[1]) {
+    const val = parseInt(weekMatch[1], 10) * 7;
+    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+  }
+  return undefined;
+}
+
 /**
  * POST /api/agent/run
  * Generates runId, triggers Python agent service asynchronously, and returns runId immediately.
@@ -375,6 +398,8 @@ export async function runAgentHandler(
     if (userId) runUserMap.set(runId, userId);
     listenAndPersistPlanInBackground(runId, userId);
 
+    const planDays = extractPlanDays(query);
+
     // Trigger Python LangGraph service asynchronously (non-blocking)
     const pythonEndpoint = `${config.AGENTS_SERVICE_URL}/internal/agent/execute`;
     fetch(pythonEndpoint, {
@@ -385,6 +410,7 @@ export async function runAgentHandler(
         query: query.trim(),
         thread_id: threadId || null,
         user_id: userId,
+        plan_days: planDays,
         workflow_input: effectiveResumeText ? { resume_text: String(effectiveResumeText).slice(0, 50000) } : {},
       }),
     })
@@ -515,6 +541,7 @@ function triggerInterviewPrep(
       query,
       thread_id: run.threadId,
       user_id: userId,
+      plan_days: extractPlanDays(userMessage || query),
       workflow_mode: "interview_prep",
       workflow_input: resume ? {} : input,
       workflow_text_input: resume ? null : userMessage || null,

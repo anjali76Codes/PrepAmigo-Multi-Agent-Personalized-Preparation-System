@@ -402,3 +402,22 @@ def test_days_for_a_partly_known_skill_skip_the_basics():
     salesforce = next(p for p in llm.prompts if '"Salesforce"' in p)
     assert "used the API in one project" in claude and "skip the beginner basics" in claude
     assert "skip the beginner basics" not in salesforce
+
+
+def test_ninety_day_plan_generation_allocates_correct_days_and_sprints():
+    llm = ChunkLLM()
+    output = build(llm=llm, modules=MODULES, gaps=GAPS, total_days=90)
+
+    # 1. Total days in plan
+    assert output["plan"]["total_days"] == 90
+    assert len(output["sprint_days"]) == 90
+
+    # 2. Sprints partition 90 days cleanly into 13 sprints (7 days each, last sprint has 6)
+    sprints = output["sprints"]
+    assert len(sprints) == 13
+    assert sum(s["total_days"] for s in sprints) == 90
+
+    # 3. Days per topic sum to 90
+    days_per_topic = output["coverage"]["days_per_topic"]
+    assert sum(days_per_topic.values()) == 90
+
