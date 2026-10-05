@@ -447,3 +447,29 @@ def test_with_caches_on_serpapi_requests_carry_no_bypass_flag(monkeypatch, tmp_p
     sent = _live_serpapi(monkeypatch, tmp_path, lambda p: {"organic_results": []})
     serpapi_client.serpapi_search({"engine": "google", "q": "x"})
     assert "no_cache" not in sent[0]
+
+
+def test_inference_speed_separates_waiting_from_generating():
+    """The slow day: 17-40s before the first token, then normal-ish
+    generation. End-to-end speed alone can't tell those apart."""
+    from langchain_core.messages import AIMessage
+
+    from observability.metrics import Call, format_report, inference_summary, server_timing
+
+    ollama = AIMessage(content="x", response_metadata={"eval_duration": 2_000_000_000, "eval_count": 400})
+    groq = AIMessage(content="x", response_metadata={"token_usage": {"completion_time": 0.8}})
+    assert server_timing(ollama) == 2.0 and server_timing(groq) == 0.8
+    assert server_timing(AIMessage(content="x")) == 0.0
+
+    calls = [Call("research", "llm", "nemotron", 0.0, 32.0, output_tokens=400, gen_s=2.0),
+             Call("planner", "llm", "nemotron", 0.0, 10.0, output_tokens=0, ok=False, error="timeout"),
+             Call("research", "llm", "nemotron", 0.0, 0.1, output_tokens=400, cache_hit=True)]
+    model = inference_summary(calls)["nemotron"]
+    assert model == {"calls": 2, "failed": 1, "output_tokens": 400, "tok_s": 12.5, "gen_tok_s": 200.0,
+                     "wait_s": 30.0, "avg_s": 21.0, "max_s": 32.0}
+
+    summary = {"wall_s": 32.0, "agents": {}, "totals": {"llm_calls": 0, "llm_cache_hits": 0, "input_tokens": 0,
+               "output_tokens": 0, "tokens_saved": 0, "tool_calls": 0, "tool_cache_hits": 0, "time_saved_s": 0,
+               "peak_context_tokens": 0}, "slowest": [], "failures": [], "inference": {"nemotron": model}}
+    line = next(line for line in format_report(summary) if line.startswith("Inference"))
+    assert "12 tok/s end-to-end" in line and "generating 200 tok/s" in line and "wait 30.0s/call" in line

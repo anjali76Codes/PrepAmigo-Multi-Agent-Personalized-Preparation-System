@@ -156,10 +156,10 @@ The orchestrator determines success if `profile.get("description") or profile.ge
 
 ```powershell
 # Standalone — directly invokes CompanyResearchAgent (bypasses supervisor)
-uv run python src/cli.py --company "Anthropic"
-uv run python src/cli.py --company "Datadog" --role "Site Reliability Engineer"
+uv run python src/scripts/cli.py --company "Anthropic"
+uv run python src/scripts/cli.py --company "Datadog" --role "Site Reliability Engineer"
 
 # Multi-agent REPL — routes through supervisor
-uv run python src/cli.py
+uv run python src/scripts/cli.py
 # Then type: research Stripe for a backend engineer role
 ```

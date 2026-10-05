@@ -21,7 +21,9 @@ from typing import Any
 
 # failures that say "the network or the model server is slow/unreachable",
 # not "there is a bug here": logged as one line, without a traceback
-_EXPECTED_ERROR_NAMES = {"ResponseError", "ConnectError", "ReadTimeout", "ConnectTimeout", "RemoteProtocolError"}
+_EXPECTED_ERROR_NAMES = {"ResponseError", "ConnectError", "ReadTimeout", "ConnectTimeout", "RemoteProtocolError",
+                         "ModelDegradedError",  # observability/llm_health.py
+                         "SearchUnavailable"}  # tools/serpapi_client.py: no searches left / key rejected
 
 
 def describe_error(exc: BaseException) -> str:

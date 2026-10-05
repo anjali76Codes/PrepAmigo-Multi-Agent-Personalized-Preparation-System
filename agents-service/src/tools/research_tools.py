@@ -128,7 +128,8 @@ def _serpapi(
     try:
         results = serpapi_search(params, suppress_ai_overview=suppress_ai_overview, use_cache=use_cache)
     except Exception as exc:
-        raise RuntimeError("Research search provider unavailable") from exc
+        # serpapi_search's messages are already free of the API key
+        raise RuntimeError(f"Research search provider unavailable: {exc}") from exc
     if results.get("error"):
         raise RuntimeError(f"Research search provider returned an error: {results['error']}")
     return results
@@ -163,6 +164,12 @@ def search_technical_docs(query: str, limit: int = 5) -> dict:
     # pre-sales query). Callers put intent words in the query instead.
     raw = _serpapi({"engine": settings.serpapi_web_engine, "q": query})
     source = _source_name()
+    if not raw.get("organic_results"):
+        # seen for whole topics at once (Rust, Solana, DeFi docs in one
+        # run); Google's own reason is in search_information
+        info = raw.get("search_information") or {}
+        logger.warning("Web search returned no results for %r (state=%s, status=%s)", query,
+                       info.get("organic_results_state"), (raw.get("search_metadata") or {}).get("status"))
     return {
         "query": query,
         "source": source,

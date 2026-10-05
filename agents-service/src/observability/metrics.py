@@ -36,6 +36,8 @@ from uuid import UUID
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
 
+from observability import llm_health
+
 logger = logging.getLogger(__name__)
 
 UNATTRIBUTED = "other"
@@ -56,6 +58,10 @@ class Call:
     input_tokens: int = 0
     output_tokens: int = 0
     error: str = ""  # why a failed call failed (first ERROR_CHARS characters)
+    # seconds the provider says it spent generating the answer (Ollama's
+    # eval_duration, Groq's completion_time); 0 when it doesn't say. The rest
+    # of the call was queueing, loading, reading the prompt and the network.
+    gen_s: float = 0.0
 
     @property
     def ms(self) -> float:
@@ -95,6 +101,8 @@ class RunMetrics:
             ],
             "failures": self._failures(),
             "models": sorted({c.name for c in llm if c.name}),
+            "inference": inference_summary(llm),
+            "fast_keys": _fast_keys(),
         }
 
     def _failures(self) -> list[dict[str, Any]]:
@@ -138,6 +146,56 @@ class RunMetrics:
             "max_tool_call_s": round(max((c.ms for c in tools if not c.cache_hit), default=0.0) / 1000, 2),
             "time_saved_s": round(sum(c.saved_ms for c in calls if c.cache_hit) / 1000, 2),
         }
+
+
+def _fast_keys() -> list[dict[str, Any]]:
+    """Today's use per fast-model key, when a key pool is in use."""
+    from core.rate_budget import pool_snapshot
+
+    rows = pool_snapshot()
+    return rows if len(rows) > 1 else []
+
+
+def inference_summary(llm_calls: list[Call]) -> dict[str, dict[str, Any]]:
+    """Per model, how fast it answered this run (live calls only):
+      tok_s     output tokens per second of call time, end to end: what an
+                agent experiences
+      gen_tok_s output tokens per second of the provider's own generation
+                time (when it reports one): how fast the model itself writes
+      wait_s    average seconds per call before/around generation (queue,
+                model load, prompt reading, network); a provider under load
+                shows here first (17-40s on the slow day, against ~0.5s)
+      max_s     the slowest call"""
+    models: dict[str, dict[str, Any]] = {}
+    for name in sorted({c.name for c in llm_calls if c.name}):
+        live = [c for c in llm_calls if c.name == name and not c.cache_hit]
+        done = [c for c in live if c.ok and c.output_tokens]
+        if not live:
+            continue
+        wall = sum(c.ms for c in done) / 1000
+        timed = [c for c in done if c.gen_s]
+        models[name] = {
+            "calls": len(live),
+            "failed": sum(1 for c in live if not c.ok),
+            "output_tokens": sum(c.output_tokens for c in done),
+            "tok_s": round(sum(c.output_tokens for c in done) / wall, 1) if wall else 0.0,
+            "gen_tok_s": round(sum(c.output_tokens for c in timed) / sum(c.gen_s for c in timed), 1) if timed else None,
+            "wait_s": round(sum(c.ms / 1000 - c.gen_s for c in timed) / len(timed), 2) if timed else None,
+            "avg_s": round(sum(c.ms for c in live) / 1000 / len(live), 2),
+            "max_s": round(max(c.ms for c in live) / 1000, 2),
+        }
+    return models
+
+
+def server_timing(message: Any) -> float:
+    """Seconds the provider reports it spent generating, or 0.0."""
+    meta = getattr(message, "response_metadata", None) or {}
+    if meta.get("eval_duration"):  # Ollama: nanoseconds
+        return float(meta["eval_duration"]) / 1e9
+    usage = meta.get("token_usage") or {}
+    if usage.get("completion_time"):  # Groq (OpenAI-compatible usage plus timings)
+        return float(usage["completion_time"])
+    return 0.0
 
 
 def _union(intervals: list[tuple[float, float]]) -> float:
@@ -251,8 +309,10 @@ class MetricsCallback(AsyncCallbackHandler):
         started = self._started.pop(run_id, None)
         if started is not None:
             run, agent, model, start = started
-            run.add_call(Call(agent, "llm", model, start, time.perf_counter(), ok=False,
+            end = time.perf_counter()
+            run.add_call(Call(agent, "llm", model, start, end, ok=False,
                               error="cancelled before it answered (caller's timeout)"))
+            llm_health.observe(model, end - start, cut_off=True)
 
     async def on_llm_end(self, response: LLMResult, *, run_id: UUID, **kwargs: Any) -> None:
         started = self._started.pop(run_id, None)
@@ -263,18 +323,32 @@ class MetricsCallback(AsyncCallbackHandler):
         message = getattr(generation, "message", None)
         usage = getattr(message, "usage_metadata", None) or {}
         cache = ((getattr(generation, "generation_info", None) or {}).get("cache")) or {}
+        end = time.perf_counter()
+        output_tokens, input_tokens = int(usage.get("output_tokens") or 0), int(usage.get("input_tokens") or 0)
+        gen_s = 0.0 if cache.get("hit") else server_timing(message)
         run.add_call(Call(
-            agent, "llm", model, start, time.perf_counter(),
+            agent, "llm", model, start, end,
             cache_hit=bool(cache.get("hit")), saved_ms=float(cache.get("latency_ms") or 0.0),
-            input_tokens=int(usage.get("input_tokens") or 0), output_tokens=int(usage.get("output_tokens") or 0),
+            input_tokens=input_tokens, output_tokens=output_tokens, gen_s=gen_s,
         ))
+        if cache.get("hit"):
+            logger.info("llm agent=%s model=%s cache_hit=true in=%d out=%d", agent, model, input_tokens, output_tokens)
+            return
+        seconds = end - start
+        logger.info(
+            "llm agent=%s model=%s in=%d out=%d duration_s=%.2f tok_s=%.1f%s", agent, model, input_tokens,
+            output_tokens, seconds, output_tokens / seconds if seconds else 0.0,
+            f" gen_tok_s={output_tokens / gen_s:.1f} wait_s={seconds - gen_s:.2f}" if gen_s else "")
+        llm_health.observe(model, seconds, output_tokens)
 
     async def on_llm_error(self, error: BaseException, *, run_id: UUID, **kwargs: Any) -> None:
         started = self._started.pop(run_id, None)
         if started is not None:
             run, agent, model, start = started
-            run.add_call(Call(agent, "llm", model, start, time.perf_counter(), ok=False,
+            end = time.perf_counter()
+            run.add_call(Call(agent, "llm", model, start, end, ok=False,
                               error=(str(error) or type(error).__name__)[:ERROR_CHARS]))
+            llm_health.observe(model, end - start, cut_off=True)  # e.g. a client read timeout
 
 
 METRICS_CALLBACK = MetricsCallback()
@@ -321,6 +395,16 @@ def format_report(summary: dict[str, Any]) -> list[str]:
             + (f" ({c['output_tokens']:,} out tok)" if c.get("output_tokens") else "")
             for c in summary["slowest"]
         ))
+    for model, m in (summary.get("inference") or {}).items():
+        generating = (f" · generating {m['gen_tok_s']:,.0f} tok/s · wait {m['wait_s']:.1f}s/call"
+                      if m.get("gen_tok_s") else "")
+        lines.append(f"Inference {model}: {m['calls']} call(s)" + (f", {m['failed']} failed" if m["failed"] else "")
+                     + f" · {m['tok_s']:,.0f} tok/s end-to-end{generating} · avg {m['avg_s']:.1f}s · max {m['max_s']:.1f}s")
+    if summary.get("fast_keys"):
+        lines.append("Fast model keys (today): " + " · ".join(
+            f"{k['key']} {k['requests_today']} req / {k['tokens_today']:,} tok"
+            + (f" (left out: {k['disabled']})" if k["disabled"] else "")
+            for k in summary["fast_keys"]))
     if t["tokens_saved"]:
         lines.append(f"Cache: {t['llm_cache_hits']} LLM + {t['tool_cache_hits']} API hits, "
                      f"{t['tokens_saved']:,} tokens and {t['time_saved_s']:.1f}s of original call time not spent")

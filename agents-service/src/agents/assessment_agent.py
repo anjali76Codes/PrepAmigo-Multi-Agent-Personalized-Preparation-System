@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from types import SimpleNamespace
 from typing import Any, List
 
 from core.config import get_llm, settings
@@ -44,12 +45,15 @@ class AssessmentAgent:
                     objectives.extend(d.objectives)
                 
                 if titles:
-                    class MockDay:
-                        day_number = chunk[0].day_number
-                        topic_title = " | ".join(titles)
-                        objectives = list(set(objectives))
+                    # one "day" standing for the chunk (a class body could not read
+                    # the enclosing `objectives` here: NameError on every plan)
+                    chunk_day = SimpleNamespace(
+                        day_number=chunk[0].day_number,
+                        topic_title=" | ".join(titles),
+                        objectives=list(dict.fromkeys(objectives)),
+                    )
                     
-                    tasks.append(self._generate_for_day(sprint.sprint_number, MockDay()))
+                    tasks.append(self._generate_for_day(sprint.sprint_number, chunk_day))
 
         results = await asyncio.gather(*tasks)
         questions = []

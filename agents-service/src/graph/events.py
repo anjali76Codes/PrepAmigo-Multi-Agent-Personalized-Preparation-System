@@ -102,12 +102,8 @@ def summarize_tool_input(tool_input: Any) -> dict[str, Any]:
 
 
 def _tool_result_summary(result: Any) -> dict[str, Any]:
-    if isinstance(result, str):
-        try:
-            result = json.loads(result)
-        except (TypeError, ValueError):
-            return {}
-    if not isinstance(result, dict):
+    result = _tool_result_object(result)
+    if result is None:
         return {}
     summary: dict[str, Any] = {}
     source = result.get("source")
@@ -185,19 +181,22 @@ async def invoke_tool_with_events(
         result = await asyncio.wait_for(work, timeout=timeout) if timeout else await work
     except Exception as exc:
         duration_ms = round((time.perf_counter() - started) * 1000, 1)
+        # str(TimeoutError()) is "", which told the client nothing
+        timed_out = isinstance(exc, asyncio.TimeoutError) and timeout
+        error = f"timed out after {timeout:g}s" if timed_out else str(exc) or type(exc).__name__
         details = {
             **input_summary,
             "duration_ms": duration_ms,
-            "error": str(exc)[:240],
+            "error": error[:240],
             "message": f"Tool {name} failed.",
         }
         _emit_tool_state(agent, name, "failed", details)
         raise
 
     duration_ms = round((time.perf_counter() - started) * 1000, 1)
-    result_summary = _tool_result_summary(result)
+    result_object = _tool_result_object(result)  # parsed once: tools may return JSON strings
+    result_summary = _tool_result_summary(result_object)
     details = {**result_summary, "duration_ms": duration_ms}
-    result_object = _tool_result_object(result)
     failure = result_object.get("error") if result_object else None
     if not failure and result_object:
         metadata = result_object.get("search_metadata")

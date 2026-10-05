@@ -32,7 +32,7 @@ def test_final_becomes_completed_with_the_full_reply():
     assert payload == {"agent": "chat", "status": "success", "message": "Start with recursion then memoization."}
 
 
-def test_interview_intelligence_completion_contains_only_the_markdown_message():
+def test_interview_intelligence_completion_carries_the_markdown_message_and_its_agent():
     from langchain_core.messages import AIMessage
     from langgraph.graph import END, START, StateGraph
 
@@ -55,7 +55,7 @@ def test_interview_intelligence_completion_contains_only_the_markdown_message():
 
     events = collect(builder.compile())
 
-    assert events[-1] == (EventType.COMPLETED, {"message": content})
+    assert events[-1] == (EventType.COMPLETED, {"agent": "interview_intelligence", "message": content})
 
 
 def test_tokens_are_never_forwarded():
@@ -78,10 +78,13 @@ def test_step_event_type_is_chosen_from_the_step_name():
     # build_test_graph's specialist emits a "execute_searches" step, which
     # the keyword table maps to RESEARCHING regardless of which agent sent it
     step_events = [(kind, payload) for kind, payload in events if payload.get("step") == "execute_searches"]
-    assert step_events == [(EventType.RESEARCHING, {"agent": "research_agent", "step": "execute_searches"})]
+    assert step_events == [(EventType.RESEARCHING, {"agent": "research", "step": "execute_searches", "status": "completed"})]
 
 
-def test_a_failed_step_becomes_failed():
+def test_a_failed_step_is_progress_not_a_failed_run():
+    """A failed step or tool (one of several parallel searches) is reported
+    with status "failed" under its step's event type; only a failed run is
+    EventType.FAILED, which closes the client's stream."""
     from langchain_core.messages import AIMessage
     from langgraph.graph import END, START, StateGraph
 
@@ -104,8 +107,10 @@ def test_a_failed_step_becomes_failed():
 
     events = collect(graph)
 
-    failed = next(payload for kind, payload in events if kind == EventType.FAILED)
-    assert failed == {"agent": "chat", "step": "guardrail_check", "error": "blocked"}
+    assert all(kind != EventType.FAILED for kind, _ in events)
+    step = next(event for event in events if event[1].get("step") == "guardrail_check")
+    assert step == (EventType.PROCESSING, {"agent": "chat", "step": "guardrail_check", "error": "blocked", "status": "failed"})
+    assert events[-1][0] == EventType.COMPLETED
 
 
 def test_waiting_interrupt_is_forwarded_as_a_waiting_event(monkeypatch):
@@ -161,3 +166,32 @@ def test_partial_interview_prep_result_is_a_completed_event():
             "result": {"status": "partial"},
         },
     )]
+
+
+def test_the_final_plan_is_sent_once_with_every_days_references():
+    """The plan output keeps three copies of every day (nested_plan and the
+    sprint/sprintday aliases) for the plan file; the SSE event and its Redis
+    history carry one."""
+    day = {"day_number": 1, "references": [{"type": "video", "title": "T", "url": "https://x.example"}]}
+    plan = {"plan": {"total_days": 1}, "sprints": [{"sprint_number": 1}], "sprint_days": [day],
+            "sprint": [{"sprint_number": 1}], "sprintday": [day], "nested_plan": {"sprints": []},
+            "coverage": {}, "db_sync": {"success": True}}
+
+    async def fake_stream_turn(_graph, _inputs, _config, tokens=False):
+        yield {"type": "final", "agent": "interview_prep", "content": "Done.", "status": "complete",
+               "result": {"status": "complete", "study_plan": plan}}
+
+    import pytest
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr("streaming.langgraph_bridge.stream_turn", fake_stream_turn)
+    try:
+        [(kind, payload)] = collect(object())
+    finally:
+        monkeypatch.undo()
+
+    sent = payload["result"]["study_plan"]
+    assert kind == EventType.COMPLETED
+    assert set(sent) == {"plan", "sprints", "sprint_days", "coverage", "db_sync"}
+    assert sent["sprint_days"][0]["references"] == day["references"]
+    assert "nested_plan" in plan  # the state's copy is left alone
