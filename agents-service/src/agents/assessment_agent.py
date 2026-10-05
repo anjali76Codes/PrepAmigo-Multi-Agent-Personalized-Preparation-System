@@ -31,8 +31,13 @@ class AssessmentAgent:
         tasks = []
         for sprint in plan.sprints:
             days = sprint.sprint_days
-            for i in range(0, len(days), 3):
-                chunk = days[i:i+3]
+            chunks = []
+            if len(days) >= 3:
+                chunks.append(days[0:3])
+            if len(days) > 3:
+                chunks.append(days[3:7])
+                
+            for chunk in chunks:
                 titles = [d.topic_title for d in chunk if d.topic_title]
                 objectives = []
                 for d in chunk:
@@ -64,26 +69,30 @@ class AssessmentAgent:
             f"Output JSON in exactly this format: {{\"questions\": [{{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correct_answer\": \"A\", \"explanation\": \"...\", \"difficulty\": \"medium\"}}]}}\n"
             f"Return ONLY a JSON object."
         )
-        try:
-            response = await asyncio.wait_for(
-                self.llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=120
-            )
-            raw = parse_json_object(str(response.content)).get("questions", [])
-            questions = []
-            for i, q in enumerate(raw):
-                questions.append(AssessmentQuestion(
-                    id=f"s{sprint_num}-d{day.day_number}-q{i+1}",
-                    sprint=sprint_num,
-                    day=day.day_number,
-                    topic_title=day.topic_title,
-                    type="mcq",
-                    question=q.get("question", ""),
-                    options=q.get("options", []),
-                    correct_answer=q.get("correct_answer", ""),
-                    explanation=q.get("explanation", ""),
-                    difficulty=q.get("difficulty", "medium")
-                ))
-            return questions
-        except Exception as e:
-            logger.exception(f"Failed to generate assessment for day {day.day_number}: {e}")
-            return []
+        for attempt in range(3):
+            try:
+                response = await asyncio.wait_for(
+                    self.llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=120
+                )
+                # Quick fix for trailing commas before parsing
+                content = str(response.content).replace(",]", "]").replace(",}", "}")
+                raw = parse_json_object(content).get("questions", [])
+                questions = []
+                for i, q in enumerate(raw):
+                    questions.append(AssessmentQuestion(
+                        id=f"s{sprint_num}-d{day.day_number}-q{i+1}",
+                        sprint=sprint_num,
+                        day=day.day_number,
+                        topic_title=day.topic_title,
+                        type="mcq",
+                        question=q.get("question", ""),
+                        options=q.get("options", []),
+                        correct_answer=q.get("correct_answer", ""),
+                        explanation=q.get("explanation", ""),
+                        difficulty=q.get("difficulty", "medium")
+                    ))
+                return questions
+            except Exception as e:
+                logger.warning(f"Failed to generate assessment for day {day.day_number} on attempt {attempt+1}: {e}")
+        logger.error(f"Completely failed to generate assessment for day {day.day_number} after 3 attempts.")
+        return []

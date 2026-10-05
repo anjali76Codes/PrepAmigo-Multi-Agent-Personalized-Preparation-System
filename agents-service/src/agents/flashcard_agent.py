@@ -31,8 +31,13 @@ class FlashcardAgent:
         tasks = []
         for sprint in plan.sprints:
             days = sprint.sprint_days
-            for i in range(0, len(days), 3):
-                chunk = days[i:i+3]
+            chunks = []
+            if len(days) >= 3:
+                chunks.append(days[0:3])
+            if len(days) > 3:
+                chunks.append(days[3:7])
+                
+            for chunk in chunks:
                 titles = [d.topic_title for d in chunk if d.topic_title]
                 objectives = []
                 for d in chunk:
@@ -64,25 +69,29 @@ class FlashcardAgent:
             f"Output JSON in exactly this format: {{\"cards\": [{{\"front\": \"...\", \"back\": \"...\", \"difficulty\": \"easy\", \"category\": \"concept\", \"tags\": [\"tag1\"]}}]}}\n"
             f"Return ONLY a JSON object."
         )
-        try:
-            response = await asyncio.wait_for(
-                self.llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=120
-            )
-            raw = parse_json_object(str(response.content)).get("cards", [])
-            cards = []
-            for i, c in enumerate(raw):
-                cards.append(Flashcard(
-                    id=f"s{sprint_num}-d{day.day_number}-fc{i+1}",
-                    sprint=sprint_num,
-                    day=day.day_number,
-                    topic_title=day.topic_title,
-                    front=c.get("front", ""),
-                    back=c.get("back", ""),
-                    difficulty=c.get("difficulty", "medium"),
-                    category=c.get("category", "concept"),
-                    tags=c.get("tags", [])
-                ))
-            return cards
-        except Exception as e:
-            logger.exception(f"Failed to generate flashcards for day {day.day_number}: {e}")
-            return []
+        for attempt in range(3):
+            try:
+                response = await asyncio.wait_for(
+                    self.llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=120
+                )
+                # Quick fix for trailing commas before parsing
+                content = str(response.content).replace(",]", "]").replace(",}", "}")
+                raw = parse_json_object(content).get("cards", [])
+                cards = []
+                for i, c in enumerate(raw):
+                    cards.append(Flashcard(
+                        id=f"s{sprint_num}-d{day.day_number}-fc{i+1}",
+                        sprint=sprint_num,
+                        day=day.day_number,
+                        topic_title=day.topic_title,
+                        front=c.get("front", ""),
+                        back=c.get("back", ""),
+                        difficulty=c.get("difficulty", "medium"),
+                        category=c.get("category", "concept"),
+                        tags=c.get("tags", [])
+                    ))
+                return cards
+            except Exception as e:
+                logger.warning(f"Failed to generate flashcards for day {day.day_number} on attempt {attempt+1}: {e}")
+        logger.error(f"Completely failed to generate flashcards for day {day.day_number} after 3 attempts.")
+        return []
