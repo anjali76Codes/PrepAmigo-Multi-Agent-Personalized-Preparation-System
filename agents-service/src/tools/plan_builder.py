@@ -21,6 +21,7 @@ import re
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import quote_plus
 
 from schemas.study_plan import SCHEMA_VERSION, StudyPlan
 from tools.relevance import canonical_url, relevance, title_key, topic_terms, youtube_video_id
@@ -203,6 +204,7 @@ def resource_pack(modules: list[dict[str, Any]]) -> dict[str, list[dict[str, Any
 
 
 MAX_REFERENCES_PER_DAY = 3
+MAX_REVISIT_REFERENCES = 2
 MATCH_THRESHOLD = 0.5
 
 
@@ -215,7 +217,7 @@ def place_references(refs: list[dict[str, Any]], day_titles: list[str], topic_na
     Hard To Learn" on the Exception Handling day.
 
     Days left empty are the ones nothing was written about, typically the
-    closing practice and review days, which are for doing, not reading."""
+    closing practice and review days; revisit_references fills them."""
     days = len(day_titles)
     placed: list[list[dict[str, Any]]] = [[] for _ in range(days)]
     if not days:
@@ -238,6 +240,115 @@ def place_references(refs: list[dict[str, Any]], day_titles: list[str], topic_na
         if len(placed[target]) < MAX_REFERENCES_PER_DAY:
             placed[target].append(ref)
     return placed
+
+
+def revisit_references(
+    placed: list[list[dict[str, Any]]], refs: list[dict[str, Any]], day_titles: list[str], topic_name: str,
+) -> list[list[dict[str, Any]]]:
+    """Every day `placed` left empty (a topic's practice and review days,
+    or more days than references) gets the topic's references that fit it
+    best again, as optional material (is_required False): the doc or video
+    to keep open while doing the exercise. Best fit is the day's subject
+    as in place_references; a day with no subject of its own ("review and
+    mini-project") gets the topic's leading references, which research
+    returns best first."""
+    if not refs:
+        return placed
+    shared = set(topic_terms(topic_name))
+    for i, title in enumerate(day_titles):
+        if placed[i]:
+            continue
+        subject = " ".join(t for t in topic_terms(title) if t not in shared)
+        score = lambda k: relevance(subject, refs[k].get("title", ""), refs[k].get("description", "")) if subject else 0.0  # noqa: E731
+        best = sorted(range(len(refs)), key=lambda k: (-score(k), k))[:MAX_REVISIT_REFERENCES]
+        placed[i] = [{**refs[k], "is_required": False} for k in best]
+    return placed
+
+
+def _key(ref: dict[str, Any]) -> str:
+    return canonical_url(ref["url"])
+
+
+def _unique(refs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    return [ref for ref in refs if not (_key(ref) in seen or seen.add(_key(ref)))]
+
+
+def choose_references(
+    placed: list[list[dict[str, Any]]], days: list[dict[str, Any]],
+    allowed: list[dict[str, Any]], companions: list[dict[str, Any]],
+) -> list[list[dict[str, Any]]]:
+    """The planner model's per-day choice wins over word-matching placement.
+    A day's wording may carry "found" (references a gap search found for
+    that day) and "refs" (the topic's references the model picked for that
+    day, best first); either replaces the computed placement for that day.
+    Picks are kept only if they are among `allowed` (so a book past the
+    plan's cap stays out), and the topic's book/paper companions stay on
+    its first day. A day the model wrote without picks (concept-based
+    fallback wording) keeps the computed placement."""
+    permitted = {_key(ref) for ref in allowed}
+    chosen = []
+    for i, day in enumerate(days):
+        picks = [ref for ref in day.get("refs") or [] if _key(ref) in permitted]
+        refs = _unique([*(day.get("found") or []), *picks])[:MAX_REFERENCES_PER_DAY]
+        if refs and i == 0:
+            refs = _unique(refs + companions)
+        chosen.append(refs or placed[i])
+    return chosen
+
+
+def mark_required(per_day: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
+    """is_required on each day's first reference, unless the topic already
+    used it on an earlier day: a repeat is there to keep open while
+    practising, not to read again. Anything else is optional."""
+    seen: set[str] = set()
+    marked = []
+    for refs in per_day:
+        day = []
+        for j, ref in enumerate(refs):
+            required = j == 0 and _key(ref) not in seen and ref.get("is_required", True)
+            day.append({**ref, "is_required": bool(required)})
+        seen |= {_key(ref) for ref in refs}
+        marked.append(day)
+    return marked
+
+
+def borrow_references(topics: list[dict[str, Any]], modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """`topics`, each one without references of its own (its research was
+    capped, failed or found nothing) given what other topics' research
+    found about it (related_references), marked "borrowed". Done before the
+    planner's wording calls, so the model can pick among them too."""
+    pool = references([r for m in modules for r in m.get("resources") or []])
+    borrowed = []
+    for topic in topics:
+        refs = [] if topic["references"] else related_references(topic["name"], pool)
+        borrowed.append({**topic, "references": refs, "borrowed": True} if refs else topic)
+    return borrowed
+
+
+def related_references(topic_name: str, pool: list[dict[str, Any]], limit: int = MAX_REFERENCES_PER_DAY) -> list[dict[str, Any]]:
+    """References other topics' research found that are about `topic_name`
+    (every significant word of it in the title or description), for a
+    topic whose own research did not run or failed."""
+    return [
+        ref for ref in pool
+        if relevance(topic_name, ref.get("title", ""), ref.get("description", "")) >= 1.0
+    ][:limit]
+
+
+def search_references(topic_name: str) -> list[dict[str, Any]]:
+    """Last resort for a topic nothing was found for: links to a video
+    search and a documentation search on the topic. Labelled as searches,
+    so they are never mistaken for a curated resource."""
+    name = clip(topic_name, 150)
+    return [
+        {"type": "video", "title": f"{name} tutorials (YouTube search)", "source": "YouTube search",
+         "url": f"https://www.youtube.com/results?search_query={quote_plus(f'{name} tutorial')}",
+         "description": f"Video search for {name}; no curated resource was found for this topic."},
+        {"type": "documentation", "title": f"{name} documentation (web search)", "source": "Web search",
+         "url": f"https://www.google.com/search?q={quote_plus(f'{name} official documentation')}",
+         "description": f"Web search for {name} documentation; no curated resource was found for this topic."},
+    ]
 
 
 def _topic(name: str, effort: str, module: dict[str, Any] | None) -> dict[str, Any]:
@@ -316,7 +427,8 @@ def assemble_plan(
 ) -> dict[str, Any]:
     """The full planner output: the validated plan plus resource pack,
     learning modules and coverage. `wording[topic key]` holds one
-    {"title", "objectives"} per day of that topic. Raises
+    {"title", "objectives"} per day of that topic, optionally with the
+    model's "refs" and a gap search's "found" (see choose_references). Raises
     pydantic.ValidationError if the assembled plan breaks the contract (a
     bug here, never a model problem)."""
     sprints: list[dict[str, Any]] = []
@@ -327,7 +439,9 @@ def assemble_plan(
     # highest-priority topics get them). Every one found stays in the
     # resource pack.
     left = {"book": max_books, "paper": max_papers}
-    for topic in topics:
+    fallbacks: dict[str, list[str]] = {"borrowed": [], "search_links": []}
+    all_days: list[dict[str, Any]] = []  # every planned day in order, with its references
+    for topic in borrow_references(topics, modules):
         kind_of = lambda ref: ("paper" if ref["url"] in topic["paper_urls"]  # noqa: E731
                                else "book" if ref["type"] == "book" else "")
         daily = [r for r in topic["references"] if left.get(kind_of(r)) is None]
@@ -337,45 +451,57 @@ def assemble_plan(
             if left[kind] and found:
                 companions.append(found[0])
                 left[kind] -= 1
-        per_day = place_references(daily, [d["title"] for d in wording[topic["key"]][: topic["days"]]], topic["name"])
+        days = wording[topic["key"]][: topic["days"]]
+        searched = any(day.get("found") for day in days)
+        if not daily and not companions and not searched:
+            # nothing found, or only books/papers past the plan's cap
+            daily = search_references(topic["name"])
+            fallbacks["search_links"].append(topic["name"])
+        elif topic.get("borrowed"):
+            fallbacks["borrowed"].append(topic["name"])
+        day_titles = [d["title"] for d in days]
+        per_day = place_references(daily, day_titles, topic["name"])
         per_day[0] = per_day[0] + companions
-        
-    # Now group all topics into 7-day sprints
-    all_days = []
-    for topic in topics:
-        for i in range(topic["days"]):
-            all_days.append({
-                "topic_key": topic["key"],
-                "topic_name": topic["name"],
-                "topic_overview": topic["overview"],
-                "topic_effort": topic["effort"],
-                "day_wording": wording[topic["key"]][i],
-                "references": [r for j, r in enumerate(place_references(topic["references"], [d["title"] for d in wording[topic["key"]][:topic["days"]]], topic["name"])[i])],
-            })
-            
-    parts = split_evenly(list(range(len(all_days))), -(-len(all_days) // 7))
-    for part_number, part in enumerate(parts, start=1):
+        per_day = choose_references(per_day, days, daily + companions, companions)
+        # a day the model and the searches left empty (a search-only topic
+        # whose budget ran out) revisits what its other days found
+        # material a gap search found for one day can serve a related one
+        found = [ref for day in days for ref in day.get("found") or []]
+        per_day = revisit_references(
+            per_day, _unique(daily + found) or companions or _unique([r for d in per_day for r in d]),
+            day_titles, topic["name"])
+        per_day = mark_required(per_day)
+        all_days.extend({"topic": topic, "wording": day, "references": refs} for day, refs in zip(days, per_day))
+
+    # Sprints are fixed blocks of at most sprint_max_days (7) consecutive
+    # days, across topic boundaries, so every sprint has the two
+    # assessment/flashcard chunks (days 1-3 and 4-7) those agents expect
+    parts = split_evenly(list(range(len(all_days))), -(-len(all_days) // sprint_max_days))
+    for part in parts:
         sprint_start = start_date + timedelta(days=day_number)
         sprint_days = []
         for i in part:
             day_number += 1
-            day_data = all_days[i]
+            entry = all_days[i]
+            topic, day = entry["topic"], entry["wording"]
             sprint_days.append({
                 "day_number": day_number,
                 "scheduled_date": (start_date + timedelta(days=day_number - 1)).isoformat(),
-                "topic_title": clip(day_data["day_wording"]["title"], 200),
-                "topic_description": day_data["topic_overview"] or None,
-                "objectives": [clip(o, 500) for o in day_data["day_wording"]["objectives"] if str(o).strip()][:MAX_OBJECTIVES_PER_DAY],
-                "estimated_minutes": MINUTES_PER_EFFORT.get(day_data["topic_effort"], DEFAULT_MINUTES),
-                "references": [{**ref, "is_required": j == 0} for j, ref in enumerate(day_data["references"])],
+                "topic_title": clip(day["title"], 200),
+                "topic_description": topic["overview"] or None,
+                "objectives": [clip(o, 500) for o in day["objectives"] if str(o).strip()][:MAX_OBJECTIVES_PER_DAY],
+                "estimated_minutes": MINUTES_PER_EFFORT.get(topic["effort"], DEFAULT_MINUTES),
+                "references": entry["references"],
                 "status": "pending",
                 "completed_at": None,
             })
-        
-        name = f"Sprint {len(sprints) + 1}"
+        # named after the topics it covers, in order: the roadmap shows
+        # "Sprint 3: Claude & Salesforce" (a name of "Sprint 3" read
+        # "Sprint 3: Sprint 3" there)
+        covered = list(dict.fromkeys(all_days[i]["topic"]["name"] for i in part))
         sprints.append({
             "sprint_number": len(sprints) + 1,
-            "sprint_name": clip(name, 120),
+            "sprint_name": clip(" & ".join(covered), 120),
             "start_date": sprint_start.isoformat(),
             "end_date": (sprint_start + timedelta(days=len(part) - 1)).isoformat(),
             "total_days": len(part),
@@ -422,5 +548,8 @@ def assemble_plan(
             "researched": [t["name"] for t in topics if t["researched"]],
             "unresearched": [t["name"] for t in topics if not t["researched"]],
             "not_scheduled": not_scheduled or [],
+            # topics whose references came from other topics' research
+            # or are search links (see related_references, search_references)
+            "reference_fallbacks": fallbacks,
         },
     }

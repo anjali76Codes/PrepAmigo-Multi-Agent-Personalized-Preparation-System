@@ -12,6 +12,7 @@ import json
 import logging
 import re
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -121,6 +122,123 @@ def _request_slots() -> threading.BoundedSemaphore:
         return _slots[1]
 
 
+# search_metadata.status of a search submitted with async=true that is
+# still running on SerpApi's side
+PENDING_STATUSES = frozenset({"processing", "queued"})
+POLL_FIRST_SECONDS = 1.0  # most searches finish in 1-3s
+POLL_MIN_SECONDS = 0.5
+POLL_MAX_SECONDS = 1.0
+
+
+def _search_status(result: dict[str, Any]) -> str:
+    return str((result.get("search_metadata") or {}).get("status", "")).casefold()
+
+
+# what every SerpApi response carries; anything else is the search's content
+_ENVELOPE_KEYS = frozenset({"search_metadata", "search_parameters", "search_information"})
+
+
+def _has_payload(result: dict[str, Any]) -> bool:
+    """Whether an async submit's answer already holds the results (or an
+    error). One that says it is done but carries only its envelope is read
+    from the archive instead of being cached, empty, for days."""
+    return bool(result.get("error")) or any(key not in _ENVELOPE_KEYS for key in result)
+
+
+ARCHIVE_URL = "https://serpapi.com/searches/{search_id}.json"
+
+
+def read_archive(search_id: str, timeout: float) -> dict[str, Any]:
+    """One read of a search from SerpApi's Search Archive. Only the key is
+    sent: the library's own get_search_archive also sends the search's
+    parameters, and SerpApi rejects an archive read carrying `q` ("You are
+    using query `q` parameter on our Search Archive API")."""
+    import requests
+
+    response = requests.get(ARCHIVE_URL.format(search_id=search_id),
+                            params={"api_key": settings.serpapi_api_key}, timeout=timeout)
+    return response.json()
+
+
+def _collect(submitted: dict[str, Any], engine: str) -> dict[str, Any]:
+    """The finished result of a search submitted with async=true, read from
+    SerpApi's Search Archive (archive reads cost no search credit).
+
+    Why async: a waiting request cut off at its timeout was still run, and
+    charged, by SerpApi, and the retry was a second paid search starting
+    from zero (one docs search: 8s lost, then a second paid search, 14.2s
+    in all; two others failed after paying for both). Submitted async, the
+    search keeps running however long it takes, it is paid for once, and
+    no request slot is held while it runs. Polls start after
+    POLL_FIRST_SECONDS and then run every 0.5-1s, until
+    SERPAPI_RESULT_TIMEOUT_SECONDS."""
+    search_id = (submitted.get("search_metadata") or {}).get("id")
+    if not search_id:
+        raise RuntimeError("SerpApi accepted the search but returned no search id")
+    deadline = time.monotonic() + settings.serpapi_result_timeout_seconds
+    delay = POLL_FIRST_SECONDS
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"SerpApi {engine} search did not finish in {settings.serpapi_result_timeout_seconds:g}s")
+        time.sleep(min(delay, remaining))
+        # 1s, then 0.5s, growing to 1s between polls
+        delay = POLL_MIN_SECONDS if delay == POLL_FIRST_SECONDS else min(delay * 1.25, POLL_MAX_SECONDS)
+        try:
+            result = read_archive(search_id, max(1.0, min(settings.serpapi_attempt_timeout_seconds,
+                                                          deadline - time.monotonic())))
+        except Exception as exc:
+            # a failed read is retried at the next poll; the search itself
+            # is unaffected
+            logger.debug("SerpApi archive read failed (%s); polling again", redact_api_key(str(exc)))
+            continue
+        if isinstance(result, dict) and _search_status(result) not in PENDING_STATUSES:
+            return result
+
+
+def _empty(result: dict[str, Any]) -> bool:
+    return (result.get("search_information") or {}).get("organic_results_state") == "Fully empty"
+
+
+class SearchUnavailable(RuntimeError):
+    """Web search can't run (the SerpApi account is out of searches, or its
+    key is rejected): an expected outage, logged as one line."""
+
+
+# account-level SerpApi errors: every later search would fail the same way
+_ACCOUNT_ERRORS = ("run out of searches", "invalid api key", "account is suspended", "account has been suspended")
+# how long web search stays off after one; a monthly quota renews on its
+# own date, and a long-running server should notice
+ACCOUNT_RECHECK_SECONDS = 3600.0
+_account_down: dict[str, Any] = {"until": 0.0, "why": ""}
+_account_lock = threading.Lock()
+
+
+def account_unavailable() -> str:
+    """Why SerpApi is off for now, or "" when it is usable."""
+    with _account_lock:
+        return _account_down["why"] if _account_down["until"] > time.monotonic() else ""
+
+
+def _note_account_error(result: dict[str, Any]) -> None:
+    error = str(result.get("error") or "")
+    if not any(marker in error.lower() for marker in _ACCOUNT_ERRORS):
+        return
+    with _account_lock:
+        first = _account_down["until"] <= time.monotonic()
+        _account_down.update(until=time.monotonic() + ACCOUNT_RECHECK_SECONDS, why=error)
+    if first:
+        logger.warning("SerpApi: %s Web, video and job searches are off for %.0f minutes (cached results "
+                       "and the free book and paper catalogues still work).", error, ACCOUNT_RECHECK_SECONDS / 60)
+
+
+def reset_account_state() -> None:
+    """Forget an account error (tests)."""
+    with _account_lock:
+        _account_down.update(until=0.0, why="")
+
+
 # engines whose results go stale within a day
 FRESH_ENGINES = frozenset({"google_news", "google_jobs"})
 
@@ -151,16 +269,31 @@ def serpapi_search(
     def call() -> dict[str, Any]:
         from serpapi import GoogleSearch  # type: ignore
 
+        # an empty or rejected account answers every search the same way:
+        # don't send more after the first one said so (a cache hit above
+        # never gets here, so cached results still work)
+        down = account_unavailable()
+        if down:
+            raise SearchUnavailable(f"SerpApi unavailable: {down}")
+
+        # bypassed caches include SerpApi's own: it re-serves an identical
+        # search for about an hour unless told not to. SerpApi does not
+        # accept async together with no_cache, so a --no-cache search first
+        # waits on a no_cache request; if that times out, the retry is
+        # submitted async without no_cache, which picks up the first
+        # search's result once SerpApi has it (seconds old, and not paid
+        # for a second time) instead of failing after two cut-off attempts.
+        bypass = caches_bypassed()
         attempts = max(1, settings.serpapi_max_attempts)
         for attempt in range(1, attempts + 1):
-            # bypassed caches include SerpApi's own: it re-serves an
-            # identical search for about an hour unless told not to
-            fresh = {"no_cache": "true"} if caches_bypassed() else {}
-            search = GoogleSearch({**params, **fresh, "api_key": settings.serpapi_api_key})
+            use_async = settings.serpapi_async and (not bypass or attempt > 1)
+            extra = {"async": "true"} if use_async else {"no_cache": "true"} if bypass else {}
+            search = GoogleSearch({**params, **extra, "api_key": settings.serpapi_api_key})
             # the library's own default is 60000 seconds: effectively none
             search.timeout = settings.serpapi_attempt_timeout_seconds
             try:
-                # waiting for a slot is not part of the attempt's timeout
+                # waiting for a slot is not part of the attempt's timeout; in
+                # async mode the slot is held only while submitting
                 with _request_slots():
                     result = search.get_dict()
                 break
@@ -175,6 +308,12 @@ def serpapi_search(
                 raise RuntimeError(f"SerpApi request failed: {redact_api_key(str(exc))}") from None
         if not isinstance(result, dict):
             raise RuntimeError("SerpApi returned an invalid response")
+        if result.get("error"):
+            _note_account_error(result)
+        status, search_id = _search_status(result), (result.get("search_metadata") or {}).get("id")
+        unread = status == "success" and search_id and not _has_payload(result)
+        if use_async and (status in PENDING_STATUSES or unread):
+            result = _collect(result, str(params.get("engine", "")))
         return result
 
     engine = str(params.get("engine", ""))
@@ -182,6 +321,7 @@ def serpapi_search(
     return cached_fetch(
         cache, "serpapi", params, call,
         label=f"serpapi:{engine}", ttl_seconds=cache_ttl_for(engine),
-        # an error response is retried next run, never pinned for the TTL
-        should_store=lambda result: not result.get("error"),
+        # an error or an empty answer is retried next run, never pinned for
+        # the TTL (Google's "Fully empty" for a query is often transient)
+        should_store=lambda result: not result.get("error") and not _empty(result),
     )

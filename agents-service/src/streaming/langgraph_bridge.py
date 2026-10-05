@@ -44,6 +44,22 @@ _STEP_KEYWORDS: tuple[tuple[str, EventType], ...] = (
 )
 
 
+# the plan output's second and third copies of every day (the nested form
+# and the sprint/sprintday aliases, kept for the plan file and DB sync):
+# one copy is enough on the wire, and the final event is also kept in the
+# run's Redis history
+_PLAN_COPIES = ("nested_plan", "sprint", "sprintday")
+
+
+def _wire_result(result: Any) -> Any:
+    """`result` with its study plan sent once: plan, sprints and sprint_days
+    (each day with its references), resource pack, coverage and db_sync."""
+    plan = result.get("study_plan") if isinstance(result, dict) else None
+    if not isinstance(plan, dict):
+        return result
+    return {**result, "study_plan": {key: value for key, value in plan.items() if key not in _PLAN_COPIES}}
+
+
 def _event_type_for_step(step: str) -> EventType:
     lowered = step.lower()
     for keyword, event_type in _STEP_KEYWORDS:
@@ -90,10 +106,11 @@ async def bridge_graph_turn(graph: Any, inputs: dict, config: dict) -> AsyncIter
                     "agent": item["agent"],
                     "status": item.get("status", "partial"),
                     "message": item["content"],
-                    "result": item.get("result"),
+                    "result": _wire_result(item.get("result")),
                 }
             elif item["agent"] == "interview_intelligence":
-                yield EventType.COMPLETED, {"message": item["content"]}
+                # without "agent" the publisher labelled this event "system"
+                yield EventType.COMPLETED, {"agent": item["agent"], "message": item["content"]}
             elif item["agent"] == "company_research":
                 task_context = item.get("task_context") or {}
                 yield EventType.COMPLETED, {

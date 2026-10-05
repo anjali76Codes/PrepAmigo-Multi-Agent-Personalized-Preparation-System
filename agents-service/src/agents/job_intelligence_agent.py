@@ -114,7 +114,7 @@ JOB_MAX_OUTPUT_TOKENS = 900  # 15 skills + short lists; the answer used to run p
 def _llm():
     """JOB_INTELLIGENCE_LLM / JOB_INTELLIGENCE_MODEL choose the model."""
     # temperature 0: the same company and role should give the same skills
-    return get_llm(temperature=0, max_tokens=JOB_MAX_OUTPUT_TOKENS, profile=settings.job_intelligence_llm,
+    return get_llm(guarded=True, temperature=0, max_tokens=JOB_MAX_OUTPUT_TOKENS, profile=settings.job_intelligence_llm,
                    model=settings.job_intelligence_model or None)
 
 
@@ -270,6 +270,8 @@ async def _search_postings(query: str, location: str) -> tuple[list[dict[str, An
             {"query": query, "location": location},
             agent="job_intelligence",
             timeout=settings.research_tool_timeout_seconds,
+            # called as before; the dict above is only the event's summary
+            invoke=lambda: fetch_google_jobs(query, location),
         )
     except asyncio.TimeoutError:
         logger.warning("[JobIntelligence] Job search for %r timed out after %.0fs; continuing without postings",
