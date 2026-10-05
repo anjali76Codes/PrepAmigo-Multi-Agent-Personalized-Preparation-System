@@ -25,7 +25,7 @@ export async function requireAuth(
         const user = await User.findOneAndUpdate(
           { email },
           { $setOnInsert: { name: "Local developer" } },
-          { new: true, upsert: true, setDefaultsOnInsert: true },
+          { returnDocument: "after", upsert: true, setDefaultsOnInsert: true },
         );
         req.user = {
           id: user._id.toString(),

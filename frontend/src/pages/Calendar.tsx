@@ -6,13 +6,9 @@ import { Button } from '../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { cn } from '../utils/utils';
 
-interface TaskItem {
-  id: string;
-  type: 'READ' | 'PRACTISE' | 'CODE' | 'REVIEW';
-  title: string;
-  completed: boolean;
-  tag?: string;
-}
+import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
+import { MOCK_SPRINT_DAYS } from '../mocks/interviewPlan.mock';
+import type { ISprintDay } from '../mocks/interviewPlan.mock';
 
 export function Calendar() {
   const shouldReduceMotion = useReducedMotion();
@@ -26,55 +22,46 @@ export function Calendar() {
 
   const selectedPrep = preps.find(p => p.id === selectedPrepId) || preps[0];
 
-  // Interactive task state
-  const [todayTasks, setTodayTasks] = useState<TaskItem[]>([
-    { id: 't1', type: 'READ', title: 'Learn about exception handling and try-catch blocks.', completed: false },
-    { id: 't2', type: 'PRACTISE', title: 'Write a program that handles exceptions effectively.', completed: false },
-    { id: 't3', type: 'READ', title: 'Familiarize with Java Streams and Lambda expressions.', completed: false },
-  ]);
+  // Interactive task state mapped from Mock Data
+  const [tasks, setTasks] = useState<ISprintDay[]>(MOCK_SPRINT_DAYS);
 
-  const [backlogTasks, setBacklogTasks] = useState<TaskItem[]>([
-    { id: 'b1', type: 'READ', title: 'Review Object Oriented Programming pillars in Java.', completed: false },
-    { id: 'b2', type: 'CODE', title: 'Implement generic LinkedList and custom Queue.', completed: false },
-    { id: 'b3', type: 'PRACTISE', title: 'Solve 3 Leetcode Easy problems on HashMap.', completed: false },
-    { id: 'b4', type: 'READ', title: 'Spring Boot Dependency Injection & Autowiring deep dive.', completed: false },
-    { id: 'b5', type: 'REVIEW', title: 'RESTful API error response standard formats.', completed: false },
-  ]);
+  const todayTasks = tasks.filter(t => t.status === 'in_progress');
+  const upcomingTasks = tasks.filter(t => t.status === 'pending');
+  const backlogTasks: ISprintDay[] = []; 
 
-  const [upcomingTasks, setUpcomingTasks] = useState<TaskItem[]>([
-    { id: 'u1', type: 'CODE', title: 'Build a Spring Boot CRUD API with PostgreSQL & JPA.', completed: false },
-    { id: 'u2', type: 'READ', title: 'Docker containerization and multi-stage builds.', completed: false },
-    { id: 'u3', type: 'PRACTISE', title: 'AWS ECS & Fargate deployment walkthrough.', completed: false },
-  ]);
-
-  const toggleTask = (id: string, listType: 'today' | 'backlog' | 'upcoming') => {
-    if (listType === 'today') {
-      setTodayTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    } else if (listType === 'backlog') {
-      setBacklogTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    } else {
-      setUpcomingTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    }
+  const toggleTask = (id: string, _listType: 'today' | 'backlog' | 'upcoming') => {
+    setTasks(prev => prev.map(t => {
+      if (t._id === id) {
+        return { ...t, status: t.status === 'completed' ? 'pending' : 'completed' };
+      }
+      return t;
+    }));
   };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
-    const newTask: TaskItem = {
-      id: `custom-${Date.now()}`,
-      type: newTaskType,
-      title: newTaskTitle.trim(),
-      completed: false
+    const newTask: ISprintDay = {
+      _id: `custom-${Date.now()}`,
+      sprint_id: 'custom',
+      day_number: 999,
+      scheduled_date: new Date().toISOString(),
+      topic_title: newTaskTitle.trim(),
+      topic_description: newTaskType,
+      objectives: [],
+      estimated_minutes: 30,
+      references: [],
+      status: activeTab === 'today' ? 'in_progress' : 'pending',
+      completed_at: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
-    if (activeTab === 'today') setTodayTasks(prev => [...prev, newTask]);
-    else if (activeTab === 'backlog') setBacklogTasks(prev => [...prev, newTask]);
-    else setUpcomingTasks(prev => [...prev, newTask]);
-
+    setTasks(prev => [...prev, newTask]);
     setNewTaskTitle('');
     setIsAddingTask(false);
   };
 
-  const completedToday = todayTasks.filter(t => t.completed).length;
+  const completedToday = todayTasks.filter(t => t.status === 'completed').length;
   const totalToday = todayTasks.length;
   const remainingToday = totalToday - completedToday;
   const progressPercent = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
@@ -229,7 +216,7 @@ export function Calendar() {
                     {activeTab === 'today' ? "Today's Plan (Wed, 30 Sept)" : activeTab === 'backlog' ? 'Waiting for you' : 'Coming up next'}
                   </span>
                   <h2 className="text-3xl md:text-4xl font-extrabold text-carbon-900 tracking-tight mt-1">
-                    {activeTab === 'today' ? `Just ${remainingToday} more to go` : activeTab === 'backlog' ? `${backlogTasks.filter(t => !t.completed).length} tasks waiting` : `${upcomingTasks.length} tasks lined up`}
+                    {activeTab === 'today' ? `Just ${remainingToday} more to go` : activeTab === 'backlog' ? `${backlogTasks.filter(t => t.status !== 'completed').length} tasks waiting` : `${upcomingTasks.length} tasks lined up`}
                   </h2>
                 </div>
 
@@ -257,43 +244,53 @@ export function Calendar() {
 
             {/* Task Item List */}
             <div className="space-y-3 pt-2">
-              {currentList.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => toggleTask(task.id, activeTab)}
-                  className={cn(
-                    "group flex items-center gap-4 p-4 md:p-5 rounded-2xl bg-white border border-border shadow-xs hover:shadow-pop hover:border-chrome-accent/40 cursor-pointer transition-all",
-                    task.completed && "bg-surface-muted/50 border-border/40"
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-label="Toggle completed"
-                    className={cn(
-                      "w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors",
-                      task.completed 
-                        ? "bg-navy-700 border-navy-700 text-white" 
-                        : "border-carbon-300 group-hover:border-navy-700 bg-white"
-                    )}
-                  >
-                    {task.completed && <Icon name="checkmark" className="text-xs font-bold" />}
-                  </button>
+              {currentList.map((task) => {
+                const resources: ResourceItem[] = [
+                  ...task.objectives.map((obj, idx) => ({
+                    id: `obj-${idx}`,
+                    type: "Note" as const,
+                    title: obj,
+                    url: "#"
+                  })),
+                  ...task.references.map((ref, idx) => ({
+                    id: `ref-${idx}`,
+                    type: "Article" as const,
+                    title: ref.title,
+                    url: ref.url
+                  }))
+                ];
 
-                  <span className={cn(
-                    "px-2.5 py-0.5 text-[11px] font-bold uppercase rounded-md tracking-wider border shrink-0",
-                    getTagStyle(task.type)
-                  )}>
-                    {task.type}
-                  </span>
+                if (task.references.length === 0) {
+                  resources.push({
+                    id: 'dummy-vid',
+                    type: 'Video',
+                    title: 'Watch ' + task.topic_title + ' Tutorial',
+                    url: 'https://youtube.com'
+                  });
+                }
 
-                  <span className={cn(
-                    "text-sm md:text-base font-medium text-carbon-900 flex-1 leading-snug",
-                    task.completed && "line-through text-carbon-400"
-                  )}>
-                    {task.title}
-                  </span>
-                </div>
-              ))}
+                let typeStr = 'READ';
+                if (task.topic_description.toLowerCase().includes('solve')) typeStr = 'CODE';
+                else if (task.topic_description.toLowerCase().includes('practise')) typeStr = 'PRACTISE';
+
+                return (
+                  <div key={task._id} className="relative">
+                    <DayTaskCard
+                      variant="compact"
+                      title={`Day ${task.day_number}: ${task.topic_title}`}
+                      completed={task.status === 'completed'}
+                      resources={resources}
+                      onToggleComplete={() => toggleTask(task._id, activeTab)}
+                    />
+                    <span className={cn(
+                      "absolute top-4 right-4 md:right-12 px-2 py-0.5 text-[10px] font-bold uppercase rounded-md tracking-wider border pointer-events-none z-10 bg-opacity-90",
+                      getTagStyle(typeStr)
+                    )}>
+                      {typeStr}
+                    </span>
+                  </div>
+                );
+              })}
 
               {/* Add Custom Task */}
               {!isAddingTask ? (

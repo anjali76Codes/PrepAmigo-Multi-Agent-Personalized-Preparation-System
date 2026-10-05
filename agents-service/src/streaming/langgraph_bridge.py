@@ -30,10 +30,12 @@ logger = logging.getLogger(__name__)
 # Falls back to THINKING, which is the right default for a step that is
 # gathering context or deciding something rather than acting on the world.
 _STEP_KEYWORDS: tuple[tuple[str, EventType], ...] = (
+    ("tool_", EventType.RESEARCHING),
     ("search", EventType.RESEARCHING),
     ("research", EventType.RESEARCHING),
     ("fetch", EventType.RESEARCHING),
     ("parallel", EventType.RESEARCHING),
+    ("extract", EventType.STRUCTURING),
     ("synthesize", EventType.STRUCTURING),
     ("structure", EventType.STRUCTURING),
     ("generate", EventType.STRUCTURING),
@@ -70,8 +72,21 @@ async def bridge_graph_turn(graph: Any, inputs: dict, config: dict) -> AsyncIter
             yield EventType.WAITING, {**payload, "status": "awaiting_input"}
         elif item["type"] == "step":
             event = item["event"]
-            payload = {"agent": event["agent"], "step": event["step"], **event["payload"]}
-            yield (EventType.FAILED if event["status"] == "failed" else _event_type_for_step(event["step"])), payload
+            details = dict(event["payload"])
+            agent_name = {"research_agent": "research"}.get(event["agent"], event["agent"])
+            payload = {
+                "agent": agent_name,
+                "step": event["step"],
+                **details,
+            }
+            # Keep an agent-provided status (including domain outcomes such as
+            # success/partial) in the canonical status field. Fall back to the
+            # AgentEvent lifecycle status when the payload has none.
+            payload.setdefault("status", event["status"])
+            # A failed step/tool is progress metadata, not necessarily a failed
+            # run (parallel searches can continue). Only the final run-level
+            # failure uses EventType.FAILED and closes the SSE stream.
+            yield _event_type_for_step(event["step"]), payload
         elif item["type"] == "final":
             if item["agent"] == "interview_prep":
                 event_type = EventType.FAILED if item.get("status") == "failed" else EventType.COMPLETED

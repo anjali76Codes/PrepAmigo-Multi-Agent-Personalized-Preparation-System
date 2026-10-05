@@ -5,7 +5,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { FlashcardDeck } from '../practice/FlashcardDeck';
-import { AgentJourney, type JourneyStep } from './AgentJourney'; // NEW
+import { ChatJourney, type JourneyStep } from './AgentJourney';
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
 
 export interface Message {
@@ -27,6 +27,7 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
       {messages.map((msg) => (
         <motion.div
           key={msg.id}
+          id={`msg-${msg.id}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`flex gap-4 max-w-5xl mx-auto ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
@@ -46,10 +47,10 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
 
             {/* NEW: agent journey shown as the response while agents work */}
             {msg.scenario === 'agent-journey' && msg.data && (
-              <AgentJourney
+              <ChatJourney
                 steps={msg.data.steps as JourneyStep[]}
-                activeIndex={msg.data.activeIndex}          // controlled (optional)
-                autoPlay={msg.data.activeIndex === undefined} // demo mode if not controlled
+                activeIndex={msg.data.activeIndex}
+                autoPlay={msg.data.activeIndex === undefined}
                 finalAction={msg.data.finalAction}
                 onComplete={() => onJourneyComplete?.(msg.id)}
               />

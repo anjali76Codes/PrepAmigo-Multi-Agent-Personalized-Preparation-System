@@ -339,35 +339,50 @@ def assemble_plan(
                 left[kind] -= 1
         per_day = place_references(daily, [d["title"] for d in wording[topic["key"]][: topic["days"]]], topic["name"])
         per_day[0] = per_day[0] + companions
-        parts = split_evenly(list(range(topic["days"])), -(-topic["days"] // sprint_max_days))
-        for part_number, part in enumerate(parts, start=1):
-            sprint_start = start_date + timedelta(days=day_number)
-            sprint_days = []
-            for i in part:
-                day_number += 1
-                day = wording[topic["key"]][i]
-                sprint_days.append({
-                    "day_number": day_number,
-                    "scheduled_date": (start_date + timedelta(days=day_number - 1)).isoformat(),
-                    "topic_title": clip(day["title"], 200),
-                    "topic_description": topic["overview"] or None,
-                    "objectives": [clip(o, 500) for o in day["objectives"] if str(o).strip()][:MAX_OBJECTIVES_PER_DAY],
-                    "estimated_minutes": MINUTES_PER_EFFORT.get(topic["effort"], DEFAULT_MINUTES),
-                    "references": [{**ref, "is_required": j == 0} for j, ref in enumerate(per_day[i])],
-                    "status": "pending",
-                    "completed_at": None,
-                })
-            name = topic["name"] if len(parts) == 1 else f"{topic['name']} (part {part_number} of {len(parts)})"
-            sprints.append({
-                "sprint_number": len(sprints) + 1,
-                "sprint_name": clip(name, 120),
-                "start_date": sprint_start.isoformat(),
-                "end_date": (sprint_start + timedelta(days=len(part) - 1)).isoformat(),
-                "total_days": len(part),
-                "sprint_days": sprint_days,
-                "completion_percent": 0,
-                "status": "pending",
+        
+    # Now group all topics into 7-day sprints
+    all_days = []
+    for topic in topics:
+        for i in range(topic["days"]):
+            all_days.append({
+                "topic_key": topic["key"],
+                "topic_name": topic["name"],
+                "topic_overview": topic["overview"],
+                "topic_effort": topic["effort"],
+                "day_wording": wording[topic["key"]][i],
+                "references": [r for j, r in enumerate(place_references(topic["references"], [d["title"] for d in wording[topic["key"]][:topic["days"]]], topic["name"])[i])],
             })
+            
+    parts = split_evenly(list(range(len(all_days))), -(-len(all_days) // 7))
+    for part_number, part in enumerate(parts, start=1):
+        sprint_start = start_date + timedelta(days=day_number)
+        sprint_days = []
+        for i in part:
+            day_number += 1
+            day_data = all_days[i]
+            sprint_days.append({
+                "day_number": day_number,
+                "scheduled_date": (start_date + timedelta(days=day_number - 1)).isoformat(),
+                "topic_title": clip(day_data["day_wording"]["title"], 200),
+                "topic_description": day_data["topic_overview"] or None,
+                "objectives": [clip(o, 500) for o in day_data["day_wording"]["objectives"] if str(o).strip()][:MAX_OBJECTIVES_PER_DAY],
+                "estimated_minutes": MINUTES_PER_EFFORT.get(day_data["topic_effort"], DEFAULT_MINUTES),
+                "references": [{**ref, "is_required": j == 0} for j, ref in enumerate(day_data["references"])],
+                "status": "pending",
+                "completed_at": None,
+            })
+        
+        name = f"Sprint {len(sprints) + 1}"
+        sprints.append({
+            "sprint_number": len(sprints) + 1,
+            "sprint_name": clip(name, 120),
+            "start_date": sprint_start.isoformat(),
+            "end_date": (sprint_start + timedelta(days=len(part) - 1)).isoformat(),
+            "total_days": len(part),
+            "sprint_days": sprint_days,
+            "completion_percent": 0,
+            "status": "pending",
+        })
 
     company_name = company.strip() or "General"
     # emoji, invisible characters and typographic punctuation removed from
@@ -384,12 +399,19 @@ def assemble_plan(
         "sprints": sprints,
     })
 
+    separated = plan.to_separated()
+
     return {
         "id": f"plan-{uuid.uuid4().hex[:12]}",
         "schema_version": SCHEMA_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "narrative_source": narrative_source,
-        "plan": plan.model_dump(mode="json"),
+        "plan": sanitize_data(separated["plan"]),
+        "sprints": sanitize_data(separated["sprints"]),
+        "sprint_days": sanitize_data(separated["sprint_days"]),
+        "sprint": sanitize_data(separated["sprints"]),
+        "sprintday": sanitize_data(separated["sprint_days"]),
+        "nested_plan": plan.model_dump(mode="json"),
         "resource_pack": sanitize_data(resource_pack(modules)),
         "learning_modules": sanitize_data([
             {"topic": m.get("topic", ""), "depth": m.get("depth"), "content_markdown": m.get("content_markdown", "")}

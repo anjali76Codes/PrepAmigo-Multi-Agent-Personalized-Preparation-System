@@ -5,7 +5,6 @@ import { ChatInput, type AttachedFile } from '../components/chat/ChatInput';
 import { Messages } from '../components/chat/Messages';
 import type { Message } from '../components/chat/Messages';
 import type { JourneyStep } from '../components/chat/AgentJourney';
-import { LearningContextPanel } from '../components/preps/LearningContextPanel';
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
 import { cn } from '../utils/utils';
@@ -34,8 +33,6 @@ export function Chat() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [highlightField, setHighlightField] = useState<'role' | 'summary' | 'gaps' | 'all' | null>(null);
-  const [highlightSource, setHighlightSource] = useState<string>('');
   const [threadId] = useState<string>(() => `chat-${Date.now()}`);
 
   const clientRef = useRef<AgentStreamClient | null>(null);
@@ -47,17 +44,23 @@ export function Chat() {
     };
   }, []);
 
-  const { preps: mockPreps, refreshPreps } = useAppContext();
-  const mockContext = mockPreps[0]?.learningContext;
+  const { refreshPreps } = useAppContext();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevLengthRef = useRef(0);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > prevLengthRef.current) {
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg?.scenario === 'agent-journey') {
+           document.getElementById(`msg-${lastMsg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
       }, 100);
     }
+    prevLengthRef.current = messages.length;
   }, [messages]);
 
   const suggestions = [
@@ -143,21 +146,6 @@ export function Chat() {
           onEvent: (event) => {
             const stepIdx = mapEventToStepIndex(event);
             updateJourneyIndex(stepIdx);
-
-            if (stepIdx === 1) {
-              setHighlightSource('Company Research');
-            } else if (stepIdx === 2) {
-              setHighlightField('role');
-              setHighlightSource('Job Intelligence');
-            } else if (stepIdx === 3) {
-              setHighlightField('gaps');
-              setHighlightSource('Skill Gap');
-            } else if (stepIdx === 4) {
-              setHighlightSource('Research');
-            } else if (stepIdx === 5) {
-              setHighlightField('all');
-              setHighlightSource('Planner');
-            }
           },
           onWaiting: (payload) => {
             // ReAct evaluator paused for clarification
@@ -206,8 +194,6 @@ export function Chat() {
               }, 1500);
             }
 
-            setHighlightField('all');
-            setHighlightSource('Planner');
             setIsProcessing(false);
           },
           onError: (err) => {
@@ -296,7 +282,7 @@ export function Chat() {
 
           <motion.div
             layout
-            layoutId="chat-input-morph"
+            layoutId="prepamigo-input"
             transition={{ type: 'spring', stiffness: 260, damping: 30 }}
             className={cn('w-full relative z-20', hasStarted ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto')}
           >
@@ -335,7 +321,7 @@ export function Chat() {
         </div>
       </div>
 
-      <div className="w-full md:w-96 border-l border-border bg-surface flex flex-col h-full overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)]">
+      {/* <div className="w-full md:w-96 border-l border-border bg-surface flex flex-col h-full overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)]">
         <div className="p-6 border-b border-border bg-bg shrink-0">
           <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-3">
             <Icon name="person" className="text-chrome-accent text-xl" /> Live Context
@@ -356,7 +342,7 @@ export function Chat() {
             />
           </motion.div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

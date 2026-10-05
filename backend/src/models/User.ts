@@ -37,7 +37,7 @@ const profileSchema = new Schema<IUserProfile>(
 
 const userSchema = new Schema<IUser>(
   {
-    googleId: { type: String, sparse: true },
+    googleId: { type: String, unique: true, sparse: true, default: undefined },
     email: {
       type: String,
       required: true,

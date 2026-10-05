@@ -7,6 +7,34 @@ from .models import AgentStreamEvent, EventType
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_STEPS = {
+    EventType.THINKING: "thinking",
+    EventType.RESEARCHING: "researching",
+    EventType.CALLING_AGENT: "route",
+    EventType.WAITING: "awaiting_input",
+    EventType.PROCESSING: "processing",
+    EventType.STRUCTURING: "structuring",
+    EventType.COMPLETED: "final",
+    EventType.FAILED: "failure",
+    EventType.PING: "heartbeat",
+}
+
+
+def standardize_payload(event_type: EventType, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep the shared SSE fields while preserving the caller's status value."""
+    result = dict(payload)
+    if not result.get("status"):
+        result["status"] = {
+            EventType.WAITING: "waiting",
+            EventType.COMPLETED: "completed",
+            EventType.FAILED: "failed",
+            EventType.PING: "running",
+        }.get(event_type, "running")
+
+    result["agent"] = result.get("agent") or result.get("node") or "system"
+    result["step"] = result.get("step") or _DEFAULT_STEPS[event_type]
+    return result
+
 
 class EventPublisher:
     """Publishes domain events to Redis Pub/Sub and buffers recent history for client replay."""
@@ -54,7 +82,7 @@ class EventPublisher:
         event = AgentStreamEvent(
             runId=run_id,
             type=event_type,
-            payload=payload,
+            payload=standardize_payload(event_type, payload),
         )
         await self.emit(event)
         return event

@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from types import SimpleNamespace
 
 import main
+import core.auth as agent_auth
 
 
 class FakeGraph:
@@ -23,6 +24,17 @@ def test_health_contract():
 
     assert response.status_code == 200
     assert response.json()["status"] == "UP"
+
+
+def test_enable_auth_controls_agent_endpoints(monkeypatch):
+    with TestClient(main.app) as client:
+        monkeypatch.setattr(agent_auth, "ENABLE_AUTH", False)
+        assert client.get("/api/interview-prep/fields").status_code == 200
+
+        monkeypatch.setattr(agent_auth, "ENABLE_AUTH", True)
+        response = client.get("/api/interview-prep/fields")
+
+    assert response.status_code == 401
 
 
 def test_chat_contract(monkeypatch):
@@ -235,4 +247,4 @@ def test_stream_endpoint_contract(monkeypatch):
     lines = [line for line in res.text.splitlines() if line.startswith("data: ")]
     assert len(lines) == 2
     assert "thinking" in lines[0]
-    assert "completed" in lines[1]
+    assert "completed" in lines[1]

@@ -194,9 +194,34 @@ function listenAndPersistPlanInBackground(runId: string, userId?: string | null)
   });
 }
 
+const defaultSteps: Record<AgentStreamEvent["type"], string> = {
+  thinking: "thinking",
+  researching: "researching",
+  calling_agent: "route",
+  waiting: "awaiting_input",
+  processing: "processing",
+  structuring: "structuring",
+  completed: "final",
+  failed: "failure",
+  ping: "heartbeat",
+};
+
+function standardizeSsePayload(event: AgentStreamEvent): AgentStreamEvent {
+  const payload = { ...event.payload };
+  payload.agent = payload.agent || payload.node || "system";
+  payload.step = payload.step || defaultSteps[event.type];
+  if (!payload.status) payload.status = ({
+    waiting: "waiting",
+    completed: "completed",
+    failed: "failed",
+  } as Partial<Record<AgentStreamEvent["type"], string>>)[event.type] || "running";
+  return { ...event, payload };
+}
+
 /** Helper to format and write SSE messages compliant with standard SSE protocol */
 function sendSSEMessage(res: Response, event: AgentStreamEvent): void {
   if (res.writableEnded) return;
+  event = standardizeSsePayload(event);
   res.write(`id: ${event.id}\n`);
   res.write(`event: ${event.type}\n`);
   res.write(`data: ${JSON.stringify(event)}\n\n`);

@@ -180,7 +180,7 @@ export function Auth() {
                 <div className="absolute inset-0 bg-chrome-accent/10 rounded-full animate-pulse" />
                 <Mascot
                   size="lg"
-                  mood={isLogin ? 'idle' : 'think'}
+                  variant={isLogin ? 'OK.png' : 'Thinking.png'}
                   className="relative z-10"
                 />
               </div>

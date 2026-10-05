@@ -117,7 +117,7 @@ export async function claimDayCompletion(
         },
         $inc: { xp_points: 20, completed_day_count: 1 },
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true },
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true, runValidators: true },
     );
   } catch (error) {
     if (!isDuplicateKeyError(error)) throw error;
@@ -150,7 +150,7 @@ export async function claimDayCompletion(
     const bonusProgress: IPlanProgress | null = await PlanProgress.findOneAndUpdate(
       { _id: currentProgress._id, weekly_bonus_count: currentBonusCount },
       { $inc: { weekly_bonus_count: 1, xp_points: 100 } },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (bonusProgress) {
       currentProgress = bonusProgress;

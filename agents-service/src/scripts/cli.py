@@ -463,27 +463,49 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     # ── STAGE 4: Study Plan ───────────────────────────────────────────────────
     output = state.get("study_plan")
     plan = (output or {}).get("plan")
+    sprints = (output or {}).get("sprints") or ((plan or {}).get("sprints") if plan else [])
+    sprint_days = (output or {}).get("sprint_days") or []
     print(f"\n  {BOLD}STAGE 4 — STUDY PLAN{RESET}")
     if not plan:
         print(f"    {YELLOW}○{RESET} No plan — no skill gaps or research modules to plan around")
     else:
-        print(f"    {GREEN}✓{RESET} {plan['total_days']} days in {len(plan['sprints'])} sprint(s), "
-              f"{plan['start_date']} → {plan['end_date']}  {DIM}(wording: {output['narrative_source']}){RESET}\n")
+        print(f"    {GREEN}✓{RESET} {plan['total_days']} days in {len(sprints)} sprint(s), "
+              f"{plan['start_date']} → {plan['end_date']}  {DIM}(wording: {output.get('narrative_source', 'llm')}){RESET}\n")
+        
+        days_by_sprint_num = {}
+        for d in sprint_days:
+            days_by_sprint_num.setdefault(d.get("sprint_number", 1), []).append(d)
+
         # long plans: one line per sprint (first → last day); every day is in the saved JSON
-        for sprint in plan["sprints"]:
-            days = sprint["sprint_days"]
-            span = days[0]["topic_title"] if len(days) == 1 else f"{days[0]['topic_title']} … {days[-1]['topic_title']}"
-            print(f"    {BOLD}S{sprint['sprint_number']:>2}{RESET} D{days[0]['day_number']}-{days[-1]['day_number']} "
-                  f"{sprint['sprint_name']}  {DIM}{span}{RESET}")
-        coverage = output["coverage"]
-        if coverage["unresearched"]:
+        for sprint in sprints:
+            s_num = sprint.get("sprint_number", 1)
+            days = days_by_sprint_num.get(s_num) or sprint.get("sprint_days", [])
+            if days:
+                span = days[0]["topic_title"] if len(days) == 1 else f"{days[0]['topic_title']} … {days[-1]['topic_title']}"
+                print(f"    {BOLD}S{s_num:>2}{RESET} D{days[0]['day_number']}-{days[-1]['day_number']} "
+                      f"{sprint['sprint_name']}  {DIM}{span}{RESET}")
+            else:
+                print(f"    {BOLD}S{s_num:>2}{RESET} {sprint['sprint_name']} ({sprint['total_days']} days)")
+
+        coverage = output.get("coverage", {})
+        if coverage.get("unresearched"):
             print(f"\n    {YELLOW}○{RESET} No research for: {', '.join(coverage['unresearched'])} (planned, no references)")
         if coverage.get("not_scheduled"):
             print(f"    {YELLOW}○{RESET} Not scheduled (plan too short): {', '.join(coverage['not_scheduled'])}")
-        pack_counts = ", ".join(f"{k}: {len(v)}" for k, v in output["resource_pack"].items())
+        pack_counts = ", ".join(f"{k}: {len(v)}" for k, v in (output.get("resource_pack") or {}).items())
         print(f"    Resource Pack : {pack_counts or 'none'}")
         saved = state.get("study_plan_path")
         print(f"    Saved JSON    : {BOLD}{saved}{RESET}" if saved else f"    Saved JSON    : {DIM}not saved (PLAN_OUTPUT_DIR empty or write failed){RESET}")
+
+        # MongoDB Sequential Storage Status
+        db_sync = state.get("db_sync") or output.get("db_sync")
+        if db_sync and db_sync.get("success"):
+            print(f"\n    {GREEN}✓{RESET} {BOLD}MongoDB Sequential Sync Complete:{RESET}")
+            print(f"      Plan ID       : {GREEN}{db_sync.get('plan_id')}{RESET}")
+            print(f"      Sprints       : {db_sync.get('sprints_count')} created")
+            print(f"      Sprint Days   : {db_sync.get('total_days_created')} created")
+        elif db_sync and not db_sync.get("success"):
+            print(f"\n    {YELLOW}○{RESET} MongoDB Sequential Sync: {DIM}{db_sync.get('error')}{RESET}")
 
     # ── DATA FLOW STATUS ─────────────────────────────────────────────────────
     print(f"  {BOLD}DATA FLOW STATUS  {DIM}(did state pass between agents correctly?){RESET}")
@@ -516,7 +538,7 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     flow_check(
         f"Planner           → Output",
         bool(plan or not (materials or gap_topics)),
-        f"{output['id']}, {plan['total_days']} day(s), validated against the backend plan schema" if plan else "plan missing"
+        f"{output.get('id', 'plan')}, {plan['total_days'] if plan else 0} day(s), validated against DB schema" if plan else "plan missing"
     )
 
     time_str = f"{elapsed_sec:.2f}s"
