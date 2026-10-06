@@ -12,6 +12,7 @@ import { Gamification } from "../components/home/Gamification";
 import { BottomCTA } from "../components/home/BottomCTA";
 import { useAuth } from "../hooks/useAuth";
 import { featureFlags } from "../config/featureFlags";
+import { Mascot } from "../components/ui/Mascot";
 
 export function Home() {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export function Home() {
       {/* 1. Hero */}
       <motion.section
         style={{ scale, filter }}
-        className="relative pt-24 pb-12 px-4 md:px-6 mx-2 md:mx-4 rounded-3xl md:rounded-b-[2.5rem] min-h-[98vh] flex flex-col items-center justify-center bg-carbon-900 text-white text-center z-10 shadow-2xl"
+        className="relative pt-24 pb-12 px-4 md:px-6 mx-2 md:mx-4 md:rounded-b-[2.5rem] min-h-[98vh] flex flex-col items-center justify-center bg-carbon-900 text-white text-center z-10 shadow-2xl"
       >
         <RevealStagger className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center space-y-5 my-auto">
           <RevealStaggerItem>
@@ -63,6 +64,9 @@ export function Home() {
               className="text-left"
             />
           </RevealStaggerItem>
+
+
+          <Mascot variant="hi.png" className="absolute left-10 bottom-0 mx-auto" style={{ height: "500px", width: "auto" }} />
         </RevealStagger>
       </motion.section>
 
@@ -96,10 +100,14 @@ export function Home() {
       </section> */}
 
       {/* 5. What the Planner builds */}
-      <WhatYouGet />
+      <div id="features" className="scroll-mt-10">
+        <WhatYouGet />
+      </div>
 
       {/* 6. Worked Example */}
-      <PromptToPlan />
+      <div id="agents" className="scroll-mt-10">
+        <PromptToPlan />
+      </div>
 
       {/* 7. Gamification */}
       <Gamification />

@@ -53,12 +53,12 @@ const STEPS: {
       step: '3',
       title: 'Plan',
       desc: 'We generate a day-by-day study roadmap.',
-      card: 'bg-navy-100 text-white',
+      card: 'bg-navy-500 text-white',
       descColor: 'text-white/85',
       badge: 'bg-white text-navy-900',
       x: '85.4%',
       y: '85.4%',
-      mood: 'cheer',
+      mood: 'idle',
     },
     {
       step: '4',
@@ -213,8 +213,8 @@ export function ScrollSteps() {
           <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
             <Mascot
               size="xl"
-              variant={STEPS[active].mood === "cheer" ? "Celebration.png" : STEPS[active].mood === "think" ? "Thinking.png" : "OK.png"}
-              className="bg-lavender-100 shadow-pop ring-8 ring-bg"
+              variant={STEPS[active].mood === "cheer" ? "Celebration.png" : STEPS[active].mood === "think" ? "Thinking.png" : "Chilling.png"}
+              className=""
             />
           </div>
 

@@ -1,12 +1,16 @@
 import { Reveal } from '../ui/Reveal';
 import { Icon } from '../ui/Icon';
 import { RevealCard, CardText } from '../ui/RevealCard';
+import { Mascot } from '../ui/Mascot';
 
 export function InterviewTrap() {
     return (
         <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
             <Reveal>
-                <h2 className="mb-4 text-center text-3xl font-bold text-navy-900">The Interview Prep Trap</h2>
+                <h2 className="mb-4 text-center text-3xl font-bold text-navy-900">The Interview Prep Trap
+                    <Mascot variant='dissapointed.png' className='mx-auto' style={{ width: "100px", height: "auto" }} />
+
+                </h2>
                 <p className="mx-auto mb-14 max-w-xl text-center text-navy-500">
                     Why the old way of preparing for interviews is broken.
                 </p>

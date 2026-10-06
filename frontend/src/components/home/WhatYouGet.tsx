@@ -1,12 +1,13 @@
 import { Reveal } from '../ui/Reveal';
 import { Icon } from '../ui/Icon';
 import { RevealCard, CardText } from '../ui/RevealCard';
+import { Mascot } from '../ui/Mascot';
 
 export function WhatYouGet() {
     return (
         <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
             <Reveal>
-                <h2 className="mb-4 text-center text-3xl font-bold text-navy-900">What You Get</h2>
+                <h2 className="mb-4 text-center text-4xl font-bold text-navy-900"><Mascot size="lg" variant='Motivated.png' />What You Get </h2>
                 <p className="mx-auto mb-14 max-w-xl text-center text-navy-500">
                     Five things the Planner builds for you, and keeps updating as you go.
                 </p>
@@ -29,8 +30,8 @@ export function WhatYouGet() {
                             <div
                                 key={d.t}
                                 className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${d.today
-                                        ? 'border-chrome-accent bg-chrome-accent text-navy-900'
-                                        : 'border-white/10 bg-white/5'
+                                    ? 'border-chrome-accent bg-chrome-accent text-navy-900'
+                                    : 'border-white/10 bg-white/5'
                                     }`}
                             >
                                 <span
@@ -62,12 +63,12 @@ export function WhatYouGet() {
                             <div
                                 key={i}
                                 className={`h-7 rounded-lg ${i === 5
-                                        ? 'border border-beige-600 bg-beige-100'
-                                        : i < 5
-                                            ? 'bg-navy-100'
-                                            : i === 6
-                                                ? 'bg-navy-900'
-                                                : 'bg-white'
+                                    ? 'border border-beige-600 bg-beige-100'
+                                    : i < 5
+                                        ? 'bg-chrome'
+                                        : i === 6
+                                            ? 'bg-navy-900'
+                                            : 'bg-white'
                                     }`}
                             />
                         ))}
@@ -75,7 +76,7 @@ export function WhatYouGet() {
                 </RevealCard>
 
                 {/* Resource Pack */}
-                <RevealCard from="left" className="bg-navy-100 text-white md:col-span-2">
+                <RevealCard from="left" className="bg-chrome text-white md:col-span-2">
                     <CardText
                         title="Resource Pack"
                         desc="Curated, grouped by purpose. Never a link dump."
