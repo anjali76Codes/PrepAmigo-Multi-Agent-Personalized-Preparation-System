@@ -2,7 +2,7 @@ import { forwardRef, type HTMLAttributes } from "react";
 import { cn } from "./Button";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "muted" | "outlined" | "elevated" | "forest" | "sunny" | "coral" | "sky" | "navy" | "carbon" | "dashed";
+  variant?: "default" | "muted" | "outlined" | "elevated" | "forest" | "sunny" | "coral" | "sky" | "navy" | "carbon" | "chrome" | "dashed";
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
