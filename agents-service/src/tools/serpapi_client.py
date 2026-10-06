@@ -86,7 +86,42 @@ def _fixture_for(params: dict[str, Any]) -> dict[str, Any]:
     elif "default" in fixture and isinstance(fixture["default"], dict):
         fixture = fixture["default"]
 
-    return {**fixture, "_source": "dummy"}
+    return {**_fill_fixture(fixture, str(params.get("q") or params.get("search_query") or "")), "_source": "dummy"}
+
+
+# words a search adds around its subject; dropped to name the subject
+_QUERY_FILLER = frozenset(
+    "guide tutorial tutorials explained for beginners best practices company engineering tech stack internals deep "
+    "dive cheat sheet interview questions paper papers survey review official documentation a an the of to and in "
+    "on with".split())
+
+
+def fixture_subject(query: str) -> str:
+    """What a search is about, without its quotes, operators (OR, -jobs)
+    and intent words: '"Rust" Programming Language guide OR tutorial -jobs'
+    -> "Rust Programming Language"."""
+    words = [w for w in query.replace('"', " ").split() if not w.startswith("-") and w.upper() != "OR"]
+    kept = [w for w in words if w.casefold() not in _QUERY_FILLER]
+    return " ".join(kept or words).strip()
+
+
+def _fill_fixture(value: Any, query: str) -> Any:
+    """A fixture with "{subject}" and "{slug}" filled in from the search,
+    so one test fixture answers every topic with results about that topic
+    (docs/serpapi_fixtures.pipeline.json)."""
+    subject = fixture_subject(query) or "Software Engineering"
+    slug = re.sub(r"[^a-z0-9]+", "-", subject.casefold()).strip("-") or "topic"
+
+    def fill(item: Any) -> Any:
+        if isinstance(item, str):
+            return item.replace("{subject}", subject).replace("{slug}", slug)
+        if isinstance(item, dict):
+            return {key: fill(entry) for key, entry in item.items()}
+        if isinstance(item, list):
+            return [fill(entry) for entry in item]
+        return item
+
+    return fill(value)
 
 
 def _without_ai_overview(params: dict[str, Any]) -> dict[str, Any]:

@@ -24,6 +24,7 @@ os.environ.update({
     "SERPAPI_ASYNC": "true",
     "SERPAPI_RESULT_TIMEOUT_SECONDS": "15",
     "PLAN_GAP_SEARCHES": "auto",
+    "LLM_RESCUE_SECONDS": "20",
     # test runs stay out of the developer's .data/logs/agents-service.log
     "LOG_FILE": "",
     # the fast model's rate budget: no day totals written under .data/

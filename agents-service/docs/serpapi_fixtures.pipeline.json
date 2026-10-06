@@ -1,0 +1,85 @@
+{
+  "_comment": "Pipeline test data for SERPAPI_ENABLED=false (SERPAPI_DUMMY_DATA_PATH=docs/serpapi_fixtures.pipeline.json). {subject} is the search's subject ('\"Rust\" Programming Language guide OR tutorial -jobs' -> 'Rust Programming Language') and {slug} its URL form, so every topic gets results and distinct references about itself. All links are example.com test URLs. No job postings: job intelligence builds the requirements from the role, as it does for a company with no postings of its own.",
+  "engines": {
+    "google": {
+      "knowledge_graph": {
+        "title": "{subject}",
+        "type": "Technology company",
+        "industry": "Software",
+        "founded": "2018",
+        "headquarters": "San Francisco, CA",
+        "description": "{subject} builds software products and developer platforms (pipeline test data).",
+        "website": "https://example.com/{slug}"
+      },
+      "organic_results": [
+        {"position": 1, "title": "{subject}: a practical guide", "link": "https://example.com/{slug}/guide",
+         "snippet": "A practical, step-by-step guide to {subject}: core concepts, worked examples and common pitfalls.",
+         "source": "Example Docs"},
+        {"position": 2, "title": "{subject} documentation", "link": "https://example.com/{slug}/docs",
+         "snippet": "Official-style reference documentation for {subject}, from setup to advanced usage.",
+         "source": "Example Docs"},
+        {"position": 3, "title": "Getting started with {subject}", "link": "https://example.com/{slug}/getting-started",
+         "snippet": "Install, configure and build a first project with {subject}.", "source": "Example Learn"},
+        {"position": 4, "title": "{subject} best practices", "link": "https://example.com/{slug}/best-practices",
+         "snippet": "Patterns, conventions and performance tips for working with {subject} in production.",
+         "source": "Example Engineering Blog"},
+        {"position": 5, "title": "{subject} internals explained", "link": "https://example.com/{slug}/internals",
+         "snippet": "How {subject} works under the hood, explained with diagrams.", "source": "Example Engineering Blog"},
+        {"position": 6, "title": "{subject} interview questions and answers", "link": "https://example.com/{slug}/interview-questions",
+         "snippet": "Common interview questions on {subject}, with worked answers.", "source": "Example Prep"}
+      ],
+      "related_questions": [
+        {"question": "What should I learn first in {subject}?",
+         "snippet": "Start with the fundamentals of {subject}, then build a small project that uses them."},
+        {"question": "How is {subject} tested in interviews?",
+         "snippet": "Interviews on {subject} usually combine concept questions with a hands-on exercise."}
+      ],
+      "discussions_and_forums": []
+    },
+    "google_news": {
+      "news_results": [
+        {"position": 1, "title": "{subject} announces a major platform update", "link": "https://example.com/news/{slug}/platform-update",
+         "source": {"name": "Example News"}, "iso_date": "2026-09-20T00:00:00Z",
+         "snippet": "{subject} shipped a platform update focused on performance and developer tooling."},
+        {"position": 2, "title": "{subject} expands its engineering team", "link": "https://example.com/news/{slug}/hiring",
+         "source": {"name": "Example Tech Daily"}, "iso_date": "2026-08-02T00:00:00Z",
+         "snippet": "{subject} is hiring across infrastructure, compilers and developer experience."},
+        {"position": 3, "title": "Inside {subject}'s engineering culture", "link": "https://example.com/news/{slug}/culture",
+         "source": {"name": "Example Magazine"}, "iso_date": "2026-06-11T00:00:00Z",
+         "snippet": "Engineers at {subject} describe how they design, review and ship systems."}
+      ]
+    },
+    "google_jobs": {
+      "jobs_results": []
+    },
+    "youtube": {
+      "video_results": [
+        {"title": "{subject} explained in 10 minutes", "link": "https://example.com/videos/{slug}/explained",
+         "description": "A short visual introduction to {subject}.", "channel": {"name": "Example Academy"},
+         "length": "10:12", "published_date": "3 months ago"},
+        {"title": "{subject} full course for beginners", "link": "https://example.com/videos/{slug}/full-course",
+         "description": "A complete beginner course on {subject} with hands-on exercises.", "channel": {"name": "Example Academy"},
+         "length": "2:41:05", "published_date": "8 months ago"},
+        {"title": "{subject} deep dive", "link": "https://example.com/videos/{slug}/deep-dive",
+         "description": "Advanced concepts of {subject} for engineers preparing for interviews.", "channel": {"name": "Example Conf"},
+         "length": "48:30", "published_date": "1 year ago"},
+        {"title": "Build a project with {subject}", "link": "https://example.com/videos/{slug}/project",
+         "description": "Build a small end-to-end project with {subject}.", "channel": {"name": "Example Builders"},
+         "length": "35:44", "published_date": "5 months ago"}
+      ]
+    },
+    "google_scholar": {
+      "organic_results": [
+        {"position": 1, "title": "{subject}: a survey", "link": "https://example.com/papers/{slug}/survey",
+         "snippet": "A survey of research on {subject}.",
+         "publication_info": {"summary": "Example Authors - Example Journal, 2024"}},
+        {"position": 2, "title": "Design and evaluation of {subject}", "link": "https://example.com/papers/{slug}/design",
+         "snippet": "We present the design of {subject} and evaluate it on standard benchmarks.",
+         "publication_info": {"summary": "Example Authors - Example Conference, 2023"}}
+      ]
+    },
+    "google_ai_overview": {
+      "ai_overview": {"text_blocks": [], "references": []}
+    }
+  }
+}

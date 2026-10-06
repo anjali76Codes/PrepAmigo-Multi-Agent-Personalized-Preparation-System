@@ -129,9 +129,12 @@ def test_default_45_day_plan_is_valid_with_bounded_sprints(planner_settings):
     days = output["coverage"]["days_per_topic"]
     assert days["Claude"] == days["Salesforce"] > days["Enterprise Integration"]  # High gets more
     assert sum(days.values()) == 45
+    # fixed blocks of at most 7 days across topic boundaries, named after the
+    # topics they cover (the frontend shows "Sprint N" itself above the name)
     sprint_names = [s["sprint_name"] for s in output["sprints"]]
-    assert sprint_names[0] == "Sprint 1"
-    assert len(sprint_names) == 7
+    assert len(sprint_names) == 7 and sprint_names[0] == "Claude" and "Claude & Salesforce" in sprint_names
+    assert all(4 <= s["total_days"] <= 7 for s in output["sprints"])
+    assert all(d["references"] for d in output["sprint_days"])
 
 
 def test_no_llm_call_writes_more_than_the_chunk_size_and_later_chunks_see_earlier_titles(planner_settings):
@@ -437,3 +440,246 @@ def test_ninety_day_plan_generation_allocates_correct_days_and_sprints():
     days_per_topic = output["coverage"]["days_per_topic"]
     assert sum(days_per_topic.values()) == 90
 
+# ---- restored: the model picks each day's references; gap searches (lost in a merge) ----
+
+def test_a_gap_without_research_borrows_what_other_topics_found_about_it():
+    modules = [{"topic": "Java", "content_markdown": "## Overview\nx", "resources": [
+        {"title": "Java tutorial", "url": "https://docs.example/java", "resource_type": "documentation"},
+        {"title": "Spring Boot with Java: build a REST API", "url": "https://docs.example/spring",
+         "resource_type": "documentation"},
+    ]}]
+    gaps = [{"skill": "Java", "effort": "High"}, {"skill": "Spring Boot", "effort": "High"}]
+
+    output = build(modules=modules, gaps=gaps, total_days=6)
+
+    spring = [d for d in output["sprint_days"] if d["topic_title"].startswith("Spring Boot")]
+    assert spring and all(d["references"] for d in spring)
+    assert {r["url"] for d in spring for r in d["references"]} == {"https://docs.example/spring"}
+    assert output["coverage"]["reference_fallbacks"] == {"borrowed": ["Spring Boot"], "search_links": []}
+
+
+def test_every_day_reaches_the_backend_with_its_references(monkeypatch):
+    """The plan's days, references included, are what POST /api/sprint-days receives."""
+    import httpx
+
+    from tools import plan_db_sync
+
+    output = build(total_days=45)
+    assert all(d["references"] for d in output["sprint_days"])
+
+    sent_days = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if request.url.path == "/api/sprint-days":
+            sent_days.extend(body["days"])
+            return httpx.Response(201, json={"ids": [str(i) for i in range(len(body["days"]))]})
+        return httpx.Response(201, json={"id": "0123456789abcdef01234567"})
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(plan_db_sync.httpx, "AsyncClient",
+                        lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
+
+    result = asyncio.run(plan_db_sync.sync_generated_plan_to_db(output, base_url="http://backend.test"))
+
+    assert result["success"] and result["total_days_created"] == 45
+    assert [d["references"] for d in sent_days] == [d["references"] for d in output["sprint_days"]]
+
+
+class PickingLLM(ChunkLLM):
+    """Like ChunkLLM, but answers the way the prompt asks: per day the
+    numbers of the listed resources whose title shares a word with the
+    day's subject, else a search for that subject. `day_subjects` maps a
+    topic to the subject of each of its days (cycled)."""
+
+    def __init__(self, day_subjects, **kw):
+        super().__init__(**kw)
+        self.day_subjects = day_subjects
+
+    async def ainvoke(self, prompt, config=None):
+        self.prompts.append(prompt)
+        topic = re.search(r'studying "(.+?)"', prompt).group(1)
+        first = int(re.search(r"Plan days (\d+)-", prompt).group(1))
+        count = int(re.search(r"EXACTLY (\d+) days", prompt).group(1))
+        listed = re.findall(r"^(\d+)\. \[[a-z]+\] (.+)$", prompt, re.M)
+        subjects = self.day_subjects[topic]
+        days = []
+        for i in range(count):
+            subject = subjects[(first - 1 + i) % len(subjects)]
+            refs = [int(n) for n, title in listed if subject.casefold() in title.casefold()]
+            days.append({"title": f"{topic}: {subject} (day {first + i})", "objectives": [f"Learn {subject}"],
+                         "refs": refs[:2] + [99], "search": "" if refs else f"{subject} tutorial"})
+        return AIMessage(content=json.dumps({"days": days}))
+
+
+class FakeDocsSearch:
+    """Stands in for research_tools.search_technical_docs."""
+    name = "search_technical_docs"
+
+    def __init__(self, source="serpapi"):
+        self.queries, self.source = [], source
+
+    def invoke(self, payload):
+        query = payload["query"].split(" -")[0]  # without the -jobs ... terms
+        self.queries.append(query)
+        subject = query.removesuffix(" tutorial")
+        return {"source": self.source, "results": [
+            {"title": f"{subject} explained", "url": f"https://learn.example/{subject.replace(' ', '-')}",
+             "snippet": f"A tutorial on {subject}.", "resource_type": "documentation"},
+            {"title": f"{subject} engineer jobs", "url": "https://jobs.example/apply", "snippet": "Hiring now"},
+        ]}
+
+
+@pytest.fixture
+def searchable(planner_settings, monkeypatch):
+    search = FakeDocsSearch()
+    monkeypatch.setattr(planner_module, "search_technical_docs", search)
+    planner_settings(serpapi_enabled=True, serpapi_api_key="k", plan_gap_searches="auto")
+    return search
+
+
+def test_each_day_gets_the_references_the_model_picked_for_it(planner_settings):
+    planner_settings(serpapi_enabled=False)
+    modules = [{"topic": "Java", "content_markdown": "## Overview\nx", "resources": [
+        {"title": "Java tutorial", "url": "https://docs.example/java", "resource_type": "documentation"},
+        {"title": "Exception handling in Java", "url": "https://docs.example/exceptions", "resource_type": "documentation"},
+        {"title": "Java collections video", "url": "https://videos.example/collections", "resource_type": "video"},
+    ]}]
+    llm = PickingLLM({"Java": ["Exception", "Collections", "tutorial"]})
+
+    output = build(llm, modules=modules, gaps=[{"skill": "Java", "effort": "High"}], total_days=3)
+
+    days = output["sprint_days"]
+    assert [[r["url"] for r in d["references"]] for d in days] == [
+        ["https://docs.example/exceptions"], ["https://videos.example/collections"], ["https://docs.example/java"]]
+    assert "1. [docs] Java tutorial" in llm.prompts[0]  # the model sees the list, numbered
+    assert all(d["references"][0]["is_required"] for d in days)  # 99 (not listed) was ignored
+
+
+def test_a_resource_picked_again_is_optional_and_a_book_past_the_cap_is_never_picked(planner_settings):
+    planner_settings(serpapi_enabled=False, plan_max_books=0)
+    modules = [{"topic": "Go", "content_markdown": "## Overview\nx", "resources": [
+        {"title": "Go concurrency guide", "url": "https://docs.example/go", "resource_type": "documentation"},
+        {"title": "Go concurrency book", "url": "https://books.example/go", "resource_type": "book"},
+    ]}]
+    output = build(PickingLLM({"Go": ["concurrency"]}), modules=modules,
+                   gaps=[{"skill": "Go", "effort": "High"}], total_days=3)
+
+    refs = [d["references"] for d in output["sprint_days"]]
+    assert all([r["url"] for r in day] == ["https://docs.example/go"] for day in refs)
+    assert [day[0]["is_required"] for day in refs] == [True, False, False]
+
+
+def test_days_no_resource_covers_get_a_targeted_search_within_the_budget(searchable):
+    modules = [{"topic": "Data Structures", "content_markdown": "## Overview\nx", "resources": [
+        {"title": "Hash maps deep dive", "url": "https://docs.example/hash", "resource_type": "documentation"},
+    ]}]
+    subjects = ["Hash maps", "Bloom filters", "Tries", "Skip lists", "Heaps"]
+    output = build(PickingLLM({"Data Structures": subjects}), modules=modules,
+                   gaps=[{"skill": "Data Structures", "effort": "High"}], total_days=10)
+
+    days = output["sprint_days"]
+    assert len(searchable.queries) == 2  # auto: one per 5 days of a 10-day plan
+    assert searchable.queries == ["Bloom filters tutorial", "Tries tutorial"]  # earliest days first
+    assert [r["url"] for r in days[1]["references"]] == ["https://learn.example/Bloom-filters"]  # job advert dropped
+    assert all(d["references"] for d in days)
+
+
+def test_search_budget_one_topic_does_not_need_goes_to_another(searchable, planner_settings):
+    modules = [
+        {"topic": "Java", "content_markdown": "## Overview\nx", "resources": [
+            {"title": "Java streams", "url": "https://docs.example/streams", "resource_type": "documentation"}]},
+        {"topic": "Go", "content_markdown": "## Overview\nx", "resources": []},
+    ]
+    gaps = [{"skill": "Java", "effort": "High"}, {"skill": "Go", "effort": "High"}]
+    llm = PickingLLM({"Java": ["streams"], "Go": ["goroutines", "channels", "select", "context"]})
+
+    planner_settings(plan_gap_searches="3")
+    output = build(llm, modules=modules, gaps=gaps, total_days=24)  # shares Java 2 / Go 1
+
+    assert sorted(searchable.queries) == ["channels tutorial", "goroutines tutorial", "select tutorial"]
+    go_days = [d for d in output["sprint_days"] if d["topic_title"].startswith("Go")]
+    assert all(d["references"] for d in go_days)  # searched days, the rest revisit what was found
+    assert output["coverage"]["reference_fallbacks"]["search_links"] == []
+
+
+def test_offline_search_results_are_not_used_as_material(searchable, monkeypatch):
+    monkeypatch.setattr(planner_module, "search_technical_docs", FakeDocsSearch(source="mock"))
+    output = build(PickingLLM({"Claude": ["zzz"], "Enterprise Integration": ["zzz"], "Salesforce": ["zzz"]}),
+                   total_days=10)
+    assert not any("learn.example" in r["url"] for d in output["sprint_days"] for r in d["references"])
+
+
+@pytest.mark.parametrize("total_days", [10, 14, 45, 60, 90])
+def test_short_and_long_plans_have_a_reference_on_every_day(total_days, searchable):
+    gaps = [{"skill": name, "effort": effort} for name, effort in
+            [("Claude", "High"), ("Enterprise Integration", "Medium"), ("Salesforce", "High"),
+             ("Kafka", "High"), ("Terraform", "Medium"), ("GraphQL", "Medium"), ("Rust", "High")]]
+    subjects = {g["skill"]: ["docs", "video", "internals", "practice"] for g in gaps}
+
+    output = build(PickingLLM(subjects), gaps=gaps, total_days=total_days)
+
+    StudyPlan.model_validate(output)
+    days = output["sprint_days"]
+    assert len(days) == total_days and all(d["references"] for d in days)
+    assert len(searchable.queries) <= -(-total_days // 5)  # never past the budget
+    assert all(sum(r["is_required"] for r in d["references"]) <= 1 for d in days)
+
+
+def test_an_overview_reused_for_unrelated_days_is_replaced_by_searches(searchable, planner_settings):
+    """The same "What is Solana?" video sat on Proof of History, Tower BFT
+    and Sealevel. A repeat is kept only for a day it is about (or a review
+    day); the others ask for a search on their own subject."""
+    modules = [{"topic": "Solana", "content_markdown": "## Overview\nx", "resources": [
+        {"title": "What is Solana? Explained", "url": "https://videos.example/solana", "resource_type": "video"},
+        {"title": "The Solana book", "url": "https://books.example/solana", "resource_type": "book"},
+    ]}]
+
+    class LazyLLM(ChunkLLM):  # picks resource 1 for every day
+        async def ainvoke(self, prompt, config=None):
+            self.prompts.append(prompt)
+            titles = ["Solana Overview", "Proof of History", "Tower BFT", "Review and Mini Project"]
+            return AIMessage(content=json.dumps({"days": [
+                {"title": t, "objectives": ["x"], "refs": [1], "search": ""} for t in titles]}))
+
+    llm = LazyLLM()
+    planner_settings(plan_gap_searches="2")
+    output = build(llm, modules=modules, gaps=[{"skill": "Solana", "effort": "High"}], total_days=4)
+
+    assert "The Solana book" not in llm.prompts[0]  # a companion, not a per-day pick
+    assert searchable.queries == ["Solana proof history", "Solana tower bft"]
+    days = output["sprint_days"]
+    assert days[0]["references"][0]["url"] == "https://videos.example/solana"
+    assert [r["url"] for r in days[1]["references"]] == ["https://learn.example/Solana-proof-history"]
+    assert days[3]["references"][0]["url"] == "https://videos.example/solana"  # review: a repeat is fine
+
+
+def test_a_slow_gap_search_never_holds_the_plan_up(searchable, monkeypatch):
+    import time
+
+    class SlowSearch(FakeDocsSearch):
+        def invoke(self, payload):
+            time.sleep(0.5)
+            return super().invoke(payload)
+
+    monkeypatch.setattr(planner_module, "search_technical_docs", SlowSearch())
+    monkeypatch.setattr(planner_module, "GAP_SEARCH_GRACE_SECONDS", 0.05)
+    llm = PickingLLM({"Claude": ["zzz"], "Enterprise Integration": ["zzz"], "Salesforce": ["zzz"]})
+
+    async def timed():
+        started = time.monotonic()
+        plan = await PlannerAgent(llm=llm).build_plan(MODULES, GAPS, "FDE", "Anthropic",
+                                                      start_date=date(2026, 1, 1), total_days=10)
+        return plan, time.monotonic() - started
+
+    output, took = asyncio.run(timed())  # (asyncio.run itself waits for the abandoned thread at exit)
+
+    assert took < 0.45
+    assert all(d["references"] for d in output["sprint_days"])  # the computed placement still applies
+
+
+def test_each_topic_prompt_names_the_plans_other_topics():
+    llm = ChunkLLM()
+    build(llm, total_days=10)
+    claude = next(p for p in llm.prompts if 'studying "Claude"' in p)
+    assert 'do not plan days about them: ["Salesforce", "Enterprise Integration"]' in claude

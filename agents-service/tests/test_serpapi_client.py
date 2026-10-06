@@ -116,7 +116,8 @@ def test_relative_fixture_path_is_resolved_from_agents_service(monkeypatch, tmp_
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(serpapi_client, "settings", Settings(
         serpapi_enabled=False,
-        serpapi_dummy_data_path=".data/serpapi_fixtures.example.json",
+        # committed example (a path under .data/ exists only where someone copied it)
+        serpapi_dummy_data_path="docs/serpapi_fixtures.example.json",
     ))
 
     result = serpapi_client.serpapi_search({"engine": "google_jobs", "q": "Software Engineer"})
@@ -167,3 +168,24 @@ def test_disabled_mode_routes_all_serpapi_agents_to_the_same_fixture(monkeypatch
     assert resources["results"][0]["title"] == "Acme Engineering"
     assert jobs["jobs_results"][0]["company_name"] == "Acme"
     assert flight_result["flights"][0]["airline"] == "Fixture Air"
+
+def test_pipeline_fixture_answers_every_topic_about_itself(monkeypatch):
+    """docs/serpapi_fixtures.pipeline.json: {subject}/{slug} are filled from
+    the search, so offline runs get per-topic results and distinct references."""
+    monkeypatch.setattr(serpapi_client, "settings", Settings(
+        serpapi_enabled=False, serpapi_dummy_data_path="docs/serpapi_fixtures.pipeline.json"))
+
+    rust = serpapi_client.serpapi_search({"engine": "google", "q": '"Rust" Programming Language guide OR tutorial -jobs'})
+    solana = serpapi_client.serpapi_search({"engine": "youtube", "search_query": "Solana explained for beginners"})
+
+    assert rust["organic_results"][0]["title"] == "Rust Programming Language: a practical guide"
+    assert rust["organic_results"][0]["link"] == "https://example.com/rust-programming-language/guide"
+    assert solana["video_results"][0]["link"] == "https://example.com/videos/solana/explained"
+    assert rust["_source"] == solana["_source"] == "dummy"
+    assert serpapi_client.serpapi_search({"engine": "google_jobs", "q": "Acme SWE"})["jobs_results"] == []
+
+
+def test_fixture_subject_drops_operators_and_intent_words():
+    assert serpapi_client.fixture_subject('"Rust" Programming Language guide OR tutorial -jobs -vacancy') == \
+        "Rust Programming Language"
+    assert serpapi_client.fixture_subject("Solana Labs company engineering tech stack") == "Solana Labs"

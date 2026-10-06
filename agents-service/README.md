@@ -20,7 +20,7 @@ SERPAPI_API_KEY=your-serpapi-key
 
 The value of `OLLAMA_MODEL` must match a model installed in your Ollama instance. Check available models with `ollama list`, install the documented default with `ollama pull llama3.1`, or set `OLLAMA_MODEL` to an existing model name.
 
-`SERPAPI_API_KEY` powers live search. Set `SERPAPI_ENABLED=false` to disable live SerpApi calls across Company Research, Job Intelligence, Content Research, and Interview Intelligence. Tools then read provider-shaped engine responses from `SERPAPI_DUMMY_DATA_PATH` (defaults to `serpapi_fixtures.example.json`); missing engines fall back to empty built-in fixtures. `USE_DUMMY_STREAM` is separate (defaults to `false` = runs real agents; set `true` only for scripted dummy SSE UI testing).
+`SERPAPI_API_KEY` powers live search. Set `SERPAPI_ENABLED=false` to disable live SerpApi calls across Company Research, Job Intelligence, Content Research, and Interview Intelligence. Tools then read provider-shaped engine responses from `SERPAPI_DUMMY_DATA_PATH`; missing engines fall back to empty built-in fixtures. The file accepts either a top-level engine map or `{ "engines": { ... } }`; each engine may also define `by_query` and `default` entries. Strings may use `{subject}` and `{slug}`, filled from each search's subject, so `docs/serpapi_fixtures.pipeline.json` gives every topic its own results and references for a full offline pipeline run (no job postings: requirements come from the role). `USE_DUMMY_STREAM` is separate (defaults to `false` = runs real agents; set `true` only for scripted dummy SSE UI testing).
 
 Optional fast tier: configure `FAST_LLM_BASE_URL`, `FAST_LLM_MODEL`, and `FAST_LLM_API_KEY` to route small, latency-sensitive calls to any OpenAI-compatible provider (e.g. Groq).
 
