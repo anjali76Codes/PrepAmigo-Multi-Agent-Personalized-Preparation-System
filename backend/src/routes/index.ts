@@ -6,6 +6,8 @@ import plansRouter from "./plans.routes.js";
 import sprintsRouter from "./sprints.routes.js";
 import sprintDaysRouter from "./sprint-days.routes.js";
 import progressRouter from "./progress.routes.js";
+import assessmentsRouter from "./assessments.routes.js";
+import flashcardsRouter from "./flashcards.routes.js";
 
 const apiRouter = Router();
 
@@ -15,5 +17,7 @@ apiRouter.use("/api", plansRouter);
 apiRouter.use("/api", sprintsRouter);
 apiRouter.use("/api", sprintDaysRouter);
 apiRouter.use("/api", progressRouter);
+apiRouter.use("/api/assessments", assessmentsRouter);
+apiRouter.use("/api/flashcards", flashcardsRouter);
 
 export default apiRouter;
