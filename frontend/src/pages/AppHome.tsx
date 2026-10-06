@@ -39,14 +39,60 @@ export function AppHome() {
 
   const sprints = (activePrep?.roadmap?.sprints || []).map((s: any, idx: number) => {
     const days = s.days || [];
-    const lvlCount = Math.ceil(days.length / 3) || 1;
-    const levels = Array.from({ length: lvlCount }).map((_, i) => ({
-      id: `level-${i + 1}`,
-      title: `Level ${i + 1}`,
-      status: days.slice(i * 3, (i + 1) * 3).every((d: any) => d.status === 'done')
-        ? ('completed' as const)
-        : ('unlocked' as const),
-    }));
+    const levels: any[] = [];
+    let levelIdx = 1;
+    let assessIdx = 1;
+    for (let i = 0; i < days.length; i += 7) {
+      const chunk = days.slice(i, i + 7);
+      if (chunk.length > 0) {
+        levels.push({
+          id: `level-${levelIdx}`,
+          title: `Level ${levelIdx}`,
+          status: chunk.slice(0, 1).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+        });
+        levelIdx++;
+      }
+      if (chunk.length > 1) {
+        levels.push({
+          id: `level-${levelIdx}`,
+          title: `Level ${levelIdx}`,
+          status: chunk.slice(1, 3).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+        });
+        levelIdx++;
+      }
+      if (chunk.length > 0) {
+        levels.push({
+          id: `assessment-${assessIdx}`,
+          title: `Assessment ${assessIdx}`,
+          status: chunk.slice(0, 3).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+        });
+        assessIdx++;
+      }
+      if (chunk.length > 3) {
+        levels.push({
+          id: `level-${levelIdx}`,
+          title: `Level ${levelIdx}`,
+          status: chunk.slice(3, 5).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+        });
+        levelIdx++;
+      }
+      if (chunk.length > 5) {
+        levels.push({
+          id: `level-${levelIdx}`,
+          title: `Level ${levelIdx}`,
+          status: chunk.slice(5, 7).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+        });
+        levelIdx++;
+      }
+      if (chunk.length > 3) {
+        levels.push({
+          id: `assessment-${assessIdx}`,
+          title: `Assessment ${assessIdx}`,
+          status: chunk.slice(3, 7).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+        });
+        assessIdx++;
+      }
+    }
     return {
       id: s.id || `sprint-${idx + 1}`,
       title: s.title || `Sprint ${idx + 1}`,

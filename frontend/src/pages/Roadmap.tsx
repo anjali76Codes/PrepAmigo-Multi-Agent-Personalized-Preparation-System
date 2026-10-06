@@ -157,13 +157,72 @@ export function Roadmap() {
     return sprints
       .map((sprint) => {
         const days = sprintDays.filter((d) => d.sprint_id === sprint._id);
-        const lvlCount = Math.ceil(days.length / DAYS_PER_LEVEL);
-        const allLevels = Array.from({ length: lvlCount }).map((_, i) => ({
-          id: `level-${i + 1}`,
-          number: i + 1,
-          title: `Level ${i + 1}`,
-          allDays: days.slice(i * DAYS_PER_LEVEL, (i + 1) * DAYS_PER_LEVEL),
-        }));
+        const allLevels: any[] = [];
+        let levelIdx = 1;
+        let assessIdx = 1;
+        for (let i = 0; i < days.length; i += 7) {
+          const chunk = days.slice(i, i + 7);
+          if (chunk.length > 0) {
+            allLevels.push({
+              id: `level-${levelIdx}`,
+              number: levelIdx,
+              title: `Level ${levelIdx}`,
+              isAssessment: false,
+              allDays: chunk.slice(0, 1),
+            });
+            levelIdx++;
+          }
+          if (chunk.length > 1) {
+            allLevels.push({
+              id: `level-${levelIdx}`,
+              number: levelIdx,
+              title: `Level ${levelIdx}`,
+              isAssessment: false,
+              allDays: chunk.slice(1, 3),
+            });
+            levelIdx++;
+          }
+          if (chunk.length > 0) {
+            allLevels.push({
+              id: `assessment-${assessIdx}`,
+              number: assessIdx,
+              title: `Assessment ${assessIdx}`,
+              isAssessment: true,
+              allDays: [],
+            });
+            assessIdx++;
+          }
+          if (chunk.length > 3) {
+            allLevels.push({
+              id: `level-${levelIdx}`,
+              number: levelIdx,
+              title: `Level ${levelIdx}`,
+              isAssessment: false,
+              allDays: chunk.slice(3, 5),
+            });
+            levelIdx++;
+          }
+          if (chunk.length > 5) {
+            allLevels.push({
+              id: `level-${levelIdx}`,
+              number: levelIdx,
+              title: `Level ${levelIdx}`,
+              isAssessment: false,
+              allDays: chunk.slice(5, 7),
+            });
+            levelIdx++;
+          }
+          if (chunk.length > 3) {
+            allLevels.push({
+              id: `assessment-${assessIdx}`,
+              number: assessIdx,
+              title: `Assessment ${assessIdx}`,
+              isAssessment: true,
+              allDays: [],
+            });
+            assessIdx++;
+          }
+        }
         const firstOpenId = allLevels.find((l) => l.allDays.some((d) => d.status !== 'completed'))?.id;
 
         const levels = allLevels
@@ -177,7 +236,7 @@ export function Roadmap() {
               return matchesSearch && matchesStatus;
             }),
           }))
-          .filter((l) => l.days.length > 0);
+          .filter((l) => l.isAssessment || l.days.length > 0);
 
         return { ...sprint, levels, firstOpenId, total: days.length, done: days.filter((d) => d.status === 'completed').length };
       })
