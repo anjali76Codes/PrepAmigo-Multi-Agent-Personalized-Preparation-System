@@ -9,6 +9,4 @@ redis>=5.0.0
 uvicorn[standard]
 PyJWT
 pydantic>=2.0.0
-pymongo
 python-multipart
-motor

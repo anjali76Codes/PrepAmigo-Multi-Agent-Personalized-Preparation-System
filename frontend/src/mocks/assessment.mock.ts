@@ -47,6 +47,24 @@ export const getFlashcardDecks = async (): Promise<FlashcardDeck[]> => {
     }
 };
 
+/** Save a finished quiz: one answer letter (or null) per question, in order. Best effort. */
+export const submitAssessmentAttempt = async (assessmentId: string, answers: (string | null)[]): Promise<void> => {
+    try {
+        await apiFetch(`/api/assessments/${assessmentId}/attempt`, { method: "POST", body: JSON.stringify({ answers }) });
+    } catch (e) {
+        console.error("Failed to save the quiz attempt", e);
+    }
+};
+
+/** Save a finished deck: one rating (1 Hard, 3 Okay, 5 Easy, or null) per card, in order. Best effort. */
+export const submitFlashcardReview = async (deckId: string, ratings: (number | null)[]): Promise<void> => {
+    try {
+        await apiFetch(`/api/flashcards/${deckId}/review`, { method: "POST", body: JSON.stringify({ ratings }) });
+    } catch (e) {
+        console.error("Failed to save the flashcard review", e);
+    }
+};
+
 export const getDayTitle = (id: string) => {
     return MOCK_SPRINT_DAYS.find((d) => d._id === id)?.topic_title ?? "Practice set";
 };

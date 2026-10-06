@@ -3,6 +3,7 @@ import { Plan, PlanStatus } from "../models/Plan.js";
 import { PlanProgress, IPlanProgress } from "../models/PlanProgress.js";
 import { Sprint, SprintStatus } from "../models/Sprint.js";
 import { SprintDay } from "../models/SprintDay.js";
+import { ensureStudyMaterialInBackground, nextSprintId } from "../services/studyMaterial.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -14,10 +15,15 @@ export async function syncSprintAndPlan(sprintId: Types.ObjectId, planId: Types.
   const sprintStatus: SprintStatus = totalSprintDays > 0 && completedSprintDays >= totalSprintDays
     ? "completed"
     : completedSprintDays > 0 ? "in_progress" : "pending";
-  await Sprint.updateOne(
+  const before = await Sprint.findOneAndUpdate(
     { _id: sprintId },
     { $set: { completion_percent: sprintPercent, status: sprintStatus } },
-  );
+  ).select("status");
+  if (sprintStatus === "completed" && before?.status !== "completed") {
+    // the next sprint's quiz and flashcards, generated with what this one taught
+    const next = await nextSprintId(sprintId);
+    if (next) ensureStudyMaterialInBackground(next);
+  }
 
   const [plan, sprints] = await Promise.all([
     Plan.findById(planId).select("total_days"),

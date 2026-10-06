@@ -6,6 +6,7 @@ export interface IFlashcardItem {
   difficulty?: string;
   category?: string;
   tags: string[];
+  concept?: string;
   // User tracking fields
   is_reviewed: boolean;
   confidence_level?: "easy" | "medium" | "hard" | "again";
@@ -31,6 +32,7 @@ const flashcardItemSchema = new Schema<IFlashcardItem>(
     difficulty: { type: String, trim: true },
     category: { type: String, trim: true },
     tags: { type: [String], default: [] },
+    concept: { type: String, trim: true },
     is_reviewed: { type: Boolean, default: false },
     confidence_level: { type: String, enum: ["easy", "medium", "hard", "again"] },
     last_reviewed_at: { type: Date },

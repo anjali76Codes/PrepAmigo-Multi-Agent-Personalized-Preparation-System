@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { getFlashcards } from "../controllers/flashcards.controller.js";
+import { getFlashcards, submitFlashcardReview } from "../controllers/flashcards.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.get("/", getFlashcards);
+router.get("/", requireAuth, getFlashcards);
+router.post("/:flashcardId/review", requireAuth, submitFlashcardReview);
 
 export default router;

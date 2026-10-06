@@ -148,11 +148,8 @@ class Settings:
     # --- App metadata ---
     app_title: str = os.getenv("APP_TITLE", "PrepAmigo Agents").strip()
 
-    # --- Database (MongoDB) ---
-    # Connection URI for MongoDB. Only used when mongo_enabled is true.
-    mongo_uri: str = os.getenv("MONGO_URI", "mongodb://localhost:27017").strip()
-    # Set MONGO_ENABLED=true to persist agent outputs (e.g. skill-gap reports) to MongoDB.
-    mongo_enabled: bool = os.getenv("MONGO_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    # No database settings: MongoDB belongs to the backend (MAINTENANCE.md);
+    # this service only returns data for the backend to save.
 
     # --- Redis / SSE ---
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379").strip()
@@ -181,10 +178,17 @@ class Settings:
     cors_origins: str = os.getenv("CORS_ORIGINS", "").strip()
 
     # --- User knowledge graph (see graph/knowledge_graph.py) ---
-    # JSON file for the graph; empty keeps the graph in-process only.
-    # Not currently written by the research agent; reserved for the
-    # skill-gap/assessment agents.
+    # JSON file for the in-memory graph (when NEO4J_URI is empty); empty
+    # keeps it in-process only. Written by skill gap, planner and quiz /
+    # flashcard results; read by study material and skill gap.
     knowledge_graph_path: str = os.getenv("KNOWLEDGE_GRAPH_PATH", "").strip()
+    # Neo4j (e.g. Aura) for the user knowledge graph: used when NEO4J_URI is
+    # set, else the graph lives in process memory (or KNOWLEDGE_GRAPH_PATH).
+    # A Neo4j that can't be reached falls back to memory with one warning.
+    neo4j_uri: str = os.getenv("NEO4J_URI", "").strip()
+    neo4j_username: str = os.getenv("NEO4J_USERNAME", "neo4j").strip()
+    neo4j_password: str = os.getenv("NEO4J_PASSWORD", "").strip()
+    neo4j_database: str = os.getenv("NEO4J_DATABASE", "").strip()
 
     # --- Research tool cache (tools/cache.py) ---
     # cache raw tool/SerpApi responses as inspectable JSON so repeated dev

@@ -147,8 +147,8 @@ export const plansApi = {
   get: (id: string) => apiFetch<{ success: boolean; data: ApiPlan }>(`/api/plans/${id}`),
   summary: (id: string) => apiFetch<{ success: boolean; data: any }>(`/api/plans/${id}/summary`),
   startDay: (dayId: string) =>
-    apiFetch<{ success: boolean; data: any }>(`/api/sprint-days/${dayId}/start`, { method: "PATCH" }),
+    apiFetch<{ success: boolean; data: any }>(`/api/sprint-days/${dayId}/start`, { method: "POST" }),
   completeDay: (dayId: string) =>
-    apiFetch<{ success: boolean; data: any }>(`/api/sprint-days/${dayId}/complete`, { method: "PATCH" }),
-  getUserProgress: () => apiFetch<{ success: boolean; data: any }>("/api/user/progress"),
+    apiFetch<{ success: boolean; data: any }>(`/api/sprint-days/${dayId}/complete`, { method: "POST" }),
+  getUserProgress: () => apiFetch<{ success: boolean; data: any }>("/api/progress"),
 };

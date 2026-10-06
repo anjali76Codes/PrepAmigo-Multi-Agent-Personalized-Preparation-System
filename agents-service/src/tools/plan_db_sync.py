@@ -21,6 +21,23 @@ logger = logging.getLogger(__name__)
 _backend_token: contextvars.ContextVar[str | None] = contextvars.ContextVar("backend_token", default=None)
 
 
+# Runs the backend started (POST /internal/agent/execute) are saved by the
+# backend itself from the `completed` event (persistGeneratedPlan): the
+# backend is the only writer to MongoDB. Saving here as well created every
+# plan twice. Only runs with no backend listening (the CLI) sync from here.
+_backend_persists: contextvars.ContextVar[bool] = contextvars.ContextVar("backend_persists", default=False)
+
+
+@contextmanager
+def persisted_by_backend() -> Iterator[None]:
+    """Mark every plan finished inside the block as saved by the backend."""
+    reset = _backend_persists.set(True)
+    try:
+        yield
+    finally:
+        _backend_persists.reset(reset)
+
+
 @contextmanager
 def backend_auth(authorization: str | None) -> Iterator[None]:
     """Use the caller's token (an Authorization header value or a bare
@@ -141,6 +158,7 @@ class PlanDBSyncClient:
                 "objectives": d.get("objectives", []),
                 "estimated_minutes": d.get("estimated_minutes"),
                 "references": d.get("references", []),
+                "concepts": d.get("concepts", []),
             })
 
         body = {
@@ -229,7 +247,11 @@ async def sync_generated_plan_to_db(
     base_url: str | None = None,
     auth_token: str | None = None,
 ) -> dict[str, Any] | None:
-    """Convenience helper to sync a generated study plan to MongoDB if backend is running."""
+    """Save a finished plan through the backend API, for runs nobody else
+    saves (the CLI). A run the backend started is saved by the backend from
+    its `completed` event, so this returns at once for those."""
+    if _backend_persists.get():
+        return {"success": True, "mode": "delegated_to_backend"}
     # When authentication is enabled and no explicit auth token is supplied,
     # plan persistence is handled directly by the Node.js backend streaming listener.
     if getattr(settings, "enable_auth", False) and not auth_token:

@@ -10,6 +10,7 @@ import { User } from "../models/User.js";
 import { Plan } from "../models/Plan.js";
 import { Sprint } from "../models/Sprint.js";
 import { SprintDay, ReferenceType } from "../models/SprintDay.js";
+import { ensureStudyMaterialInBackground } from "../services/studyMaterial.js";
 import { PlanProgress } from "../models/PlanProgress.js";
 import { AgentStreamEvent, InterviewPrepField, InterviewPrepRequestBody, RunAgentRequestBody } from "./types.js";
 
@@ -159,6 +160,9 @@ export async function persistGeneratedPlan(
               : [],
             estimated_minutes: Number(d.estimated_minutes) > 0 ? Number(d.estimated_minutes) : 60,
             references: cleanedReferences.slice(0, 50),
+            concepts: Array.isArray(d.concepts)
+              ? d.concepts.map((c: any) => String(c).trim().slice(0, 120)).filter(Boolean).slice(0, 12)
+              : [],
             status: dayNumber === 1 && sprintNumber === 1 ? "in_progress" : "pending",
           });
 
@@ -193,6 +197,9 @@ export async function persistGeneratedPlan(
 
       const mongoPlanId = plan._id.toString();
       savedRunPlanMap.set(runId, mongoPlanId);
+      // the first sprint's quiz and flashcards, ready by the time it's opened;
+      // later sprints are generated as earlier ones are completed
+      if (createdSprintIds.length > 0) ensureStudyMaterialInBackground(createdSprintIds[0]);
       logger.info(`[Agent Gateway] Persisted study plan ${mongoPlanId} for runId ${runId} with ${createdSprintIds.length} sprints`);
       return mongoPlanId;
     } catch (err) {
@@ -221,7 +228,10 @@ function listenAndPersistPlanInBackground(runId: string, userId?: string | null)
     } catch {}
   };
 
-  const timer = setTimeout(cleanup, 300000); // 5-minute cleanup
+  // Only a safety net: the listener normally ends on the run's `completed` or
+  // `failed` event. A fixed 5 minutes dropped the plan of any slower run
+  // (a slow model once made a run take 6.5 minutes).
+  const timer = setTimeout(cleanup, 30 * 60 * 1000);
 
   sub.on("message", async (_channel: string, msg: string) => {
     try {

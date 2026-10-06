@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../ui/Icon";
-import type { FlashcardDeck } from "../../mocks/assessment.mock";
+import { submitFlashcardReview, type FlashcardDeck } from "../../mocks/assessment.mock";
 import { Back, Badge, ProgressBar, fade } from "./shared";
 import { Result } from "./Result";
 
@@ -27,7 +27,11 @@ export function DeckRunner({ deck, onExit }: { deck: FlashcardDeck; onExit: () =
     const rate = (value: number) => {
         const r = { ...ratings, [idx]: value };
         setRatings(r);
-        if (Object.keys(r).length >= total) setDone(true);
+        if (Object.keys(r).length >= total) {
+            setDone(true);
+            // saved once per finished deck: feeds the knowledge graph
+            submitFlashcardReview(deck._id, deck.cards.map((_: unknown, i: number) => r[i] ?? null));
+        }
         else go(idx + 1 >= total ? 0 : idx + 1);
     };
 

@@ -27,6 +27,8 @@ os.environ.update({
     "LLM_RESCUE_SECONDS": "20",
     # test runs stay out of the developer's .data/logs/agents-service.log
     "LOG_FILE": "",
+    # never a live Neo4j from a test: the knowledge graph stays in memory
+    "NEO4J_URI": "",
     # the fast model's rate budget: no day totals written under .data/
     "FAST_LLM_BUDGET_FILE": "",
     "PLANNER_LLM": "default",

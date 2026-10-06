@@ -9,9 +9,10 @@ class AssessmentQuestion(BaseModel):
     type: str = Field(default="mcq", description="Extensible question type")
     question: str
     options: Optional[List[str]] = Field(default=None, description="Options for MCQ")
-    correct_answer: str
+    correct_answer: str = Field(description="Letter of the correct option: A, B, C or D")
     explanation: str
-    difficulty: str = Field(default="medium", description="Difficulty level")
+    difficulty: str = Field(default="medium", description="easy, medium or hard")
+    concept: Optional[str] = Field(default=None, description="The concept the question tests")
 
 class Assessment(BaseModel):
     version: str = "1.0"

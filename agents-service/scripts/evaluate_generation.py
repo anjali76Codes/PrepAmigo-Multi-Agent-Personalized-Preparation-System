@@ -8,15 +8,17 @@ from dotenv import load_dotenv
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-_src_dir = str(Path(__file__).resolve().parent.parent)
+_src_dir = str(Path(__file__).resolve().parent.parent / "src")
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-load_dotenv(Path(_src_dir).parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from core.config import get_llm
 
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb+srv://ganjali9877_db_user:asdfghjkl@travelamigo-cluster.ymfdokn.mongodb.net/database")
+MONGO_URI = os.getenv("MONGODB_URI", "").strip()
+if not MONGO_URI:
+    sys.exit("Set MONGODB_URI (the backend's MongoDB connection string) in agents-service/.env")
 
 async def evaluate_chunk(db, assessment, flashcard, days_chunk):
     topic_titles = [d.get("topic_title") for d in days_chunk]

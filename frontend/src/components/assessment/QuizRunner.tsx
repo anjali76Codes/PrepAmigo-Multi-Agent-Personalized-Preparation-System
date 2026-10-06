@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../ui/Icon";
 import { cn } from "../../utils/utils";
-import type { Assessment } from "../../mocks/assessment.mock";
+import { submitAssessmentAttempt, type Assessment } from "../../mocks/assessment.mock";
 import { Back, Badge, ProgressBar, fade } from "./shared";
 import { Result } from "./Result";
 
@@ -12,21 +12,27 @@ export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => v
     const [idx, setIdx] = useState(0);
     const [picked, setPicked] = useState<string | null>(null);
     const [results, setResults] = useState<boolean[]>([]);
+    const [answers, setAnswers] = useState<(string | null)[]>([]);
     const [done, setDone] = useState(false);
 
     const total = quiz.questions.length;
     const qn = quiz.questions[idx];
     const checked = picked !== null;
 
-    const restart = () => { setIdx(0); setPicked(null); setResults([]); setDone(false); };
+    const restart = () => { setIdx(0); setPicked(null); setResults([]); setAnswers([]); setDone(false); };
     const next = () => {
-        if (idx + 1 >= total) setDone(true);
+        if (idx + 1 >= total) {
+            setDone(true);
+            // saved once per finished run: graded on the server, feeds the knowledge graph
+            submitAssessmentAttempt(quiz._id, quiz.questions.map((_: unknown, i: number) => answers[i] ?? null));
+        }
         else { setIdx(idx + 1); setPicked(null); }
     };
     const pick = (letter: string) => {
         if (checked) return;
         setPicked(letter);
         setResults((r) => [...r, letter === qn.correct_answer]);
+        setAnswers((a) => { const copy = [...a]; copy[idx] = letter; return copy; });
     };
 
     if (done) {
