@@ -1,0 +1,108 @@
+{
+  "engines": {
+    "google": {
+      "knowledge_graph": {
+        "title": "Example Company",
+        "type": "Technology company",
+        "industry": "Software",
+        "founded": "2012",
+        "headquarters": "Seattle, WA",
+        "description": "An example software company used for offline agent testing.",
+        "website": "https://example.com",
+        "ceo": "Example Executive"
+      },
+      "organic_results": [
+        {
+          "position": 1,
+          "title": "Engineering at Example Company",
+          "link": "https://example.com/engineering",
+          "snippet": "Example engineering, products, and technology overview.",
+          "source": "Example Company"
+        }
+      ],
+      "related_questions": [
+        {
+          "question": "What is the interview process at Example Company?",
+          "snippet": "Example interview process fixture."
+        }
+      ],
+      "discussions_and_forums": []
+    },
+    "google_news": {
+      "news_results": [
+        {
+          "position": 1,
+          "title": "Example Company announces a product update",
+          "link": "https://example.com/news/product-update",
+          "source": { "name": "Example News" },
+          "iso_date": "2026-01-15T00:00:00Z",
+          "snippet": "An example news fixture for offline development."
+        }
+      ]
+    },
+    "google_jobs": {
+      "jobs_results": [
+        {
+          "job_id": "dummy-job-1",
+          "title": "Software Engineer",
+          "company_name": "Example Company",
+          "location": "Remote",
+          "description": "Build reliable software services. Experience with Python, APIs, and distributed systems.",
+          "detected_extensions": { "schedule_type": "Full-time" }
+        }
+      ]
+    },
+    "google_scholar": {
+      "organic_results": [
+        {
+          "title": "An Example Survey of Distributed Systems",
+          "link": "https://example.com/papers/distributed-systems",
+          "snippet": "An example academic paper fixture.",
+          "publication_info": { "summary": "Example Authors - 2025" },
+          "inline_links": { "cited_by": { "total": 12 } }
+        }
+      ]
+    },
+    "youtube": {
+      "video_results": [
+        {
+          "title": "Example System Design Walkthrough",
+          "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "description": "An example video fixture for offline development.",
+          "channel": { "name": "Example Engineering" },
+          "length": "12:30",
+          "published_date": "2026-02-01"
+        }
+      ]
+    },
+    "google_ai_overview": {
+      "ai_overview": {
+        "text_blocks": [
+          {
+            "type": "paragraph",
+            "snippet": "This is example-only AI Overview text, not live research."
+          }
+        ],
+        "references": [
+          {
+            "title": "Example interview source",
+            "link": "https://example.com/interviews",
+            "snippet": "Example citation fixture.",
+            "source": "Example Company"
+          }
+        ]
+      }
+    },
+    "google_flights": {
+      "best_flights": [
+        {
+          "price": 250,
+          "currency": "USD",
+          "total_duration": 180,
+          "flights": [{ "airline": "Example Air" }]
+        }
+      ],
+      "other_flights": []
+    }
+  }
+}

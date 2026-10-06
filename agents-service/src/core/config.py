@@ -19,6 +19,8 @@ load_dotenv(PACKAGE_ROOT / ".env")
 load_dotenv(REPO_ROOT / ".env")
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 SERVICE_ROOT = PACKAGE_ROOT
 
 
@@ -385,6 +387,11 @@ class Settings:
     # budget. fallback by default: a free fast tier (8,000 tokens a minute)
     # can't absorb a whole run's write-ups and planning.
     llm_degraded_route: str = os.getenv("LLM_DEGRADED_ROUTE", "fallback").strip().lower() or "fallback"
+    # small calls everything after them depends on (job intelligence): when
+    # the main model hasn't answered after this many seconds, the call is
+    # cancelled and sent to the fast model instead (within its rate budget).
+    # A healthy model answers them in 2-5s. 0 = wait for the main model.
+    llm_rescue_seconds: float = float(os.getenv("LLM_RESCUE_SECONDS", "20") or 0)
     # web searches the planner may run for days none of their topic's
     # resources covers (the model names the day's subject; one SerpApi
     # credit each, run while the rest of the plan is being written).
@@ -394,8 +401,9 @@ class Settings:
     # most days one planner LLM call writes, keeping every call small no
     # matter how long the plan is
     planner_days_per_call: int = int(os.getenv("PLANNER_DAYS_PER_CALL", "10") or 10)
-    # token headroom for each chunk of planned days
-    planner_max_tokens: int = int(os.getenv("PLANNER_MAX_TOKENS", "1400") or 1400)
+    # token headroom for each chunk of planned days: ~100 tokens a day
+    # (wording plus the day's reference picks or search) x 10 days, plus room
+    planner_max_tokens: int = int(os.getenv("PLANNER_MAX_TOKENS", "1800") or 1800)
     # per-chunk LLM narrative synthesis budget in seconds
     planner_narrative_timeout_seconds: float = float(os.getenv("PLANNER_NARRATIVE_TIMEOUT_SECONDS", "45") or 45)
 
@@ -645,6 +653,39 @@ def _within_rate_budget(members: list[tuple[str, Any]], max_tokens: int | None):
     budgeted.chat_model = members[0][1]  # the (first) model inside, for inspection
     budgeted.members = names
     return budgeted
+
+
+async def ainvoke_with_rescue(llm: Any, prompt: Any, *, timeout: float, model: str | None = None,
+                              temperature: float = 0.0, max_tokens: int | None = None, config: Any = None) -> Any:
+    """`llm.ainvoke(prompt)` within `timeout`, rescued by the fast model.
+
+    One slow call used to sink a whole run: job intelligence's model call
+    hung for 60s, so no skills, no gaps and no plan. When the main model
+    hasn't answered after LLM_RESCUE_SECONDS (or is already known to be
+    slow), the call is cancelled, the model is marked slow for the rest of
+    the run, and the same prompt goes to the fast model for the time left.
+    Without a fast model (or with LLM_RESCUE_SECONDS=0) this is a plain
+    call with a timeout. Raises what the last attempt raised."""
+    import asyncio
+    import time as _time
+
+    from observability.llm_health import ModelDegradedError, mark_slow
+
+    name = model or (settings.openai_model if settings.llm_provider == "openai" else settings.ollama_model)
+    rescue_after = settings.llm_rescue_seconds
+    if not fast_llm_configured() or rescue_after <= 0 or rescue_after >= timeout:
+        return await asyncio.wait_for(llm.ainvoke(prompt, config=config), timeout=timeout)
+    started = _time.monotonic()
+    try:
+        return await asyncio.wait_for(llm.ainvoke(prompt, config=config), timeout=rescue_after)
+    except asyncio.TimeoutError:
+        mark_slow(name, f"no answer in {rescue_after:.0f}s")
+    except ModelDegradedError:
+        pass  # already known to be slow: straight to the fast model
+    logger.info("Model %s too slow for this call; sending it to the fast model", name)
+    fast = _build_llm(temperature, max_tokens, "fast", None, fallback=False)
+    remaining = max(1.0, timeout - (_time.monotonic() - started))
+    return await asyncio.wait_for(fast.ainvoke(prompt, config=config), timeout=remaining)
 
 
 def _health_guarded(main: Any, name: str, temperature: float, max_tokens: int | None):

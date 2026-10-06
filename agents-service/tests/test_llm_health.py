@@ -99,3 +99,48 @@ def test_the_metrics_callback_feeds_the_breaker(health_settings):
 
     asyncio.run(run())
     assert llm_health.degraded("fake-model")
+
+
+# ---- rescue: a stuck call everything depends on goes to the fast model ----------
+
+class Hanging(FakeListChatModel):
+    async def _agenerate(self, *args, **kwargs):
+        await asyncio.sleep(10)
+
+
+def _rescue_settings(monkeypatch, fast_configured=True, rescue=0.05):
+    monkeypatch.setattr(config, "settings", dataclasses.replace(config.settings, llm_rescue_seconds=rescue))
+    monkeypatch.setattr(config, "fast_llm_configured", lambda cfg=None: fast_configured)
+    fast = FakeListChatModel(responses=["from the fast model"])
+    monkeypatch.setattr(config, "_build_llm", lambda *args, fallback=True, **kw: fast)
+
+
+def test_a_hanging_call_is_rescued_by_the_fast_model_and_the_model_marked_slow(monkeypatch, health_settings):
+    """Job intelligence's call hung 60s: no skills, no gaps, no plan."""
+    _rescue_settings(monkeypatch)
+    answer = asyncio.run(config.ainvoke_with_rescue(Hanging(responses=["x"]), "hi", timeout=5, model="nano"))
+    assert answer.content == "from the fast model"
+    assert llm_health.degraded("nano")
+
+
+def test_a_healthy_call_is_untouched(monkeypatch):
+    _rescue_settings(monkeypatch, rescue=1.0)
+    main = FakeListChatModel(responses=["from the main model"])
+    assert asyncio.run(config.ainvoke_with_rescue(main, "hi", timeout=5, model="nano")).content == "from the main model"
+
+
+def test_a_model_already_known_slow_goes_straight_to_the_fast_one(monkeypatch, health_settings):
+    _rescue_settings(monkeypatch, rescue=1.0)
+
+    class Skipped(FakeListChatModel):
+        async def _agenerate(self, *args, **kwargs):
+            raise ModelDegradedError("slow")
+
+    assert asyncio.run(config.ainvoke_with_rescue(Skipped(responses=["x"]), "hi", timeout=5)).content == \
+        "from the fast model"
+
+
+def test_without_a_fast_model_the_call_just_has_its_timeout(monkeypatch):
+    _rescue_settings(monkeypatch, fast_configured=False)
+    with pytest.raises(asyncio.TimeoutError):
+        asyncio.run(config.ainvoke_with_rescue(Hanging(responses=["x"]), "hi", timeout=0.1))

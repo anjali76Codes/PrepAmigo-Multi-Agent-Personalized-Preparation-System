@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from core.config import get_llm, settings
+from core.config import ainvoke_with_rescue, get_llm, settings
 from graph.events import INTERNAL_LLM_CONFIG, emit_to_graph_stream, invoke_tool_with_events, make_event
 from observability.timing import log_failure
 from storage.llm_cache import forget_response
@@ -109,7 +109,9 @@ JOB_MAX_OUTPUT_TOKENS = settings.job_intelligence_max_output_tokens
 def _llm():
     """JOB_INTELLIGENCE_LLM / JOB_INTELLIGENCE_MODEL choose the model."""
     # temperature 0: the same company and role should give the same skills
+    # guarded: a model known to be slow is skipped (observability/llm_health.py)
     return get_llm(
+        guarded=True,
         temperature=0,
         max_tokens=settings.job_intelligence_max_output_tokens or None,
         profile=settings.job_intelligence_llm,
@@ -220,7 +222,12 @@ async def extract_with_llm(
         {"provider": settings.job_intelligence_llm, "message": "Analyzing job postings for role requirements..."},
     ))
     try:
-        response = await asyncio.wait_for(
+        # everything after this call depends on it: a main model that hangs
+        # hands it to the fast model after LLM_RESCUE_SECONDS (config.py)
+        response = await ainvoke_with_rescue(
+            _llm(), prompt, config=INTERNAL_LLM_CONFIG, timeout=settings.job_intelligence_llm_timeout_seconds,
+            model=settings.job_intelligence_model or None, temperature=0, max_tokens=JOB_MAX_OUTPUT_TOKENS,
+        ) if settings.job_intelligence_llm != "fast" else await asyncio.wait_for(
             _llm().ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
             timeout=settings.job_intelligence_llm_timeout_seconds,
         )

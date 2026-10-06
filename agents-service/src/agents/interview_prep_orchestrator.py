@@ -220,7 +220,7 @@ class InterviewPrepOrchestrator:
         response = None
         try:
             response = await asyncio.wait_for(
-                get_llm(temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
+                get_llm(guarded=True, temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
                 timeout=settings.interview_prep_extract_timeout_seconds,
             )
             content = _message_text(response).strip()

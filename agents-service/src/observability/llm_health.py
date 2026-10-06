@@ -52,6 +52,19 @@ def observe(model: str, seconds: float, output_tokens: int = 0, *, cut_off: bool
                        model, seconds, speed, settings.llm_degraded_seconds)
 
 
+def mark_slow(model: str, why: str) -> None:
+    """Mark `model` degraded now (a caller gave up on it, e.g. a rescue)."""
+    if not model:
+        return
+    now = time.monotonic()
+    with _lock:
+        newly = _degraded_until.get(model, 0.0) <= now
+        _degraded_until[model] = now + settings.llm_degraded_seconds
+    if newly:
+        logger.warning("Model %s is answering slowly (%s); routing around it for %.0fs",
+                       model, why, settings.llm_degraded_seconds)
+
+
 def degraded(model: str) -> bool:
     with _lock:
         return _degraded_until.get(model, 0.0) > time.monotonic()

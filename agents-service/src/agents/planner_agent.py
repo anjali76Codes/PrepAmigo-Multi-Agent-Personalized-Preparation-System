@@ -81,7 +81,22 @@ logger = logging.getLogger(__name__)
 
 AGENT_NAME = "planner"
 NARRATIVE_TIMEOUT_SECONDS = settings.planner_narrative_timeout_seconds
+# ~100 tokens per planned day (wording plus its picks or search) x
+# PLANNER_DAYS_PER_CALL (10), with headroom (PLANNER_MAX_TOKENS)
 PLANNER_MAX_TOKENS = settings.planner_max_tokens
+# a topic's resources listed in each wording prompt (~15 tokens each)
+MAX_PROMPT_REFERENCES = 12
+MAX_PICKS_PER_DAY = 2
+GAP_SEARCH_RESULTS = 2
+# searches still running when the last wording call is done get this long;
+# later ones are dropped (their results still reach the cache for next run)
+GAP_SEARCH_GRACE_SECONDS = 5.0
+# words in a day title that say what kind of day it is, not its subject
+GENERIC_DAY_WORDS = frozenset(
+    "review project mini practice hands build polish overview basics fundamentals introduction intro "
+    "essentials deep dive recap capstone final wrap exercises exercise implementation applied concepts "
+    "core advanced patterns techniques".split())
+REFERENCE_KINDS = {"documentation": "docs", "video": "video", "book": "book", "article": "article"}
 
 
 class DayNarrative(BaseModel):
