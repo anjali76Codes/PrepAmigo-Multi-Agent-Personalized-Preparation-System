@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
-import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { plansApi } from '../lib/api/plans';
 import { Button } from '../components/ui/Button';
@@ -10,30 +10,93 @@ import { Input } from '../components/ui/Input';
 import { Mascot } from '../components/ui/Mascot';
 import { DayTaskCard } from '../components/ui/DayTaskCard';
 import type { ResourceItem } from '../components/ui/DayTaskCard';
+import { cn } from '../utils/utils';
+
+const DAYS_PER_LEVEL = 3;
+type StatusFilter = 'All' | 'Pending' | 'Done';
 
 function formatReferenceType(type?: string): string {
-  if (!type) return "Article";
+  if (!type) return 'Article';
   const lower = type.toLowerCase();
-  if (lower.includes("video") || lower.includes("youtube")) return "Video";
-  if (lower.includes("book") || lower.includes("paper")) return "Book";
-  if (lower.includes("doc")) return "Documentation";
-  if (lower.includes("problem") || lower.includes("code") || lower.includes("leetcode")) return "Problem";
-  if (lower.includes("course") || lower.includes("tutorial")) return "Course";
-  return "Article";
+  if (lower.includes('video') || lower.includes('youtube')) return 'Video';
+  if (lower.includes('book') || lower.includes('paper')) return 'Book';
+  if (lower.includes('doc')) return 'Documentation';
+  if (lower.includes('problem') || lower.includes('code') || lower.includes('leetcode')) return 'Problem';
+  if (lower.includes('course') || lower.includes('tutorial')) return 'Course';
+  return 'Article';
+}
+
+function buildResources(day: any): ResourceItem[] {
+  const res: ResourceItem[] = [
+    ...day.objectives.map((obj: string, i: number) => ({ id: `obj-${day._id}-${i}`, type: 'Note', title: obj, url: '#' })),
+    ...day.references.map((r: any, i: number) => ({
+      id: `ref-${day._id}-${i}`,
+      type: formatReferenceType(r.type),
+      title: r.title || r.url,
+      url: r.url,
+    })),
+  ];
+  if (day.references.length === 0) {
+    res.push({ id: `vid-${day._id}`, type: 'Video', title: `Watch ${day.topic_title} Tutorial`, url: 'https://youtube.com' });
+  }
+  return res;
+}
+
+/** One row of the line hierarchy. `top` = y of the branch (px), i.e. the midpoint of the row's header. */
+function TreeItem({ last, top, delay = 0, done = false, children }: {
+  last: boolean; top: number; delay?: number; done?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <li className={cn('relative pl-8', !last && 'pb-3')}>
+      <motion.span
+        aria-hidden
+        className="absolute left-0 top-0 w-0.5 rounded-full bg-chrome-accent origin-top"
+        style={{ height: last ? top : '100%' }}
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY: 1 }}
+        transition={{ delay, duration: 0.25, ease: 'easeOut' }}
+      />
+      <motion.span
+        aria-hidden
+        className="absolute left-0 w-6 h-0.5 rounded-full bg-chrome-accent origin-left"
+        style={{ top: top - 1 }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ delay: delay + 0.12, duration: 0.2, ease: 'easeOut' }}
+      />
+      {/* dot at the end of the branch */}
+      <span aria-hidden className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: 24, top }}>
+        <motion.span
+          className={cn(
+            'block w-2.5 h-2.5 rounded-full border-2 transition-colors',
+            done ? 'bg-chrome border-chrome' : 'bg-surface border-chrome-accent'
+          )}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: delay + 0.3, type: 'spring', stiffness: 400, damping: 18 }}
+        />
+      </span>
+      <motion.div
+        initial={{ opacity: 0, x: 8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: delay + 0.15, duration: 0.25 }}
+      >
+        {children}
+      </motion.div>
+    </li>
+  );
 }
 
 export function Roadmap() {
+  const navigate = useNavigate();
   const { preps, activePrep, setActivePrepId, loadingPreps } = useAppContext();
 
-  // Map sprints and sprintDays from real activePrep
   const mappedData = useMemo(() => {
     if (!activePrep) return { sprints: [], sprintDays: [] };
     const sprints = (activePrep.roadmap?.sprints || []).map((s, idx) => ({
       _id: s.id,
       sprint_number: idx + 1,
       sprint_name: s.title || `Sprint ${idx + 1}`,
-      total_days: s.days?.length || 0,
-      status: s.days?.every((d: any) => d.status === 'done') ? ('completed' as const) : ('in_progress' as const),
     }));
 
     const sprintDays = (activePrep.roadmap?.sprints || []).flatMap((s) =>
@@ -44,7 +107,7 @@ export function Roadmap() {
         scheduled_date: d.date,
         topic_title: d.topic,
         topic_description: d.objective || '',
-        objectives: (d.objectives && d.objectives.length > 0) ? d.objectives : [d.objective].filter(Boolean),
+        objectives: d.objectives && d.objectives.length > 0 ? d.objectives : [d.objective].filter(Boolean),
         estimated_minutes: d.estimatedMinutes || 60,
         references: (d.rawReferences || []).map((r: any) => ({
           title: r.title || r.url,
@@ -58,104 +121,102 @@ export function Roadmap() {
           | 'pending',
       }))
     );
-
     return { sprints, sprintDays };
   }, [activePrep]);
 
   const [localSprintDays, setLocalSprintDays] = useState<any[]>([]);
-
-  useEffect(() => {
-    setLocalSprintDays(mappedData.sprintDays);
-  }, [mappedData.sprintDays]);
+  useEffect(() => setLocalSprintDays(mappedData.sprintDays), [mappedData.sprintDays]);
 
   const sprints = mappedData.sprints;
   const sprintDays = localSprintDays;
 
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [openSprints, setOpenSprints] = useState<Record<string, boolean>>({});
+  const [openLevels, setOpenLevels] = useState<Record<string, boolean>>({}); // key: `${sprintId}:${levelId}`
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
 
   useEffect(() => {
-    if (sprints.length > 0 && Object.keys(openCategories).length === 0) {
-      setOpenCategories({ [sprints[0]._id]: true });
+    if (sprints.length > 0 && Object.keys(openSprints).length === 0) {
+      setOpenSprints({ [sprints[0]._id]: true });
     }
   }, [sprints]);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Solved' | 'Unsolved'>('All');
-
-  // Toggle Category Accordion
-  const toggleCategory = (catId: string) => {
-    setOpenCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
-  };
-
-  // Toggle Problem Solved
   const toggleProblemSolved = (dayId: string) => {
     setLocalSprintDays((prev) =>
-      prev.map((d) =>
-        d._id === dayId ? { ...d, status: d.status === 'completed' ? 'pending' : 'completed' } : d
-      )
+      prev.map((d) => (d._id === dayId ? { ...d, status: d.status === 'completed' ? 'pending' : 'completed' } : d))
     );
     if (dayId && !dayId.includes('day-')) {
-      void plansApi.completeDay(dayId).catch((err) => {
-        console.warn('[Roadmap] Could not mark day complete on backend:', err);
-      });
+      void plansApi.completeDay(dayId).catch((err) => console.warn('[Roadmap] Could not mark day complete on backend:', err));
     }
   };
 
-  // Expand / Collapse All
-  const handleToggleExpandAll = () => {
-    const allOpen = Object.values(openCategories).every(Boolean);
-    const newCatState: Record<string, boolean> = {};
-    sprints.forEach((cat) => {
-      newCatState[cat._id] = !allOpen;
-    });
-    setOpenCategories(newCatState);
-  };
-
-  // Flattened problem statistics calculation
-  const totalCount = sprintDays.length;
-  const solvedCount = sprintDays.filter((p) => p.status === 'completed').length;
-  const overallPercentage = totalCount > 0 ? Math.round((solvedCount / totalCount) * 100) : 0;
-
-  // Next unsolved problem
-  const nextUnsolved = sprintDays.find((p) => p.status !== 'completed');
-
-  // Filtered categories
+  // Levels are built from ALL days first, then filtered, so "Level 2" stays Level 2 while searching
+  // (and matches the level ids used by /dashboard/:sprintId/:levelId).
   const filteredRoadmap = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return sprints
       .map((sprint) => {
         const days = sprintDays.filter((d) => d.sprint_id === sprint._id);
+        const lvlCount = Math.ceil(days.length / DAYS_PER_LEVEL);
+        const allLevels = Array.from({ length: lvlCount }).map((_, i) => ({
+          id: `level-${i + 1}`,
+          number: i + 1,
+          title: `Level ${i + 1}`,
+          allDays: days.slice(i * DAYS_PER_LEVEL, (i + 1) * DAYS_PER_LEVEL),
+        }));
+        const firstOpenId = allLevels.find((l) => l.allDays.some((d) => d.status !== 'completed'))?.id;
 
-        const filteredDays = days.filter((p) => {
-          const matchesSearch =
-            p.topic_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.topic_description.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchesStatus =
-            statusFilter === 'All'
-              ? true
-              : statusFilter === 'Solved'
-                ? p.status === 'completed'
-                : statusFilter === 'Unsolved'
-                  ? p.status !== 'completed'
-                  : true;
+        const levels = allLevels
+          .map((l) => ({
+            ...l,
+            days: l.allDays.filter((p) => {
+              const matchesSearch =
+                p.topic_title.toLowerCase().includes(q) || p.topic_description.toLowerCase().includes(q);
+              const matchesStatus =
+                statusFilter === 'All' ? true : statusFilter === 'Done' ? p.status === 'completed' : p.status !== 'completed';
+              return matchesSearch && matchesStatus;
+            }),
+          }))
+          .filter((l) => l.days.length > 0);
 
-          return matchesSearch && matchesStatus;
-        });
-
-        // Distribute into levels (3 days per level)
-        const daysPerLevel = 3;
-        const lvlCount = Math.ceil(filteredDays.length / daysPerLevel);
-        const levels = Array.from({ length: lvlCount }).map((_, i) => {
-          return {
-            id: `level-${i + 1}`,
-            title: `Level ${i + 1}`,
-            days: filteredDays.slice(i * daysPerLevel, (i + 1) * daysPerLevel),
-          };
-        });
-
-        return { ...sprint, filteredDays, levels };
+        return { ...sprint, levels, firstOpenId, total: days.length, done: days.filter((d) => d.status === 'completed').length };
       })
-      .filter((sprint) => sprint.filteredDays.length > 0);
+      .filter((s) => s.levels.length > 0);
   }, [sprints, sprintDays, searchQuery, statusFilter]);
+
+  const isLevelOpen = (sprintId: string, levelId: string, firstOpenId?: string) =>
+    openLevels[`${sprintId}:${levelId}`] ?? levelId === firstOpenId;
+
+  const toggleLevel = (sprintId: string, levelId: string, firstOpenId?: string) =>
+    setOpenLevels((p) => ({ ...p, [`${sprintId}:${levelId}`]: !isLevelOpen(sprintId, levelId, firstOpenId) }));
+
+  const anySprintOpen = Object.values(openSprints).some(Boolean);
+  const handleToggleExpandAll = () => {
+    const open = !anySprintOpen;
+    const s: Record<string, boolean> = {};
+    const l: Record<string, boolean> = {};
+    sprints.forEach((sp) => (s[sp._id] = open));
+    filteredRoadmap.forEach((sp) => sp.levels.forEach((lv) => (l[`${sp._id}:${lv.id}`] = open)));
+    setOpenSprints(s);
+    setOpenLevels(l);
+  };
+
+  const totalCount = sprintDays.length;
+  const solvedCount = sprintDays.filter((p) => p.status === 'completed').length;
+  const overallPercentage = totalCount > 0 ? Math.round((solvedCount / totalCount) * 100) : 0;
+  const nextUnsolved = sprintDays.find((p) => p.status !== 'completed');
+
+  // open the sprint + level that holds the next day, then scroll to it
+  const goToNext = () => {
+    if (!nextUnsolved) return;
+    const inSprint = sprintDays.filter((d) => d.sprint_id === nextUnsolved.sprint_id);
+    const levelId = `level-${Math.floor(inSprint.findIndex((d) => d._id === nextUnsolved._id) / DAYS_PER_LEVEL) + 1}`;
+    setOpenSprints((p) => ({ ...p, [nextUnsolved.sprint_id]: true }));
+    setOpenLevels((p) => ({ ...p, [`${nextUnsolved.sprint_id}:${levelId}`]: true }));
+    setTimeout(() => {
+      document.getElementById(`prob-${nextUnsolved._id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 350);
+  };
 
   if (loadingPreps) {
     return (
@@ -189,258 +250,242 @@ export function Roadmap() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      {/* Scrollable Container */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 safe-area-bottom">
-        <div className="max-w-6xl mx-auto space-y-6 pb-16">
+      <div className="flex-1 overflow-y-auto safe-area-bottom">
+        <div className="w-full px-6 md:px-12 py-6 md:py-8 space-y-6 pb-16">
 
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-carbon-500">
-            <Link to="/dashboard" className="hover:text-carbon-900 transition-colors">Prep Hub</Link>
-            <span>/</span>
-            <span className="text-carbon-900">{planTitle}</span>
-          </div>
+          {/* Header */}
 
-          {/* Multi-prep Selector if multiple preps exist */}
-          {preps.length > 1 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-xs font-bold text-carbon-500 uppercase tracking-wider shrink-0 mr-1">
-                Your Preps:
-              </span>
-              {preps.map((p) => {
-                const isSelected = p.id === activePrep.id;
-                return (
+          <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 -ml-3 font-bold text-chrome"
+                onClick={() => navigate('/dashboard')}
+              >
+                <Icon name="arrow-back" /> Dashboard
+              </Button>
+
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-carbon-900 tracking-tight">{planTitle}</h1>
+                <p className="text-sm md:text-base text-carbon-700 font-medium mt-1">
+                  {roleName} at {companyName}
+                </p>
+              </div>
+
+              <div className="max-w-sm space-y-1.5">
+                <div className="flex justify-between text-xs font-bold text-carbon-700">
+                  <span>{solvedCount} / {totalCount} days</span>
+                  <span>{overallPercentage}%</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-surface overflow-hidden">
+                  <motion.div
+                    className="h-full bg-chrome rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${overallPercentage}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              </div>
+
+              {nextUnsolved && (
+                <Button size="sm" onClick={goToNext} className="gap-2">
+                  Up next: Day {nextUnsolved.day_number} <Icon name="arrow-down" className="text-xs" />
+                </Button>
+              )}
+            </div>
+
+            <div className="hidden sm:flex shrink-0 w-36 h-36 rounded-full bg-surface border border-border items-center justify-center">
+              <Mascot variant="Motivated.png" size="lg" />
+            </div>
+          </Card>
+
+          <div className='max-w-7xl mx-auto space-y-4'>
+            {/* Multi-prep switcher */}
+            {preps.length > 1 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {preps.map((p) => (
                   <Button
                     key={p.id}
                     size="sm"
-                    variant={isSelected ? 'primary' : 'outline'}
+                    variant={p.id === activePrep.id ? 'primary' : 'outline'}
                     onClick={() => setActivePrepId(p.id)}
                     className="shrink-0 border"
                   >
-                    {p.title || `${p.learningContext?.companyInfo?.name || 'Prep'}`}
+                    {p.title || p.learningContext?.companyInfo?.name || 'Prep'}
                   </Button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Header Card */}
-          <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row justify-between items-center gap-8">
-
-            {/* Left: mascot + description */}
-            <div className="flex items-center gap-6 max-w-2xl">
-              <div className="hidden sm:flex shrink-0 w-32 h-32 rounded-full bg-surface border border-border items-center justify-center">
-                <Mascot variant="Motivated.png" size="xl" style={{ width: 110, height: 110 }} />
+                ))}
               </div>
+            )}
 
-              <div className="space-y-3">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-carbon-900 tracking-tight">
-                  {planTitle}
-                </h1>
-                <p className="text-sm md:text-base text-carbon-700 leading-relaxed">
-                  Role: {roleName} at {companyName}. A comprehensive preparation plan organized into sprints to tackle coding, system design, and behavioral questions.
-                </p>
-
-                <div className="flex items-center gap-3 text-xs font-semibold text-carbon-500">
-                  <span className="flex items-center gap-1.5 text-chrome">
-                    <span className="w-2 h-2 rounded-full bg-chrome inline-block animate-pulse" />
-                    Total {activePrep.durationDays} Days
-                  </span>
-                  <span>•</span>
-                  <span>{sprints.length} Sprints</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  {nextUnsolved && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const el = document.getElementById(`prob-${nextUnsolved._id}`);
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }}
-                      className="gap-2"
-                    >
-                      Up next : Day {nextUnsolved.day_number}
-                      <Icon name="arrow-down" className="text-xs" />
-                    </Button>
-                  )}
-
-                  <Link to="/dashboard/chat">
-                    <Button size="sm" variant="outline" className="gap-2 border">
-                      <Icon name="sparkles" className="text-xs" />
-                      Plan with PrepAmigo →
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: overall progress */}
-            <div className="bg-surface border border-border rounded-2xl p-5 md:p-6 w-full lg:w-96 shrink-0 space-y-4">
-              <div className="flex items-center justify-between text-xs font-bold text-carbon-500">
-                <span>Overall Progress</span>
-                <Icon name="ribbon" className="text-lg text-beige-500" />
-              </div>
-
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl md:text-4xl font-extrabold text-carbon-900">{overallPercentage} %</span>
-                <span className="text-xs font-bold text-carbon-500">{solvedCount} / {totalCount} days completed</span>
-              </div>
-
-              <div className="w-full h-2.5 rounded-full bg-lavender-100 overflow-hidden">
-                <motion.div
-                  className="h-full bg-chrome rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${overallPercentage}%` }}
-                  transition={{ duration: 0.5 }}
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="relative flex-1">
+                <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon-500 text-sm z-10" />
+                <Input
+                  type="text"
+                  placeholder="Search topics..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 rounded-full"
                 />
               </div>
-            </div>
-          </Card>
 
-          {/* Filter & Search Toolbar */}
-          <Card variant="default" className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="relative w-full md:w-80">
-              <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon-500 text-sm z-10" />
-              <Input
-                type="text"
-                placeholder="Search topics..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 rounded-full"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="h-10 px-4 bg-surface border border-border rounded-full text-xs font-bold text-carbon-700 outline-none cursor-pointer hover:bg-lavender-100 focus-visible:ring-2 focus-visible:ring-navy-700"
-              >
-                <option value="All">All Status</option>
-                <option value="Solved">Completed Only</option>
-                <option value="Unsolved">Pending Only</option>
-              </select>
+              <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
+                {(['All', 'Pending', 'Done'] as StatusFilter[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setStatusFilter(f)}
+                    className={cn(
+                      'px-4 h-8 rounded-full text-xs font-bold transition-colors',
+                      statusFilter === f ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
 
               <Button
                 variant="outline"
-                size="md"
                 onClick={handleToggleExpandAll}
-                title="Expand / Collapse All"
-                aria-label="Expand or collapse all sprints"
-                className="w-10 px-0 border"
+                title={anySprintOpen ? 'Collapse all' : 'Expand all'}
+                aria-label={anySprintOpen ? 'Collapse all' : 'Expand all'}
+                className="w-10 px-0 border shrink-0"
               >
-                <Icon name="layers" className="text-sm" />
+                <Icon name={anySprintOpen ? 'contract-outline' : 'expand-outline'} />
               </Button>
             </div>
-          </Card>
 
-          {/* Hierarchical Roadmap Tree Accordion */}
-          <div className="space-y-4">
-            {filteredRoadmap.map((sprint) => {
-              const catSolved = sprint.filteredDays.filter(p => p.status === 'completed').length;
-              const catTotal = sprint.filteredDays.length;
-              const isOpen = openCategories[sprint._id] ?? false;
+            {/* Sprints */}
+            <div className="space-y-4">
+              {filteredRoadmap.map((sprint) => {
+                const isOpen = openSprints[sprint._id] ?? false;
+                const sprintDone = sprint.total > 0 && sprint.done === sprint.total;
+                const pct = sprint.total ? (sprint.done / sprint.total) * 100 : 0;
 
-              return (
-                <Card key={sprint._id} variant="default" className="rounded-3xl overflow-hidden">
-                  {/* Sprint Header */}
-                  <div
-                    onClick={() => toggleCategory(sprint._id)}
-                    className="flex items-center justify-between p-4 md:p-5 cursor-pointer hover:bg-lavender-50 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-full bg-lavender-100 border border-border text-chrome flex items-center justify-center shrink-0">
-                        <Icon name={isOpen ? "chevron-down" : "chevron-forward"} className="text-sm" />
-                      </span>
-                      <h3 className="text-base md:text-lg font-bold text-carbon-900">Sprint {sprint.sprint_number}: {sprint.sprint_name}</h3>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-carbon-500">{catSolved} / {catTotal}</span>
-                      <div className="w-16 md:w-24 h-2 rounded-full bg-lavender-100 overflow-hidden">
-                        <div
-                          className="h-full bg-chrome rounded-full transition-all"
-                          style={{ width: `${catTotal ? (catSolved / catTotal) * 100 : 0}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sprint Content */}
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden border-t border-border bg-lavender-50"
+                return (
+                  <Card key={sprint._id} variant="default" className="rounded-3xl overflow-hidden">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenSprints((p) => ({ ...p, [sprint._id]: !isOpen }))}
+                      className="w-full flex items-center gap-4 p-4 md:p-5 text-left hover:bg-lavender-50 transition-colors"
+                    >
+                      <span
+                        className={cn(
+                          'w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-extrabold',
+                          sprintDone ? 'bg-chrome text-on-chrome' : 'bg-lavender-100 text-chrome'
+                        )}
                       >
-                        <div className="p-3 md:p-5 space-y-6">
+                        {sprintDone ? <Icon name="checkmark" /> : sprint.sprint_number}
+                      </span>
 
-                          {sprint.levels.map(level => (
-                            <div key={level.id} className="space-y-3">
-                              <h4 className="text-sm font-bold text-carbon-900 pl-3 border-l-4 border-chrome">
-                                {level.title}
-                              </h4>
-                              <div className="space-y-3 pl-4">
-                                {level.days.map((problem) => {
-                                  const resources: ResourceItem[] = [
-                                    ...problem.objectives.map((obj: string, idx: number) => ({
-                                      id: `obj-${problem._id}-${idx}`,
-                                      type: "Note",
-                                      title: obj,
-                                      url: "#"
-                                    })),
-                                    ...problem.references.map((ref: any, idx: number) => ({
-                                      id: `ref-${problem._id}-${idx}`,
-                                      type: formatReferenceType(ref.type),
-                                      title: ref.title || ref.url,
-                                      url: ref.url
-                                    }))
-                                  ];
-
-                                  if (problem.references.length === 0) {
-                                    resources.push({
-                                      id: 'dummy-vid',
-                                      type: 'Video',
-                                      title: 'Watch ' + problem.topic_title + ' Tutorial',
-                                      url: 'https://youtube.com'
-                                    });
-                                  }
-
-                                  return (
-                                    <div id={`prob-${problem._id}`} key={problem._id}>
-                                      <DayTaskCard
-                                        variant="compact"
-                                        title={`Day ${problem.day_number}: ${problem.topic_title} - ${problem.topic_description}`}
-                                        completed={problem.status === 'completed'}
-                                        resources={resources}
-                                        onToggleComplete={() => toggleProblemSolved(problem._id)}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-base md:text-lg text-carbon-900 truncate">{sprint.sprint_name}</h3>
+                        <div className="flex items-center gap-3 mt-1">
+                          <div className="w-24 md:w-40 h-1.5 rounded-full bg-lavender-100 overflow-hidden">
+                            <div className="h-full bg-chrome rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-carbon-500">{sprint.done} / {sprint.total}</span>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      </div>
+
+                      <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.25 }} className="text-xl text-carbon-500 flex">
+                        <Icon name="chevron-down" />
+                      </motion.span>
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          key="sprint-body"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: 'easeInOut' }}
+                          className="overflow-hidden border-t border-border bg-lavender-50"
+                        >
+                          {/* sprint → levels */}
+                          <ul className="p-4 md:p-6 ml-1">
+                            {sprint.levels.map((level, li) => {
+                              const open = isLevelOpen(sprint._id, level.id, sprint.firstOpenId);
+                              const doneCount = level.allDays.filter((d) => d.status === 'completed').length;
+                              const levelComplete = doneCount === level.allDays.length;
+
+                              return (
+                                <TreeItem key={level.id} top={20} done={levelComplete} last={li === sprint.levels.length - 1} delay={li * 0.08}>
+                                  <button
+                                    type="button"
+                                    aria-expanded={open}
+                                    onClick={() => toggleLevel(sprint._id, level.id, sprint.firstOpenId)}
+                                    className="w-full h-10 flex items-center gap-3 rounded-xl px-2 -mx-2 text-left hover:bg-lavender-100 transition-colors"
+                                  >
+                                    <span
+                                      className={cn(
+                                        'w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0',
+                                        levelComplete ? 'bg-chrome text-on-chrome' : 'bg-surface border border-border text-chrome'
+                                      )}
+                                    >
+                                      {levelComplete ? <Icon name="checkmark" className="text-xs" /> : level.number}
+                                    </span>
+                                    <span className="font-bold text-sm text-carbon-900">{level.title}</span>
+                                    <span className="text-xs font-semibold text-carbon-500">{doneCount} / {level.allDays.length}</span>
+                                    <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="ml-auto text-lg text-carbon-500 flex">
+                                      <Icon name="chevron-down" />
+                                    </motion.span>
+                                  </button>
+
+                                  {/* level → days */}
+                                  <AnimatePresence initial={false}>
+                                    {open && (
+                                      <motion.div
+                                        key="level-body"
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                        className="overflow-hidden"
+                                      >
+                                        <ul className="pt-3">
+                                          {level.days.map((day, di) => (
+                                            <TreeItem key={day._id} top={28} done={day.status === 'completed'} last={di === level.days.length - 1} delay={0.05 + di * 0.08}>
+                                              <div id={`prob-${day._id}`}>
+                                                <DayTaskCard
+                                                  variant="compact"
+                                                  title={`Day ${day.day_number}: ${day.topic_title}`}
+                                                  completed={day.status === 'completed'}
+                                                  resources={buildResources(day)}
+                                                  onToggleComplete={() => toggleProblemSolved(day._id)}
+                                                />
+                                              </div>
+                                            </TreeItem>
+                                          ))}
+                                        </ul>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </TreeItem>
+                              );
+                            })}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
+                );
+              })}
+
+              {filteredRoadmap.length === 0 && (
+                <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
+                  <Mascot variant="nosy.png" size="lg" style={{ width: 110, height: 110 }} />
+                  <p className="font-bold text-carbon-900">No days match your filters</p>
+                  <p className="text-sm text-carbon-500">Try a different search or status.</p>
                 </Card>
-              );
-            })}
+              )}
+            </div>
 
-            {filteredRoadmap.length === 0 && (
-              <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
-                <Mascot variant="nosy.png" size="lg" style={{ width: 110, height: 110 }} />
-                <p className="font-bold text-carbon-900">No days match your filters</p>
-                <p className="text-sm text-carbon-500">Try a different search or status.</p>
-              </Card>
-            )}
           </div>
-
         </div>
       </div>
     </div>

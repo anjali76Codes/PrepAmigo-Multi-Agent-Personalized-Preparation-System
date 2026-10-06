@@ -190,8 +190,12 @@ export function DayTaskCard({
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-on-chrome-muted shrink-0" />
                             <span className="truncate">{item.title}</span>
-                            {external && <Icon name="open-outline" className="text-carbon-500 shrink-0" />}
-                          </>
+                            {external && (
+                              <Icon
+                                name="arrow-forward"
+                                className="ml-auto shrink-0 text-navy-700 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0"
+                              />
+                            )}                          </>
                         );
                         return (
                           <TreeRow key={item.id} last={ii === items.length - 1} delay={itemDelay}>
@@ -201,7 +205,7 @@ export function DayTaskCard({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="h-8 flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 hover:underline rounded-lg px-2 -mx-2 hover:bg-lavender-50 transition-colors"
+                                className="group h-8 flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 hover:underline rounded-lg px-2 -mx-2 hover:bg-lavender-50 transition-colors"
                               >
                                 {inner}
                               </a>
