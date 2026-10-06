@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { plansApi } from '../lib/api/plans';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Mascot } from '../components/ui/Mascot';
 import { DayTaskCard } from '../components/ui/DayTaskCard';
 import type { ResourceItem } from '../components/ui/DayTaskCard';
 
@@ -130,10 +133,10 @@ export function Roadmap() {
             statusFilter === 'All'
               ? true
               : statusFilter === 'Solved'
-              ? p.status === 'completed'
-              : statusFilter === 'Unsolved'
-              ? p.status !== 'completed'
-              : true;
+                ? p.status === 'completed'
+                : statusFilter === 'Unsolved'
+                  ? p.status !== 'completed'
+                  : true;
 
           return matchesSearch && matchesStatus;
         });
@@ -156,9 +159,9 @@ export function Roadmap() {
 
   if (loadingPreps) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-carbon-500">
-        <Icon name="sync-outline" className="text-3xl animate-spin text-navy-700 mb-3" />
-        <p className="text-sm font-semibold">Loading your roadmap...</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg gap-3">
+        <Mascot variant="working.gif" size="lg" style={{ width: 120, height: 120 }} />
+        <p className="text-sm font-semibold text-carbon-500">Loading your roadmap...</p>
       </div>
     );
   }
@@ -166,15 +169,13 @@ export function Roadmap() {
   if (!activePrep || sprints.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-center">
-        <div className="w-16 h-16 rounded-full bg-navy-50 text-navy-700 flex items-center justify-center text-3xl mb-4">
-          <Icon name="map-outline" />
-        </div>
-        <h2 className="text-2xl font-bold text-carbon-900 mb-2">No Active Roadmap</h2>
+        <Mascot variant="dissapointed.png" size="xl" style={{ width: 160, height: 160 }} />
+        <h2 className="text-2xl font-bold text-carbon-900 mt-4 mb-2">No Active Roadmap</h2>
         <p className="text-sm text-carbon-500 max-w-md mb-6">
           You don't have an active roadmap yet. Create your personalized preparation plan by chatting with our agent.
         </p>
         <Link to="/dashboard/chat">
-          <Button variant="primary" className="flex items-center gap-2">
+          <Button className="gap-2">
             Start Prep in Chat <Icon name="arrow-forward-outline" />
           </Button>
         </Link>
@@ -191,86 +192,90 @@ export function Roadmap() {
       {/* Scrollable Container */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 safe-area-bottom">
         <div className="max-w-6xl mx-auto space-y-6 pb-16">
-          
+
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-carbon-400">
+          <div className="flex items-center gap-2 text-xs font-semibold text-carbon-500">
             <Link to="/dashboard" className="hover:text-carbon-900 transition-colors">Prep Hub</Link>
             <span>/</span>
-            <span className="text-carbon-800">{planTitle}</span>
+            <span className="text-carbon-900">{planTitle}</span>
           </div>
 
           {/* Multi-prep Selector if multiple preps exist */}
           {preps.length > 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-xs font-bold text-carbon-400 uppercase tracking-wider shrink-0 mr-1">
+              <span className="text-xs font-bold text-carbon-500 uppercase tracking-wider shrink-0 mr-1">
                 Your Preps:
               </span>
               {preps.map((p) => {
                 const isSelected = p.id === activePrep.id;
                 return (
-                  <button
+                  <Button
                     key={p.id}
+                    size="sm"
+                    variant={isSelected ? 'primary' : 'outline'}
                     onClick={() => setActivePrepId(p.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
-                      isSelected
-                        ? "bg-navy-900 text-white border-navy-900 shadow-xs"
-                        : "bg-white text-carbon-700 border-border hover:bg-surface-muted"
-                    }`}
+                    className="shrink-0 border"
                   >
-                    <span>{p.title || `${p.learningContext?.companyInfo?.name || 'Prep'}`}</span>
-                  </button>
+                    {p.title || `${p.learningContext?.companyInfo?.name || 'Prep'}`}
+                  </Button>
                 );
               })}
             </div>
           )}
 
-          {/* Top Header Card following Screenshot 2 */}
-          <div className="bg-white border border-border rounded-3xl p-6 md:p-8 shadow-sm flex flex-col lg:flex-row justify-between items-start gap-8">
-            
-            {/* Left Header Description */}
-            <div className="space-y-4 max-w-2xl">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-carbon-900 tracking-tight">
-                {planTitle}
-              </h1>
-              <p className="text-sm md:text-base text-carbon-500 leading-relaxed">
-                Role: {roleName} at {companyName}. A comprehensive preparation plan organized into sprints to tackle coding, system design, and behavioral questions.
-              </p>
+          {/* Header Card */}
+          <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex flex-col lg:flex-row justify-between items-center gap-8">
 
-              <div className="flex items-center gap-4 text-xs font-semibold text-carbon-400">
-                <span className="flex items-center gap-1.5 text-navy-700">
-                  <span className="w-2 h-2 rounded-full bg-navy-700 inline-block animate-pulse" />
-                  Total {activePrep.durationDays} Days
-                </span>
-                <span>•</span>
-                <span>{sprints.length} Sprints</span>
+            {/* Left: mascot + description */}
+            <div className="flex items-center gap-6 max-w-2xl">
+              <div className="hidden sm:flex shrink-0 w-32 h-32 rounded-full bg-surface border border-border items-center justify-center">
+                <Mascot variant="Motivated.png" size="xl" style={{ width: 110, height: 110 }} />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                {nextUnsolved && (
-                  <button 
-                    onClick={() => {
-                      const el = document.getElementById(`prob-${nextUnsolved._id}`);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }}
-                    className="px-4 py-2 bg-navy-900 hover:bg-navy-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2"
-                  >
-                    <span>Up next : Day {nextUnsolved.day_number}</span>
-                    <Icon name="arrow-down" className="text-xs" />
-                  </button>
-                )}
+              <div className="space-y-3">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-carbon-900 tracking-tight">
+                  {planTitle}
+                </h1>
+                <p className="text-sm md:text-base text-carbon-700 leading-relaxed">
+                  Role: {roleName} at {companyName}. A comprehensive preparation plan organized into sprints to tackle coding, system design, and behavioral questions.
+                </p>
 
-                <Link to="/dashboard/chat">
-                  <button className="px-4 py-2 bg-navy-100 hover:bg-navy-100/80 text-navy-800 border border-navy-700/30 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
-                    <Icon name="sparkles" className="text-xs text-navy-700" />
-                    <span>Plan with PrepAmigo →</span>
-                  </button>
-                </Link>
+                <div className="flex items-center gap-3 text-xs font-semibold text-carbon-500">
+                  <span className="flex items-center gap-1.5 text-chrome">
+                    <span className="w-2 h-2 rounded-full bg-chrome inline-block animate-pulse" />
+                    Total {activePrep.durationDays} Days
+                  </span>
+                  <span>•</span>
+                  <span>{sprints.length} Sprints</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  {nextUnsolved && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const el = document.getElementById(`prob-${nextUnsolved._id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                      className="gap-2"
+                    >
+                      Up next : Day {nextUnsolved.day_number}
+                      <Icon name="arrow-down" className="text-xs" />
+                    </Button>
+                  )}
+
+                  <Link to="/dashboard/chat">
+                    <Button size="sm" variant="outline" className="gap-2 border">
+                      <Icon name="sparkles" className="text-xs" />
+                      Plan with PrepAmigo →
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
 
-            {/* Right Overall Progress Card */}
-            <div className="bg-bg/80 border border-border rounded-2xl p-5 md:p-6 w-full lg:w-96 shrink-0 space-y-4">
+            {/* Right: overall progress */}
+            <div className="bg-surface border border-border rounded-2xl p-5 md:p-6 w-full lg:w-96 shrink-0 space-y-4">
               <div className="flex items-center justify-between text-xs font-bold text-carbon-500">
                 <span>Overall Progress</span>
                 <Icon name="ribbon" className="text-lg text-beige-500" />
@@ -278,59 +283,56 @@ export function Roadmap() {
 
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl md:text-4xl font-extrabold text-carbon-900">{overallPercentage} %</span>
-                <span className="text-xs font-bold text-carbon-400">{solvedCount} / {totalCount} days completed</span>
+                <span className="text-xs font-bold text-carbon-500">{solvedCount} / {totalCount} days completed</span>
               </div>
 
-              {/* Progress Bar */}
-              <div className="w-full h-2.5 rounded-full bg-surface-muted overflow-hidden">
-                <motion.div 
-                  className="h-full bg-navy-900 rounded-full"
+              <div className="w-full h-2.5 rounded-full bg-lavender-100 overflow-hidden">
+                <motion.div
+                  className="h-full bg-chrome rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${overallPercentage}%` }}
                   transition={{ duration: 0.5 }}
                 />
               </div>
             </div>
-
-          </div>
+          </Card>
 
           {/* Filter & Search Toolbar */}
-          <div className="bg-white border border-border rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Search Input */}
+          <Card variant="default" className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="relative w-full md:w-80">
-              <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon-400 text-sm" />
-              <input
+              <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-carbon-500 text-sm z-10" />
+              <Input
                 type="text"
                 placeholder="Search topics..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-bg border border-border rounded-xl text-xs text-carbon-900 placeholder:text-carbon-400 outline-none focus:border-navy-900 transition-colors"
+                className="pl-9 rounded-full"
               />
             </div>
 
-            {/* Filter Pills */}
             <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-              {/* Status Filter */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="px-3 py-1.5 bg-surface-muted/60 border border-border/60 rounded-xl text-xs font-bold text-carbon-700 outline-none cursor-pointer"
+                className="h-10 px-4 bg-surface border border-border rounded-full text-xs font-bold text-carbon-700 outline-none cursor-pointer hover:bg-lavender-100 focus-visible:ring-2 focus-visible:ring-navy-700"
               >
                 <option value="All">All Status</option>
                 <option value="Solved">Completed Only</option>
                 <option value="Unsolved">Pending Only</option>
               </select>
 
-              {/* Expand / Collapse All */}
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 onClick={handleToggleExpandAll}
-                className="p-2 border border-border rounded-xl text-carbon-600 hover:text-carbon-900 hover:bg-surface-muted transition-colors text-xs font-semibold flex items-center gap-1"
                 title="Expand / Collapse All"
+                aria-label="Expand or collapse all sprints"
+                className="w-10 px-0 border"
               >
                 <Icon name="layers" className="text-sm" />
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* Hierarchical Roadmap Tree Accordion */}
           <div className="space-y-4">
@@ -340,96 +342,103 @@ export function Roadmap() {
               const isOpen = openCategories[sprint._id] ?? false;
 
               return (
-                <div key={sprint._id} className="bg-white border border-border rounded-2xl overflow-hidden shadow-xs">
-                  {/* Category Header */}
+                <Card key={sprint._id} variant="default" className="rounded-3xl overflow-hidden">
+                  {/* Sprint Header */}
                   <div
                     onClick={() => toggleCategory(sprint._id)}
-                    className="flex items-center justify-between p-4 md:p-5 cursor-pointer hover:bg-bg/50 transition-colors select-none"
+                    className="flex items-center justify-between p-4 md:p-5 cursor-pointer hover:bg-lavender-50 transition-colors select-none"
                   >
                     <div className="flex items-center gap-3">
-                      <Icon
-                        name={isOpen ? "chevron-down" : "chevron-forward"}
-                        className="text-base text-carbon-500 transition-transform"
-                      />
+                      <span className="w-8 h-8 rounded-full bg-lavender-100 border border-border text-chrome flex items-center justify-center shrink-0">
+                        <Icon name={isOpen ? "chevron-down" : "chevron-forward"} className="text-sm" />
+                      </span>
                       <h3 className="text-base md:text-lg font-bold text-carbon-900">Sprint {sprint.sprint_number}: {sprint.sprint_name}</h3>
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-carbon-400">{catSolved} / {catTotal}</span>
-                      <div className="w-16 md:w-24 h-1.5 rounded-full bg-surface-muted overflow-hidden">
+                      <span className="text-xs font-bold text-carbon-500">{catSolved} / {catTotal}</span>
+                      <div className="w-16 md:w-24 h-2 rounded-full bg-lavender-100 overflow-hidden">
                         <div
-                          className="h-full bg-navy-900 rounded-full transition-all"
+                          className="h-full bg-chrome rounded-full transition-all"
                           style={{ width: `${catTotal ? (catSolved / catTotal) * 100 : 0}%` }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Category Content */}
+                  {/* Sprint Content */}
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-border/60 bg-bg/20"
+                        className="overflow-hidden border-t border-border bg-lavender-50"
                       >
-                        <div className="p-3 md:p-4 border-b border-border/40 last:border-b-0 space-y-6">
-                            
-                            {sprint.levels.map(level => (
-                              <div key={level.id} className="space-y-3">
-                                <h4 className="text-sm font-bold text-carbon-600 pl-2 border-l-2 border-navy-300">
-                                  {level.title}
-                                </h4>
-                                <div className="space-y-3 pl-4">
-                                  {level.days.map((problem) => {
-                                    const resources: ResourceItem[] = [
-                                      ...problem.objectives.map((obj: string, idx: number) => ({
-                                        id: `obj-${problem._id}-${idx}`,
-                                        type: "Note",
-                                        title: obj,
-                                        url: "#"
-                                      })),
-                                      ...problem.references.map((ref: any, idx: number) => ({
-                                        id: `ref-${problem._id}-${idx}`,
-                                        type: formatReferenceType(ref.type),
-                                        title: ref.title || ref.url,
-                                        url: ref.url
-                                      }))
-                                    ];
-                  
-                                    if (problem.references.length === 0) {
-                                      resources.push({
-                                        id: 'dummy-vid',
-                                        type: 'Video',
-                                        title: 'Watch ' + problem.topic_title + ' Tutorial',
-                                        url: 'https://youtube.com'
-                                      });
-                                    }
+                        <div className="p-3 md:p-5 space-y-6">
 
-                                    return (
-                                      <div id={`prob-${problem._id}`} key={problem._id}>
-                                        <DayTaskCard
-                                          variant="compact"
-                                          title={`Day ${problem.day_number}: ${problem.topic_title} - ${problem.topic_description}`}
-                                          completed={problem.status === 'completed'}
-                                          resources={resources}
-                                          onToggleComplete={() => toggleProblemSolved(problem._id)}
-                                        />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                          {sprint.levels.map(level => (
+                            <div key={level.id} className="space-y-3">
+                              <h4 className="text-sm font-bold text-carbon-900 pl-3 border-l-4 border-chrome">
+                                {level.title}
+                              </h4>
+                              <div className="space-y-3 pl-4">
+                                {level.days.map((problem) => {
+                                  const resources: ResourceItem[] = [
+                                    ...problem.objectives.map((obj: string, idx: number) => ({
+                                      id: `obj-${problem._id}-${idx}`,
+                                      type: "Note",
+                                      title: obj,
+                                      url: "#"
+                                    })),
+                                    ...problem.references.map((ref: any, idx: number) => ({
+                                      id: `ref-${problem._id}-${idx}`,
+                                      type: formatReferenceType(ref.type),
+                                      title: ref.title || ref.url,
+                                      url: ref.url
+                                    }))
+                                  ];
+
+                                  if (problem.references.length === 0) {
+                                    resources.push({
+                                      id: 'dummy-vid',
+                                      type: 'Video',
+                                      title: 'Watch ' + problem.topic_title + ' Tutorial',
+                                      url: 'https://youtube.com'
+                                    });
+                                  }
+
+                                  return (
+                                    <div id={`prob-${problem._id}`} key={problem._id}>
+                                      <DayTaskCard
+                                        variant="compact"
+                                        title={`Day ${problem.day_number}: ${problem.topic_title} - ${problem.topic_description}`}
+                                        completed={problem.status === 'completed'}
+                                        resources={resources}
+                                        onToggleComplete={() => toggleProblemSolved(problem._id)}
+                                      />
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            ))}
+                            </div>
+                          ))}
 
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
+                </Card>
               );
             })}
+
+            {filteredRoadmap.length === 0 && (
+              <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
+                <Mascot variant="nosy.png" size="lg" style={{ width: 110, height: 110 }} />
+                <p className="font-bold text-carbon-900">No days match your filters</p>
+                <p className="text-sm text-carbon-500">Try a different search or status.</p>
+              </Card>
+            )}
           </div>
 
         </div>

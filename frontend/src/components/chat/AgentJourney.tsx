@@ -33,6 +33,7 @@ export interface AgentJourneyProps extends Partial<JourneyConfig> {
     nodeCount?: number;
     nodePositions?: number[];
     levelIds?: string[];
+    levelTitles?: string[];
 }
 
 // Math for resampling piecewise linear curve
@@ -81,7 +82,8 @@ export function AgentJourney(props: AgentJourneyProps) {
         viewH,
         strokeWidth,
         strokeColor,
-        strokeTrackColor,
+        strokeTrackColor, roadWidth, roadColor, waypointsPerGap, decorations,
+        levelTitles,
     } = config;
 
     const [internal, setInternal] = useState(0);
@@ -89,10 +91,16 @@ export function AgentJourney(props: AgentJourneyProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(0);
     const [pointsPct, setPointsPct] = useState<{ x: number, y: number, t: number }[]>([]);
+    const [waypoints, setWaypoints] = useState<{ x: number; y: number; t: number }[]>([]);
     const [viewBox, setViewBox] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
 
-    const derivedNodeCount = nodeStates ? nodeStates.length : (propNodeCount ?? Math.max(3, Math.min(steps.length, 7)));
-    const nodeCount = Math.max(3, Math.min(7, derivedNodeCount || 5));
+    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+    const [mascotHover, setMascotHover] = useState(false);
+
+    const derivedNodeCount = nodeStates
+        ? nodeStates.length
+        : (propNodeCount ?? Math.max(3, Math.min(steps.length, 7))); // keep the floor for chat only
+    const nodeCount = Math.max(1, Math.min(7, derivedNodeCount || 5)); // was Math.max(3, ...)
 
     const controlled = activeIndex !== undefined;
     const idx = nodeStates ? nodeStates.indexOf('current') : -1;
@@ -160,7 +168,17 @@ export function AgentJourney(props: AgentJourneyProps) {
             };
         });
         setPointsPct(pts);
-    }, [nodeCount, nodePositions]);
+        const per = waypointsPerGap ?? 0;
+        const wps: { x: number; y: number; t: number }[] = [];
+        for (let i = 0; i < pts.length - 1; i++) {
+            for (let k = 1; k <= per; k++) {
+                const tt = pts[i].t + ((pts[i + 1].t - pts[i].t) * k) / (per + 1);
+                const p = pathRef.current!.getPointAtLength(tt * 0.5 * len);
+                wps.push({ x: ((p.x - box.x) / box.w) * 100, y: ((p.y - box.y) / box.h) * 100, t: tt });
+            }
+        }
+        setWaypoints(wps);
+    }, [nodeCount, nodePositions, waypointsPerGap]);
 
     useEffect(() => {
         if (controlled || !autoPlay || internal >= total) return;
@@ -206,7 +224,10 @@ export function AgentJourney(props: AgentJourneyProps) {
     const mp = pointsPct[mascotIndex] ?? { x: 50, y: 0, t: 0 };
     const bubbleSide: 'left' | 'right' = mp.x > 50 ? 'left' : 'right';
 
-    const currentMascotVariant = MASCOT_VARIANTS[mascotIndex % MASCOT_VARIANTS.length] || "OK.png";
+    const isHappy = mascotHover || (hoverIdx !== null && hoverIdx === mascotIndex);
+    const currentMascotVariant = isHappy
+        ? "Motivated.png"
+        : (MASCOT_VARIANTS[mascotIndex % MASCOT_VARIANTS.length] || "OK.png");
     const bubbleText = finished ? finishText : steps[mascotIndex]?.text ?? '';
     const shouldShowBubble = showBubble && (current >= 0 || finished) && bubbleText;
 
@@ -254,6 +275,17 @@ export function AgentJourney(props: AgentJourneyProps) {
                     viewBox={vbString}
                     preserveAspectRatio="none"
                 >
+                    {roadWidth && (
+                        <motion.path
+                            d={pathD}
+                            fill="none"
+                            strokeWidth={roadWidth}
+                            strokeLinecap="round"
+                            stroke={roadColor}
+                            vectorEffect="non-scaling-stroke"
+                            initial={{ pathLength: 0.5 }}
+                        />
+                    )}
                     {/* Background path */}
                     <motion.path
                         ref={pathRef}
@@ -281,6 +313,46 @@ export function AgentJourney(props: AgentJourneyProps) {
                     )}
                 </svg>
 
+                {decorations && (
+                    <>
+                        <div
+                            className="absolute inset-0 opacity-40 pointer-events-none"
+                            style={{
+                                backgroundImage: 'radial-gradient(var(--color-chrome-accent) 1.5px, transparent 1.5px)',
+                                backgroundSize: '20px 20px',
+                            }}
+                        />
+                        {[
+                            { icon: 'cloud-outline', left: '6%', top: '10%', size: 'text-4xl', delay: 0 },
+                            { icon: 'star-outline', left: '88%', top: '8%', size: 'text-2xl', delay: 0.6 },
+                            { icon: 'leaf-outline', left: '92%', top: '78%', size: 'text-3xl', delay: 1.2 },
+                            { icon: 'planet-outline', left: '5%', top: '82%', size: 'text-3xl', delay: 1.8 },
+                            { icon: 'sparkles-outline', left: '48%', top: '4%', size: 'text-xl', delay: 0.3 },
+                        ].map((d) => (
+                            <motion.span
+                                key={d.icon}
+                                className={cn('absolute text-chrome-accent pointer-events-none', d.size)}
+                                style={{ left: d.left, top: d.top }}
+                                animate={{ y: [0, -6, 0] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: d.delay }}
+                            >
+                                <Icon name={d.icon} />
+                            </motion.span>
+                        ))}
+                    </>
+                )}
+
+                {viewBox && waypoints.map((w, i) => (
+                    <span
+                        key={i}
+                        className={cn(
+                            'absolute w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 border-2 transition-colors duration-500',
+                            w.t <= baseCurrentFraction ? 'bg-chrome border-chrome' : 'bg-surface border-chrome-accent'
+                        )}
+                        style={{ left: `${w.x}%`, top: `${w.y}%` }}
+                    />
+                ))}
+
                 {/* Nodes + labels - only render when viewBox is measured to prevent flash */}
                 {viewBox && pointsPct.map((p, i) => {
                     const isActive = nodeStates ? nodeStates[i] === 'current' : (i === current);
@@ -292,15 +364,13 @@ export function AgentJourney(props: AgentJourneyProps) {
                     const handleNodeClick = (e: React.MouseEvent | React.KeyboardEvent) => {
                         e.stopPropagation();
                         if (!interactive || !onNodeClick) return;
-                        if (isLocked) return;
                         const idToPass = levelIds ? (levelIds[i] ?? `level-${i + 1}`) : `level-${i + 1}`;
                         onNodeClick(idToPass, i);
                     };
 
                     const interactiveProps = interactive ? {
                         role: "button",
-                        tabIndex: isLocked ? -1 : 0,
-                        "aria-disabled": isLocked,
+                        tabIndex: 0,
                         "aria-label": `Level ${i + 1}, ${stateName}`,
                         onClick: handleNodeClick,
                         onKeyDown: (e: React.KeyboardEvent) => {
@@ -321,26 +391,38 @@ export function AgentJourney(props: AgentJourneyProps) {
                             key={i}
                             className={cn(
                                 "absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 group",
-                                interactive && !isLocked && "cursor-pointer focus-visible:ring-2 focus-visible:outline-none ring-chrome-accent ring-offset-4 rounded-full",
-                                interactive && isLocked && "focus-visible:ring-2 focus-visible:outline-none ring-carbon-400 ring-offset-4 rounded-full"
+                                interactive && "cursor-pointer focus-visible:ring-2 focus-visible:outline-none ring-chrome ring-offset-4 rounded-full"
                             )}
                             style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                            onMouseEnter={() => setHoverIdx(i)}
+                            onMouseLeave={() => setHoverIdx(null)}
+                            onFocus={() => setHoverIdx(i)}
+                            onBlur={() => setHoverIdx(null)}
                             {...interactiveProps}
                         >
-                            <div className="relative flex items-center justify-center" style={{ width: actualNodeSize, height: actualNodeSize }}>
-                                {isActive && (
-                                    <motion.div
-                                        className="absolute inset-0 rounded-full bg-navy-700/30"
-                                        animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
-                                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+                            <div
+                                className={cn("relative flex items-center justify-center", isActive && "rounded-full ring-4 ring-chrome-accent")}
+                                style={{ width: actualNodeSize, height: actualNodeSize }}
+                            >
+                                {isActive && [0, 1].map((r) => (
+                                    <motion.span
+                                        key={r}
+                                        aria-hidden
+                                        className="absolute inset-0 rounded-full bg-chrome-accent/50 pointer-events-none"
+                                        initial={{ scale: 1, opacity: 0.6 }}
+                                        animate={{ scale: 1.7, opacity: 0 }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeOut', delay: r }}
                                     />
-                                )}
+                                ))}
                                 <motion.img
                                     src={NODE_IMG}
                                     alt="Node"
-                                    animate={{ scale: (isActive && interactive) ? 1.15 : (isActive ? 1.2 : 1) }}
+                                    animate={{ scale: isActive ? [1.08, 1.2, 1.08] : 1 }}
+                                    transition={isActive
+                                        ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+                                        : { duration: 0.3 }}
                                     className={cn(
-                                        'relative w-full h-full object-contain transition-all duration-300',
+                                        'relative w-full h-full object-contain transition-[filter,opacity] duration-300',
                                         isDone && 'opacity-100 grayscale-0',
                                         isActive && 'opacity-100 grayscale-0',
                                         isUpcoming && 'opacity-80 grayscale',
@@ -363,6 +445,15 @@ export function AgentJourney(props: AgentJourneyProps) {
                                         Complete the previous level first
                                     </div>
                                 )}
+
+                                {decorations && i === pointsPct.length - 1 && (
+                                    <div
+                                        className="absolute -top-2 -left-2 w-8 h-8 rounded-full bg-chrome text-on-chrome flex items-center justify-center shadow-card z-10"
+                                        title="Sprint finish"
+                                    >
+                                        <Icon name="trophy" className="text-base" />
+                                    </div>
+                                )}
                             </div>
                             <div
                                 className={cn(
@@ -373,6 +464,9 @@ export function AgentJourney(props: AgentJourneyProps) {
                                 style={{ top: '100%', marginTop: 3, fontSize: labelSize, padding: '4px 10px' }}
                             >
                                 {labelString}
+                                {levelTitles?.[i] && (
+                                    <span className="block text-[10px] font-medium opacity-70 max-w-[110px] truncate">{levelTitles[i]}</span>
+                                )}
                             </div>
                         </div>
                     );
@@ -414,6 +508,8 @@ export function AgentJourney(props: AgentJourneyProps) {
                     <motion.div
                         className="absolute z-10 -translate-x-1/2 -translate-y-full mb-6"
                         style={{ left: mascotLeft, top: mascotTop, width: mascotSize, height: mascotSize }}
+                        onMouseEnter={() => setMascotHover(true)}
+                        onMouseLeave={() => setMascotHover(false)}
                     >
                         <motion.div
                             animate={finished ? { y: [0, -4, 0] } : { rotate: [-2, 2, -2] }}
@@ -460,6 +556,20 @@ export function AgentJourney(props: AgentJourneyProps) {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+
+                        {interactive && isHappy && !finished && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.85 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="absolute top-0 w-max bg-navy-700 text-white text-xs font-bold px-3 py-2 rounded-card shadow-sm pointer-events-none"
+                                style={bubbleSide === 'right'
+                                    ? { left: '100%', marginLeft: 10 }
+                                    : { right: '100%', marginRight: 10 }}
+                            >
+                                Let's go!
+                            </motion.div>
+                        )}
                     </motion.div>
                 )}
             </div>
@@ -471,6 +581,10 @@ export function ChatJourney(props: Omit<AgentJourneyProps, 'variant'>) {
     return <AgentJourney variant="chat" {...props} />;
 }
 
-export function SprintMap({ nodeStates, onNodeClick, levelIds, className }: { sprintId?: string, nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[], onNodeClick?: (levelId: string, index: number) => void, levelIds?: string[], className?: string }) {
-    return <AgentJourney variant="sprint" nodeStates={nodeStates} onNodeClick={onNodeClick} levelIds={levelIds} className={className} />;
+export function SprintMap({ nodeStates, onNodeClick, levelIds, levelTitles, className }: {
+    sprintId?: string; nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[];
+    onNodeClick?: (levelId: string, index: number) => void; levelIds?: string[];
+    levelTitles?: string[]; className?: string;
+}) {
+    return <AgentJourney variant="sprint" nodeStates={nodeStates} onNodeClick={onNodeClick} levelIds={levelIds} levelTitles={levelTitles} className={className} />;
 }

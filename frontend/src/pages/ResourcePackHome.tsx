@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Mascot } from "../components/ui/Mascot";
 import { ChatInput } from "../components/chat/ChatInput";
 import { DirectorySearch } from "../components/resources/DirectorySearch";
 import { FolderTile } from "../components/resources/FolderIcon";
@@ -25,13 +28,23 @@ export function ResourcePackHome() {
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <header className="bg-white border-b border-border px-4 md:px-8 py-5 shrink-0 shadow-xs">
-        <h1 className="text-xl md:text-2xl font-extrabold text-carbon-900 tracking-tight">Resource Pack</h1>
-      </header>
+      <div className="flex-1 overflow-y-auto safe-area-bottom">
+        <div className="w-full px-6 md:px-12 py-6 md:py-8 space-y-10 pb-12">
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 safe-area-bottom">
-        <div className="max-w-5xl mx-auto space-y-10 pb-16">
+          {/* Header */}
+          <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center gap-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-carbon-900 mb-2">Resource Pack</h1>
+              <p className="text-base md:text-lg text-carbon-700 font-medium max-w-xl">
+                All your sprint notes, links and references in one place.
+              </p>
+            </div>
+            <div className="hidden sm:flex shrink-0">
+              <Mascot size="lg" variant="working.png" className="bg-surface border border-border rounded-full p-2" />
+            </div>
+          </Card>
 
+          {/* Directory */}
           <section className="space-y-5">
             <h2 className="text-xl font-bold text-carbon-900 flex items-center gap-2 border-b border-border pb-3">
               <Icon name="folder-open" className="text-chrome" /> Resource Directory
@@ -40,7 +53,7 @@ export function ResourcePackHome() {
             <DirectorySearch value={query} onChange={setQuery} />
 
             {shown.length === 0 ? (
-              <div className="text-center py-10 text-navy-300">No results found.</div>
+              <div className="text-center py-10 text-carbon-500">No results found.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {shown.map((f) => (
@@ -51,14 +64,16 @@ export function ResourcePackHome() {
 
             {!q && (
               <div className="flex justify-center">
-                <Link to="/resource-pack/notes"
-                  className="px-6 py-2.5 bg-lavender-100 hover:bg-chrome-accent/40 text-chrome text-sm font-bold rounded-xl border border-border transition-colors">
-                  View more
+                <Link to="/resource-pack/notes">
+                  <Button variant="outline" className="border gap-2">
+                    View more <Icon name="arrow-forward" />
+                  </Button>
                 </Link>
               </div>
             )}
           </section>
 
+          {/* Ask */}
           <section className="space-y-5 pt-4">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-extrabold text-carbon-900">Ask your Resources</h2>
@@ -70,7 +85,7 @@ export function ResourcePackHome() {
             <div className="flex flex-wrap gap-2 justify-center max-w-3xl mx-auto">
               {SUGGESTED_QUESTIONS.map((s) => (
                 <button key={s} onClick={() => handleSend(s)}
-                  className="px-4 py-2 bg-white border border-border rounded-full text-xs font-bold text-chrome hover:bg-lavender-100 transition-colors">
+                  className="px-4 py-2 bg-surface border border-border rounded-full text-xs font-bold text-chrome hover:bg-lavender-100 transition-colors">
                   {s}
                 </button>
               ))}
