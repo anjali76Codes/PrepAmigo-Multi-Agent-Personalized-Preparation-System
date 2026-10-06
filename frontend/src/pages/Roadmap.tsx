@@ -223,12 +223,12 @@ export function Roadmap() {
             assessIdx++;
           }
         }
-        const firstOpenId = allLevels.find((l) => l.allDays.some((d) => d.status !== 'completed'))?.id;
+        const firstOpenId = allLevels.find((l) => l.allDays.some((d: any) => d.status !== 'completed'))?.id;
 
         const levels = allLevels
           .map((l) => ({
             ...l,
-            days: l.allDays.filter((p) => {
+            days: l.allDays.filter((p: any) => {
               const matchesSearch =
                 p.topic_title.toLowerCase().includes(q) || p.topic_description.toLowerCase().includes(q);
               const matchesStatus =
@@ -469,7 +469,7 @@ export function Roadmap() {
                           <ul className="p-4 md:p-6 ml-1">
                             {sprint.levels.map((level, li) => {
                               const open = isLevelOpen(sprint._id, level.id, sprint.firstOpenId);
-                              const doneCount = level.allDays.filter((d) => d.status === 'completed').length;
+                              const doneCount = level.allDays.filter((d: any) => d.status === 'completed').length;
                               const levelComplete = doneCount === level.allDays.length;
 
                               return (
@@ -507,7 +507,7 @@ export function Roadmap() {
                                         className="overflow-hidden"
                                       >
                                         <ul className="pt-3">
-                                          {level.days.map((day, di) => (
+                                          {level.days.map((day: any, di: number) => (
                                             <TreeItem key={day._id} top={28} done={day.status === 'completed'} last={di === level.days.length - 1} delay={0.05 + di * 0.08}>
                                               <div id={`prob-${day._id}`}>
                                                 <DayTaskCard
