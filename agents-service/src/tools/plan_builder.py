@@ -34,6 +34,7 @@ MINUTES_PER_EFFORT = {"High": 90, "Medium": 60}
 DEFAULT_MINUTES = 60
 KEY_CONCEPTS_PER_TOPIC = 8
 MAX_OBJECTIVES_PER_DAY = 4
+MAX_DAY_CONCEPTS = 8
 
 # research resource_type -> the backend's reference `type` enum
 REFERENCE_TYPES = {
@@ -497,6 +498,9 @@ def assemble_plan(
                 "objectives": [clip(o, 500) for o in day["objectives"] if str(o).strip()][:MAX_OBJECTIVES_PER_DAY],
                 "estimated_minutes": MINUTES_PER_EFFORT.get(topic["effort"], DEFAULT_MINUTES),
                 "references": entry["references"],
+                # the topic's key concepts: ground the day's quiz and flashcards,
+                # and tie quiz results to concepts in the knowledge graph
+                "concepts": [clip(c, 120) for c in topic["concepts"]][:MAX_DAY_CONCEPTS],
                 "status": "pending",
                 "completed_at": None,
             })

@@ -11,6 +11,7 @@ class Flashcard(BaseModel):
     difficulty: Optional[str] = None
     category: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
+    concept: Optional[str] = None
 
 class Flashcards(BaseModel):
     version: str = "1.0"

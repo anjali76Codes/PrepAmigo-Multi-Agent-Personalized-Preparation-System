@@ -10,16 +10,27 @@ Schema
           User     -MASTERED->                   learning node
           learning -REQUIRES->                   learning node  (prerequisite)
           Resource -COVERS->                     learning node
+          Concept  -PART_OF->                    Topic
 
 Learning nodes (Topic/Concept/Skill/Technology) are keyed by normalised
 name, so "System Design" and "system design" are one node whatever its type.
 
 Agents talk to UserKnowledgeGraph only. Storage goes through
-BaseGraphStore, whose primitives map 1:1 onto Cypher MERGE / MATCH, so a
-Neo4j or Memgraph store can replace InMemoryGraphStore without changing
-anything above it.
+BaseGraphStore, whose primitives map 1:1 onto Cypher MERGE / MATCH:
+InMemoryGraphStore here, Neo4jGraphStore (graph/neo4j_store.py) when
+NEO4J_URI is set. get_knowledge_graph() picks one; a Neo4j that can't be
+reached falls back to memory with one warning.
+
+Who writes and reads it (all best effort: a graph problem never fails a
+run or a request):
+  - skill gap      record_skill_gap: first evidence of each required skill
+  - planner        record_plan: topics, their concepts and resources
+  - quiz attempts  record_attempt (POST /internal/knowledge/attempt):
+                   per-concept proficiency, a running average
+  - study material study_context: the user's weak and mastered concepts
 """
 import json
+import logging
 import threading
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -31,6 +42,8 @@ from typing import Any
 from typing_extensions import TypedDict
 
 from core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class NodeType(str, Enum):
@@ -49,6 +62,7 @@ class EdgeType(str, Enum):
     MASTERED = "MASTERED"
     REQUIRES = "REQUIRES"
     COVERS = "COVERS"
+    PART_OF = "PART_OF"
 
 
 LEARNING_NODE_TYPES = {NodeType.TOPIC, NodeType.CONCEPT, NodeType.SKILL, NodeType.TECHNOLOGY}
@@ -57,6 +71,14 @@ LEARNING_NODE_TYPES = {NodeType.TOPIC, NodeType.CONCEPT, NodeType.SKILL, NodeTyp
 WEAK_BELOW = 0.4
 PROFICIENT_AT = 0.7
 MASTERED_AT = 0.85
+# what a skill-gap verdict says about a skill before any quiz evidence
+SKILL_GAP_PROFICIENCY = {"strong": 0.8, "partial": 0.5, "missing": 0.1}
+# weight of the newest quiz result in a concept's running average
+ATTEMPT_WEIGHT = 0.5
+
+NodeOp = tuple[str, str, dict[str, Any]]           # (id, type, properties) created if missing
+EdgeOp = tuple[str, str, str, dict[str, Any]]      # (source, relation, target, properties) upserted
+DeleteOp = tuple[str, str, str]                    # (source, relation, target) removed
 
 
 class GraphNode(TypedDict):
@@ -104,6 +126,18 @@ class BaseGraphStore(ABC):
         self, source: str | None = None, relation: str | None = None, target: str | None = None
     ) -> list[GraphEdge]:
         """Edges matching every filter that is not None."""
+
+    def apply(self, nodes: list[NodeOp] = (), edges: list[EdgeOp] = (), deletes: list[DeleteOp] = ()) -> None:
+        """A batch of writes: nodes created when missing (an existing node
+        keeps its type and properties), then edges upserted, then edges
+        removed. A remote store does each group in one round trip."""
+        for node_id, node_type, properties in nodes:
+            if self.get_node(node_id) is None:
+                self.upsert_node(node_id, node_type, properties)
+        for source, relation, target, properties in edges:
+            self.upsert_edge(source, relation, target, properties)
+        for source, relation, target in deletes:
+            self.delete_edge(source, relation, target)
 
 
 class InMemoryGraphStore(BaseGraphStore):
@@ -334,6 +368,123 @@ class UserKnowledgeGraph:
             visit(_learning_id(skill), skill.strip())
         return gaps
 
+    # ---- batch writes (one store round trip per group) -------------------
+
+    def record_scores(self, user_id: str, scores: dict[str, float], node_type: NodeType = NodeType.CONCEPT) -> None:
+        """update_proficiency for many nodes at once."""
+        if not scores:
+            return
+        user, now = _user_id(user_id), _now()
+        nodes: list[NodeOp] = [(user, NodeType.USER.value, {"user_id": user_id.strip()})]
+        edges: list[EdgeOp] = []
+        deletes: list[DeleteOp] = []
+        for name, score in scores.items():
+            score = min(1.0, max(0.0, float(score)))
+            node = _learning_id(name)
+            nodes.append((node, node_type.value, {"name": name.strip()}))
+            edges.append((user, EdgeType.KNOWS.value, node, {"proficiency": round(score, 3), "updated_at": now}))
+            if score < WEAK_BELOW:
+                edges.append((user, EdgeType.WEAK_IN.value, node, {"since": now}))
+            else:
+                deletes.append((user, EdgeType.WEAK_IN.value, node))
+            if score >= MASTERED_AT:
+                edges.append((user, EdgeType.MASTERED.value, node, {"since": now}))
+                deletes.append((user, EdgeType.STUDYING.value, node))
+            else:
+                deletes.append((user, EdgeType.MASTERED.value, node))
+        self.store.apply(nodes, edges, deletes)
+
+    def _proficiencies(self, user_id: str) -> dict[str, float]:
+        """Node id -> the user's current proficiency (one store read)."""
+        edges = self.store.get_edges(source=_user_id(user_id), relation=EdgeType.KNOWS.value)
+        return {e["target"]: float(e["properties"].get("proficiency", 0.0)) for e in edges}
+
+    def record_skill_gap(self, user_id: str, report: dict[str, Any]) -> int:
+        """A skill-gap report as first evidence: strong 0.8, partial 0.5,
+        missing 0.1 (WEAK_IN). A skill the user already has a proficiency
+        for keeps it: quiz results are better evidence than a resume read."""
+        known = self._proficiencies(user_id)
+        scores: dict[str, float] = {}
+        for key, status in (("matched_skills", "strong"), ("partial_skills", "partial"), ("missing_skills", "missing")):
+            for item in report.get(key) or []:
+                name = str(item.get("skill_name") or item.get("skill") or "").strip() if isinstance(item, dict) else ""
+                if name and _learning_id(name) not in known:
+                    scores[name] = SKILL_GAP_PROFICIENCY[status]
+        self.record_scores(user_id, scores, NodeType.SKILL)
+        return len(scores)
+
+    def record_plan(self, user_id: str, topics: list[dict[str, Any]]) -> int:
+        """A planned topic set: each topic, its key concepts (PART_OF), its
+        resources (COVERS), and the user STUDYING it."""
+        user, now = _user_id(user_id), _now()
+        nodes: list[NodeOp] = [(user, NodeType.USER.value, {"user_id": user_id.strip()})]
+        edges: list[EdgeOp] = []
+        for topic in topics:
+            name = str(topic.get("name") or "").strip()
+            if not name:
+                continue
+            node = _learning_id(name)
+            nodes.append((node, NodeType.TOPIC.value, {"name": name}))
+            resource_ids = []
+            for concept in topic.get("concepts") or []:
+                if isinstance(concept, str) and concept.strip():
+                    concept_id = _learning_id(concept)
+                    nodes.append((concept_id, NodeType.CONCEPT.value, {"name": concept.strip()}))
+                    edges.append((concept_id, EdgeType.PART_OF.value, node, {}))
+            for ref in topic.get("references") or []:
+                url = str(ref.get("url") or "").strip()
+                if url:
+                    resource_id = f"resource:{url}"
+                    resource_ids.append(resource_id)
+                    nodes.append((resource_id, NodeType.RESOURCE.value,
+                                  {"title": str(ref.get("title") or "")[:300], "url": url,
+                                   "kind": str(ref.get("type") or "")}))
+                    edges.append((resource_id, EdgeType.COVERS.value, node, {}))
+            edges.append((user, EdgeType.STUDYING.value, node,
+                          {"resource_ids": list(dict.fromkeys(resource_ids)), "last_studied_at": now}))
+        self.store.apply(nodes, edges)
+        return len(nodes) - 1
+
+    def record_attempt(self, user_id: str, results: list[dict[str, Any]]) -> dict[str, float]:
+        """Quiz or flashcard results ({"concept", "correct": bool} or
+        {"concept", "score": 0-1}) as per-concept proficiency: the share
+        right this time, averaged with what was known (ATTEMPT_WEIGHT for
+        the newest). Returns concept -> new proficiency."""
+        totals: dict[str, list[float]] = {}
+        for item in results:
+            concept = str(item.get("concept") or "").strip()
+            if not concept:
+                continue
+            value = item.get("score")
+            if value is None:
+                value = 1.0 if item.get("correct") else 0.0
+            totals.setdefault(concept, []).append(min(1.0, max(0.0, float(value))))
+        if not totals:
+            return {}
+        known = self._proficiencies(user_id)
+        scores = {}
+        for concept, values in totals.items():
+            now = sum(values) / len(values)
+            before = known.get(_learning_id(concept))
+            scores[concept] = now if before is None else before * (1 - ATTEMPT_WEIGHT) + now * ATTEMPT_WEIGHT
+        self.record_scores(user_id, scores, NodeType.CONCEPT)
+        return {k: round(v, 3) for k, v in scores.items()}
+
+    def study_context(self, user_id: str, concepts: list[str] | None = None, limit: int = 8) -> dict[str, list[str]]:
+        """The user's weak and mastered concepts (one store read), limited
+        to `concepts` when given: what a quiz should test more, or skip."""
+        wanted = {_learning_id(c): c.strip() for c in concepts or [] if isinstance(c, str) and c.strip()}
+        edges = self.store.get_edges(source=_user_id(user_id))
+        found: dict[str, list[str]] = {"weak": [], "mastered": []}
+        for edge in edges:
+            key = {"WEAK_IN": "weak", "MASTERED": "mastered"}.get(edge["relation"])
+            if key is None or (wanted and edge["target"] not in wanted):
+                continue
+            name = wanted.get(edge["target"]) or edge["target"].removeprefix("learn:")
+            if name not in found[key]:
+                found[key].append(name)
+        return {key: names[:limit] for key, names in found.items()}
+
     # ---- internals -------------------------------------------------------
 
     def _is_unresolved(self, user: str, node: str) -> bool:
@@ -385,6 +536,49 @@ def _learning_id(name: str) -> str:
 
 @lru_cache(maxsize=1)
 def get_knowledge_graph() -> UserKnowledgeGraph:
-    """Process-wide knowledge graph backed by KNOWLEDGE_GRAPH_PATH (or
-    process memory when unset)."""
+    """Process-wide knowledge graph: Neo4j when NEO4J_URI is set and
+    reachable, else KNOWLEDGE_GRAPH_PATH (or process memory)."""
+    if settings.neo4j_uri:
+        try:
+            from graph.neo4j_store import Neo4jGraphStore
+
+            return UserKnowledgeGraph(Neo4jGraphStore(
+                settings.neo4j_uri, settings.neo4j_username, settings.neo4j_password, settings.neo4j_database))
+        except Exception as exc:
+            logger.warning("Knowledge graph: Neo4j unavailable (%s); using in-memory storage for this process",
+                           str(exc)[:200] or type(exc).__name__)
     return UserKnowledgeGraph(InMemoryGraphStore(settings.knowledge_graph_path or None))
+
+
+async def best_effort(action: str, fn, *args, timeout: float = 15.0) -> Any:
+    """Run a (blocking) graph call off the event loop; a graph problem is
+    logged as one line and returns None, never fails the caller."""
+    import asyncio
+
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=timeout)
+    except Exception as exc:
+        logger.warning("Knowledge graph: %s skipped (%s)", action, str(exc)[:200] or type(exc).__name__)
+        return None
+
+
+_background: set[Any] = set()
+
+
+def record_in_background(action: str, method_name: str, *args: Any) -> None:
+    """Run get_knowledge_graph().<method_name>(*args) without the caller
+    waiting (best effort, one line logged on failure). The task is kept
+    referenced until it finishes."""
+    import asyncio
+
+    async def run() -> None:
+        graph = await best_effort("opening the graph", get_knowledge_graph)
+        if graph is not None:
+            await best_effort(action, getattr(graph, method_name), *args)
+
+    try:
+        task = asyncio.get_running_loop().create_task(run())
+    except RuntimeError:
+        return  # no event loop: nothing to schedule on
+    _background.add(task)
+    task.add_done_callback(_background.discard)

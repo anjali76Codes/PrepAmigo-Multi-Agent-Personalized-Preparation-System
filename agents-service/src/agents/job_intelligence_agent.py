@@ -19,7 +19,6 @@ from tools.serpapi_client import serpapi_search, using_dummy_data
 
 logger = logging.getLogger(__name__)
 
-_mongo_client: Any | None = None
 
 
 class JobIntelligenceInput(BaseModel):

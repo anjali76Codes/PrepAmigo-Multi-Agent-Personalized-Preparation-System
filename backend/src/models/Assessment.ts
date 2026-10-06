@@ -7,6 +7,8 @@ export interface IAssessmentQuestion {
   explanation: string;
   difficulty: "easy" | "medium" | "hard";
   type: string;
+  // the concept the question tests (feeds the user's knowledge graph)
+  concept?: string;
   // User tracking fields
   is_attempted: boolean;
   user_answer?: string;
@@ -40,6 +42,7 @@ const assessmentQuestionSchema = new Schema<IAssessmentQuestion>(
       default: "medium",
     },
     type: { type: String, default: "mcq" },
+    concept: { type: String, trim: true },
     is_attempted: { type: Boolean, default: false },
     user_answer: { type: String, trim: true },
     is_correct: { type: Boolean },

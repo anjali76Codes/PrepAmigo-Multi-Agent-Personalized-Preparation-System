@@ -6,13 +6,15 @@ from pathlib import Path
 import motor.motor_asyncio
 from dotenv import load_dotenv
 
-_src_dir = str(Path(__file__).resolve().parent.parent)
+_src_dir = str(Path(__file__).resolve().parent.parent / "src")
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-load_dotenv(Path(_src_dir).parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb+srv://ganjali9877_db_user:asdfghjkl@travelamigo-cluster.ymfdokn.mongodb.net/database")
+MONGO_URI = os.getenv("MONGODB_URI", "").strip()
+if not MONGO_URI:
+    sys.exit("Set MONGODB_URI (the backend's MongoDB connection string) in agents-service/.env")
 
 async def main():
     client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI)

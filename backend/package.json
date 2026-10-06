@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test:job-intel": "tsx src/scripts/test-job-intelligence.ts"
+    "test:job-intel": "tsx src/scripts/test-job-intelligence.ts",
+    "backfill:study-material": "tsx src/scripts/backfillStudyMaterial.ts"
   },
   "keywords": [],
   "author": "",

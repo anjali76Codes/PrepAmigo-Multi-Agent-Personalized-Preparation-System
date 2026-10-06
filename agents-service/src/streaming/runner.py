@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional
 
 from core.config import settings
 from observability.metrics import collect_metrics
-from tools.plan_db_sync import backend_auth
+from tools.plan_db_sync import backend_auth, persisted_by_backend
 
 from .models import EventType
 from .publisher import EventPublisher, get_event_publisher
@@ -232,7 +232,8 @@ async def execute_agent_stream(
     try:
         # auth_token: the requesting user's token, for saving their plan
         # through the backend (tools/plan_db_sync.py)
-        with collect_metrics() as run_metrics, backend_auth(auth_token):
+        # the backend saves this run's plan from its `completed` event
+        with collect_metrics() as run_metrics, backend_auth(auth_token), persisted_by_backend():
             try:
                 async for event_type, payload in bridge_graph_turn(graph, inputs, config):
                     await pub.emit_event(run_id=run_id, event_type=event_type, payload=payload)

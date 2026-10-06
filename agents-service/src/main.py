@@ -21,11 +21,12 @@ from graph.errors import friendly_error_detail
 from observability import configure_logging
 from streaming.publisher import get_event_publisher
 from streaming.runner import execute_agent_stream
-from core.auth import verify_token
+from core.auth import resolve_user_id, verify_token
 from core.config import settings
 from routers.job_intelligence_router import router as job_intelligence_router
 from routers.skill_gap_router import router as skill_gap_router
 from routers.stream_router import router as stream_router
+from routers.study_material_router import router as study_material_router
 from agents.interview_prep_fields import WORKFLOW_FIELDS
 
 configure_logging()
@@ -130,6 +131,7 @@ if cors_origins:
 app.include_router(job_intelligence_router, tags=["Job Intelligence"])
 app.include_router(skill_gap_router, tags=["Skill Gap"])
 app.include_router(stream_router, tags=["Streaming"])
+app.include_router(study_material_router, tags=["Study material"])
 
 START_TIME = time.time()
 

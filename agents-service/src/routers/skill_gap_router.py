@@ -1,12 +1,10 @@
 import json
 import logging
 import io
-from datetime import datetime
 from typing import Any, List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
 
-import pymongo
 
 from core.config import settings, get_llm
 from core.auth import verify_token
@@ -16,16 +14,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# MongoDB setup (lazy initialization — only used when MONGO_ENABLED=true)
-_mongo_client = None
-
-def get_db():
-    global _mongo_client
-    if not _mongo_client:
-        _mongo_client = pymongo.MongoClient(settings.mongo_uri)
-    return _mongo_client["prepamigo"]
-
-# ----------------- PDF / DOCX Parsing -----------------
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     import pypdf
     reader = pypdf.PdfReader(io.BytesIO(file_bytes))
@@ -238,28 +226,6 @@ async def analyze_skill_gap(
     else:
         score = (len(matched_skills) * 1.0 + len(partial_skills) * 0.5) / total_required
         readiness_score = int(min(100, max(0, score * 100)))
-
-    # Store in MongoDB only when explicitly enabled via MONGO_ENABLED=true
-    if settings.mongo_enabled:
-        try:
-            db = get_db()
-            db.skill_gap_reports.insert_one({
-                "timestamp": datetime.utcnow(),
-                "resume_text": resume_text,
-                "candidate_profile": candidate_profile,
-                "gap_report": {
-                    "matched_skills": matched_skills,
-                    "partial_skills": partial_skills,
-                    "missing_skills": missing_skills,
-                    "extra_skills": extra_skills,
-                    "priority_gaps": priority_gaps,
-                    "readiness_score": readiness_score,
-                    "coverage": coverage
-                }
-            })
-        except Exception as e:
-            logger.error("Failed to store skill-gap report in MongoDB: %s", e)
-            # non-fatal: the response is returned regardless
 
     report_data = {
         "matched_skills": matched_skills,

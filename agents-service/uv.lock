@@ -963,6 +963,18 @@ wheels = [
 ]
 
 [[package]]
+name = "neo4j"
+version = "6.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytz" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/db/024bd576bde5d97436d0acb71b41cf928c036ed8fec95ea1122eb05e47d1/neo4j-6.4.0.tar.gz", hash = "sha256:056676698f080b5af5b24b0fc5abb485b8db1b95edf366d01dcfd63bcff9b71d", size = 287786, upload-time = "2026-10-05T15:37:45.216Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/5d/519aefe3b38a490924641e980a16ea6c70f6c96c08d84cf661d32c4a08c2/neo4j-6.4.0-py3-none-any.whl", hash = "sha256:fdd048ba827be138063b045cf59e40056fbf0405ac02dadc24f64e369fbd9d3d", size = 390611, upload-time = "2026-10-05T15:37:43.491Z" },
+]
+
+[[package]]
 name = "numpy"
 version = "2.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1323,9 +1335,8 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langgraph" },
     { name = "mem0ai" },
-    { name = "motor" },
+    { name = "neo4j" },
     { name = "pyjwt" },
-    { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
     { name = "python-dotenv" },
@@ -1338,6 +1349,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
+    { name = "motor" },
     { name = "pytest" },
 ]
 
@@ -1350,9 +1362,8 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=0.2.0" },
     { name = "langgraph", specifier = ">=0.2.0" },
     { name = "mem0ai", specifier = ">=2.0.0" },
-    { name = "motor", specifier = ">=3.7.1" },
+    { name = "neo4j", specifier = ">=5.20" },
     { name = "pyjwt", specifier = ">=2.8.0" },
-    { name = "pymongo", specifier = ">=4.18.2" },
     { name = "pypdf", specifier = ">=6.19.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
@@ -1365,6 +1376,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "motor", specifier = ">=3.7.1" },
     { name = "pytest", specifier = ">=8.0.0" },
 ]
 

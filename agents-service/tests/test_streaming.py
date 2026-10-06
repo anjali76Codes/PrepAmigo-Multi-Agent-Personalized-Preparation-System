@@ -190,3 +190,26 @@ def test_the_execute_endpoint_passes_the_callers_token_on(client, monkeypatch):
                            headers={"Authorization": "Bearer user-jwt"})
 
     assert response.status_code == 200 and captured["auth_token"] == "Bearer user-jwt"
+
+
+@pytest.mark.anyio
+async def test_a_backend_started_run_leaves_saving_the_plan_to_the_backend(monkeypatch):
+    """The backend saves the plan from the `completed` event; a second save
+    from here created every plan twice."""
+    from tools import plan_db_sync
+
+    seen = {}
+
+    async def fake_bridge(graph, inputs, config):
+        seen["sync"] = await plan_db_sync.sync_generated_plan_to_db({"plan": {}}, base_url="http://unreachable.invalid")
+        return
+        yield  # pragma: no cover - makes this an async generator
+
+    monkeypatch.setattr("streaming.langgraph_bridge.bridge_graph_turn", fake_bridge)
+    publisher = EventPublisher()
+    publisher.emit_event = AsyncMock()
+
+    await execute_agent_stream(run_id="run-save", query="prep me", graph=MagicMock(), publisher=publisher,
+                               user_id="u1", use_dummy=False)
+
+    assert seen["sync"] == {"success": True, "mode": "delegated_to_backend"}  # no HTTP call made

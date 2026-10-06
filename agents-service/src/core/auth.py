@@ -1,5 +1,5 @@
 from fastapi import Header, HTTPException, Depends
-from typing import Optional
+from typing import Any, Optional
 
 import os
 import jwt
@@ -40,3 +40,15 @@ def verify_token(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized: Token has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid token")
+
+
+
+def resolve_user_id(auth_payload: Any, requested_user_id: str | None) -> str | None:
+    """Whose request this is: the verified token's user, or (with auth off)
+    the user id the caller named."""
+    if auth_payload is True:
+        return requested_user_id
+    if isinstance(auth_payload, dict):
+        value = auth_payload.get("sub") or auth_payload.get("id") or auth_payload.get("userId")
+        return str(value) if value else None
+    return None

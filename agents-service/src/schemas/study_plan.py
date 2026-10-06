@@ -89,6 +89,9 @@ class SprintDayEntity(_Strict):
     objectives: list[Objective] = Field(default_factory=list, max_length=30)
     estimated_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
     references: list[PlanReference] = Field(default_factory=list, max_length=50)
+    # the topic's key concepts (for study material and the knowledge graph)
+    concepts: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]] = Field(
+        default_factory=list, max_length=12)
     status: Status = "pending"
     completed_at: Optional[str] = None
 
@@ -202,6 +205,7 @@ class StudyPlan(_Strict):
                     "objectives": list(d.objectives),
                     "estimated_minutes": d.estimated_minutes,
                     "references": [r.model_dump(mode="json") for r in d.references],
+                    "concepts": list(d.concepts),
                     "status": d.status,
                     "completed_at": d.completed_at,
                 })

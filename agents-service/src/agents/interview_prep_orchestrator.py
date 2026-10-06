@@ -31,7 +31,8 @@ from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
 from tools.duration import extract_duration_days, resolve_plan_total_days
 from tools.plan_db_sync import sync_generated_plan_to_db
-from tools.plan_builder import plan_topics, schedule
+from graph.knowledge_graph import best_effort, get_knowledge_graph, record_in_background
+from tools.plan_builder import key_concepts, plan_topics, schedule
 
 logger = logging.getLogger(__name__)
 
@@ -579,6 +580,10 @@ class InterviewPrepOrchestrator:
                 self.skill_gap_agent.analyze(company_profile, job_intelligence, resume_text, company, role),
                 timeout=settings.interview_prep_branch_timeout_seconds,
             )
+            if state.get("user_id"):
+                gap_report = await drop_mastered_gaps(state["user_id"], gap_report)
+                # first evidence of each skill for the user's knowledge graph
+                record_in_background("recording the skill gap", "record_skill_gap", state["user_id"], gap_report)
             task_context["skill_gap"] = gap_report
             skill_gaps = [g["skill"] for g in gap_report.get("priority_gaps", []) if g.get("skill")]
         except Exception as exc:
@@ -784,7 +789,12 @@ class InterviewPrepOrchestrator:
                 # the plan is still in state; a disk problem shouldn't fail the run
                 logger.warning("Could not save study plan %s", output["id"], exc_info=True)
 
-        # Execute automated sequential DB sync to store plan in MongoDB
+        if state.get("user_id"):
+            # the plan's topics, concepts and resources for the knowledge graph
+            record_in_background("recording the plan", "record_plan", state["user_id"], plan_graph_topics(output))
+
+        # saved through the backend API for CLI runs; a run the backend
+        # started is saved by the backend itself (tools/plan_db_sync.py)
         db_sync_result = await sync_generated_plan_to_db(output)
         output["db_sync"] = db_sync_result
 
@@ -927,6 +937,42 @@ class InterviewPrepOrchestrator:
 
     async def __call__(self, state: dict[str, Any]) -> dict[str, Any]:
         return await self.prepare(state)
+
+
+async def drop_mastered_gaps(user_id: str, gap_report: dict[str, Any]) -> dict[str, Any]:
+    """The gap report without the gaps the user's knowledge graph says
+    they have mastered (from earlier quizzes): a re-plan spends no days on
+    them. Unchanged when the graph is unavailable or knows nothing."""
+    gaps = gap_report.get("priority_gaps") or []
+    names = [g.get("skill") for g in gaps if g.get("skill")]
+    if not names:
+        return gap_report
+    graph = await best_effort("opening the graph", get_knowledge_graph, timeout=5)
+    context = await best_effort("reading mastered skills", graph.study_context, user_id, names,
+                                timeout=5) if graph else None
+    mastered = {name.casefold() for name in (context or {}).get("mastered") or []}
+    if not mastered:
+        return gap_report
+    logger.info("Skill gap: %d gap(s) skipped as already mastered: %s", len(mastered), sorted(mastered))
+    return {**gap_report, "priority_gaps": [g for g in gaps if str(g.get("skill", "")).casefold() not in mastered],
+            "mastered_in_graph": sorted(mastered)}
+
+
+def plan_graph_topics(output: dict[str, Any]) -> list[dict[str, Any]]:
+    """The plan's topics for the knowledge graph: each with its key
+    concepts (from its learning module) and its resources."""
+    modules = {m.get("topic"): m for m in output.get("learning_modules") or [] if m.get("topic")}
+    topics = []
+    for name in (output.get("coverage") or {}).get("days_per_topic") or {}:
+        module = modules.get(name) or {}
+        topics.append({
+            "name": name,
+            "concepts": key_concepts(module.get("content_markdown") or ""),
+            "references": [{"url": r.get("url"), "title": r.get("title"), "type": kind}
+                           for kind, refs in (output.get("resource_pack") or {}).items()
+                           for r in refs if r.get("topic") == name],
+        })
+    return topics
 
 
 def route_after_prepare(state: dict[str, Any]) -> str:

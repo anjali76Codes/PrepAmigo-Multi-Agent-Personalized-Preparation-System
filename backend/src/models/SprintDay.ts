@@ -28,6 +28,8 @@ export interface ISprintDay extends Document {
   objectives: string[];
   estimated_minutes?: number;
   references: ISprintDayReference[];
+  // the topic's key concepts: ground the day's quiz and flashcards
+  concepts: string[];
   status: SprintDayStatus;
   completed_at: Date | null;
   assessment_id?: Types.ObjectId;
@@ -67,6 +69,7 @@ const sprintDaySchema = new Schema<ISprintDay>(
     objectives: { type: [String], default: [] },
     estimated_minutes: { type: Number, min: 1 },
     references: { type: [referenceSchema], default: [] },
+    concepts: { type: [String], default: [] },
     status: {
       type: String,
       enum: ["pending", "in_progress", "completed"],

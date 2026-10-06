@@ -56,6 +56,7 @@ export const sprintDayBodySchema = z.object({
   objectives: z.array(z.string().trim().min(1).max(500)).max(30).default([]),
   estimated_minutes: z.coerce.number().int().min(1).max(1440).optional().nullable(),
   references: z.array(referenceBodySchema).max(50).default([]),
+  concepts: z.array(z.string().trim().min(1).max(120)).max(12).default([]),
   status: z.enum(["pending", "in_progress", "completed"]).optional(),
   completed_at: z.coerce.date().optional().nullable(),
 }).passthrough();

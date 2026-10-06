@@ -12,7 +12,7 @@
 The **`agents-service`** is the multi-agent orchestration engine of PrepAmigo. It executes specialized AI agents (Company Research, Job Intelligence, Skill Gap Analysis, Content Research, and Study Plan Generation) and streams step-by-step telemetry over Redis to the Express backend and React frontend.
 
 ### Core Architectural Guarantees
-1. **100% Stateless & Database-Free**: The service maintains **no direct connection to MongoDB**. All persistence is handled by the Express backend gateway by listening to the Redis SSE stream. This eliminates connection pooling issues, schema divergence, and unauthenticated database writes.
+1. **100% Stateless & Database-Free**: The service maintains **no direct connection to MongoDB**. All persistence is handled by the Express backend gateway by listening to the Redis SSE stream. This eliminates connection pooling issues, schema divergence, and unauthenticated database writes. The one store it does own is the user **knowledge graph** (Neo4j, §3.5): derived data (what each user is weak in or has mastered) that can be rebuilt from MongoDB, never a system of record.
 2. **Deterministic Plan Construction**: The LLM **never produces raw plan JSON or schedule structure**. Structural calculations (day counts, sprint boundaries, dates, and resource references) are computed deterministically in [`tools/plan_builder.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/tools/plan_builder.py) and validated against [`schemas/study_plan.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/schemas/study_plan.py). The LLM is only queried for day titles and objective descriptions in bounded chunks.
 3. **Bounded & Non-Blocking Execution**: Every agent branch, tool call, and LLM invocation has an explicit timeout and token cap. Parallel branches (Company Research and Job Intelligence) run with controlled concurrency.
 4. **SSE Event Streaming Over Redis**: Every state transition and tool step emits structured `AgentEvent` envelopes to Redis (`agent:events:{runId}` pub/sub channel and `agent:history:{runId}` list for replay).
@@ -79,7 +79,8 @@ agents-service/
 | **`skill_gap_agent.py`** | Compares candidate's resume text against target job requirements. Categorizes every skill into High effort (missing), Medium effort (partial), or Met, citing candidate evidence. | `candidate_resume_text`, required skills list | `skill_gaps` list and readiness score in state. |
 | **`research_agent.py`** | Deep content curator. For each identified skill gap, executes parallel queries across YouTube, documentation, companion books, and research papers; downloads video transcripts for high-signal videos. | Skill gap topic, candidate experience depth | `researched_materials` list of curated learning modules with URLs and metadata. |
 | **`planner_agent.py`** | Turns learning modules and skill gaps into a structured schedule. Computes topic weights and queries the LLM in small concurrent chunks (max 10 days/call) for daily titles and objectives. | `researched_materials`, `skill_gaps`, `total_days` | Calls `plan_builder.assemble_plan` to produce the finalized `StudyPlan`. |
-| **`assessment_agent.py`** & **`flashcard_agent.py`** | Generates multiple-choice quiz questions and flashcard decks across sprint topics with LLM JSON retry logic. | Sprint topics, study modules | Sprint-level assessment and flashcard datasets. |
+| **`study_material.py`** | Quiz questions and flashcards for a sprint's days: one validated model call per 3-4 day chunk (4 distinct options, answer as a letter A-D, difficulty easy/medium/hard, a `concept` tag per item), one corrective retry, LLM concurrency slots, per-chunk `ok`/`partial`/`failed`. Personalised by the knowledge graph. | Sprint days (title, description, objectives, references, concepts); the user's weak/mastered concepts | `ChunkMaterial` list, returned by `POST /internal/study-material` for the backend to save. |
+| **`assessment_agent.py`** & **`flashcard_agent.py`** | Thin plan-level wrappers over `study_material.py` (same output shapes as before). | `StudyPlan` | Assessment / flashcard datasets. |
 | **`registry.py`** | Single source of truth for specialist registration, descriptions, and factory instantiation. | N/A | Used by `supervisor.py` and `graph/builder.py` for routing. |
 
 ### 3.2. Core Infrastructure & Graph Pipeline (`src/core/`, `src/graph/`)
@@ -101,7 +102,24 @@ agents-service/
 | **`streaming/publisher.py`** | Handles Redis operations: publishes events to `agent:events:{runId}` channel and pushes frames to `agent:history:{runId}` list for client reconnection replay. |
 | **`streaming/models.py`** | Defines `EventType` enum and event payload contracts. |
 
-### 3.4. Tools & Deterministic Logic (`src/tools/`)
+### 3.4. Study material & knowledge graph endpoints (`src/routers/study_material_router.py`)
+
+| Endpoint | Called by | Does |
+| :--- | :--- | :--- |
+| `POST /internal/study-material` | backend `services/studyMaterial.ts` | Questions + flashcards per 3-4 day chunk of the days it is sent, personalised by the user's weak/mastered concepts. Stores nothing. |
+| `POST /internal/knowledge/attempt` | backend, after a quiz attempt or a flashcard review | Per-concept results into the user's knowledge graph (running average). |
+
+The backend generates a sprint's material **just in time**: sprint 1 right after a plan is saved, the next sprint when one is completed, the current sprint (or a named one) whenever material is listed (`GET /api/assessments`, `GET /api/flashcards`, optional `?sprintId=`), or on demand (`POST /api/sprints/:sprintId/study-material`). Only days without material are sent, so it is idempotent; `npm run backfill:study-material` (backend) fills in older plans.
+
+### 3.5. User knowledge graph (`src/graph/knowledge_graph.py`, `src/graph/neo4j_store.py`)
+
+- **Model**: `User`, learning nodes (`Topic`, `Concept`, `Skill`, `Technology`), `Resource`; edges `KNOWS{proficiency}`, `WEAK_IN`, `MASTERED`, `STUDYING`, `REQUIRES`, `COVERS`, `PART_OF` (Concept -> Topic).
+- **Writes** (best effort, never fail a run): skill gap -> first evidence per skill; planner -> topics, concepts, resources; quiz/flashcard results -> per-concept proficiency.
+- **Reads**: study material (test weak concepts more, skip mastered ones); skill gap (a re-plan skips mastered gaps).
+- **Storage**: Neo4j when `NEO4J_URI` is set (one transaction per batch, `UNWIND` per node type / relation), else in memory. Unreachable Neo4j -> in-memory fallback with one warning.
+- **Tests**: `tests/test_knowledge_graph_stores.py` runs on memory always and on Neo4j with `KG_TEST_NEO4J=1`, inside a namespace of its own that is deleted afterwards.
+
+### 3.6. Tools & Deterministic Logic (`src/tools/`)
 
 | Module | Purpose |
 | :--- | :--- |
@@ -191,6 +209,7 @@ PLANNER_DAYS_PER_CALL=10          # Days generated per LLM call chunk
   This automatically balances days across 7-day sprints for any plan length (e.g. 45 days $\rightarrow$ 7 sprints; 90 days $\rightarrow$ 13 sprints).
 
 ### Runbook 3: Maintaining Database Independence
+> Developer scripts that read MongoDB directly (`scripts/clear_db.py`, `scripts/evaluate_generation.py`) live in `agents-service/scripts/`, outside `src/`, read `MONGODB_URI` from `.env` (no defaults), and need the dev dependencies (`uv sync --dev`).
 > [!CAUTION]
 > **DO NOT connect `agents-service` directly to MongoDB.**
 > 
@@ -253,7 +272,8 @@ python -m pytest tests -v
 
 Before merging changes into `agents-service`, verify that:
 - [ ] `python -m pytest tests` passes with **417/417 tests green**.
-- [ ] No MongoDB connection code (`motor`, `pymongo`, `mongo_uri`) has been reintroduced into `src/`.
+- [ ] No MongoDB connection code (`motor`, `pymongo`, `mongo_uri`) has been reintroduced into `src/` (dev scripts live in `scripts/`).
+- [ ] Knowledge-graph calls stay best effort (`best_effort` / `record_in_background`): a graph outage never fails a run or a request.
 - [ ] Any new state keys are declared in `src/graph/state.py` within `AgentState`.
 - [ ] LLM day generation continues to use bounded `ChunkLLM` / `_chunk` calls without requiring the LLM to output full plan schemas.
 - [ ] All SSE events emitted comply with the `EventType` enum in `src/streaming/models.py`.
