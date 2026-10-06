@@ -13,7 +13,10 @@ export type MascotVariant =
   | "Thinking.png"
   | "thinking.gif"
   | "working.gif"
-  | "working.png";
+  | "working.png"
+  | "dissapointed.png"
+  | "hi.png"
+  | "nosy.png";
 
 export interface MascotProps extends HTMLAttributes<HTMLImageElement> {
   size?: "sm" | "md" | "lg" | "xl";

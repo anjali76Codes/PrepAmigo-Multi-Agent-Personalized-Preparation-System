@@ -24,6 +24,10 @@ export interface JourneyConfig {
     strokeWidth: number;
     strokeColor: string;       // progress path
     strokeTrackColor: string;
+    roadWidth?: number;        // wide "road" under the line (px)
+    roadColor?: string;
+    waypointsPerGap?: number;  // stepping-stone dots between nodes
+    decorations?: boolean;     // scenery + dotted background
 }
 
 export const JOURNEY_PRESETS: Record<JourneyVariant, JourneyConfig> = {
@@ -51,14 +55,18 @@ export const JOURNEY_PRESETS: Record<JourneyVariant, JourneyConfig> = {
         labelSize: 11,
         showMascot: true,
         mascotSize: 90,
-        showBubble: true,
+        showBubble: false,
         interactive: true,
         labelFormat: 'Level {n}',
         padding: 'p-4 pt-15',
         maxHeight: '400px',
-        strokeWidth: 4,
+        strokeWidth: 5,
         strokeColor: '#14532d',
-        strokeTrackColor: 'rgba(20, 83, 45, 0.2)',
+        strokeTrackColor: 'rgba(20, 83, 45, 0.25)',
+        roadWidth: 46,
+        roadColor: 'rgba(201, 193, 224, 0.45)',
+        waypointsPerGap: 3,
+        decorations: false,
     }
 };
 

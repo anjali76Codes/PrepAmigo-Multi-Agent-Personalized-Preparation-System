@@ -35,8 +35,8 @@ function UserAvatar() {
 
 function AiAvatar() {
   return (
-    <div className="w-16 h-16 rounded-full bg-lavender-100 border border-border flex items-center justify-center shrink-0 overflow-hidden">
-      <Mascot size="md" variant="Chilling.png" style={{ width: 56, height: 56 }} />
+    <div className="w-16 h-16 rounded-full bg-chrome flex items-center justify-center overflow-hidden shrink-0">
+      <Mascot size="md" variant="nosy.png" />
     </div>
   );
 }
@@ -150,7 +150,7 @@ export function ResourceChat() {
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 space-y-6">
           {messages.length === 0 && (
             <div className="flex flex-col items-center text-center pt-12 gap-5">
-              <Mascot variant="Thinking.png" size="xl" />
+              <Mascot variant="nosy.png" size="xl" />
               <div>
                 <h2 className="text-2xl font-extrabold text-carbon-900">What do you want to know?</h2>
                 <p className="text-sm text-carbon-500 mt-1">Ask about your sprints, notes, and references.</p>

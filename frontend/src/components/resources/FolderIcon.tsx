@@ -1,3 +1,4 @@
+import { Icon } from "../ui/Icon";
 import { cn } from "../../utils/utils";
 
 export function FolderIcon({ className }: { className?: string }) {
@@ -10,14 +11,27 @@ export function FolderIcon({ className }: { className?: string }) {
     );
 }
 
+const TILE =
+    "group flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-lavender-100 focus-visible:bg-lavender-100 transition-colors";
+
 export function FolderTile({ title, count, subtitle, onClick }: { title: string; count?: number; subtitle?: string; onClick: () => void }) {
     return (
-        <button onClick={onClick}
-            className="group flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-lavender-100 focus-visible:bg-lavender-100 transition-colors">
+        <button onClick={onClick} className={TILE}>
             <FolderIcon className="group-hover:-translate-y-0.5 transition-transform" />
             <span className="text-sm font-semibold text-carbon-900 text-center w-full line-clamp-2">{title}</span>
-            {subtitle && <span className="text-[11px] text-navy-300 text-center line-clamp-1">{subtitle}</span>}
-            {count !== undefined && <span className="text-xs text-navy-300">{count} items</span>}
+            {subtitle && <span className="text-[11px] text-carbon-500 text-center line-clamp-1">{subtitle}</span>}
+            {count !== undefined && <span className="text-xs text-carbon-500">{count} items</span>}
         </button>
+    );
+}
+
+export function FileTile({ title, url, icon, subtitle, domain }: { title: string; url?: string; icon?: string; subtitle?: string; domain?: string }) {
+    return (
+        <a href={url} target="_blank" rel="noopener noreferrer" className={TILE}>
+            <Icon name={icon ?? "document-text"} className="text-6xl text-navy-500 group-hover:-translate-y-0.5 transition-transform" />
+            <span className="text-xs font-semibold text-carbon-900 text-center line-clamp-2">{title}</span>
+            {subtitle && <span className="text-[11px] text-carbon-500 text-center line-clamp-1">{subtitle}</span>}
+            {domain && <span className="text-[11px] font-semibold text-chrome">{domain}</span>}
+        </a>
     );
 }
