@@ -57,7 +57,7 @@ export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => v
                     </div>
 
                     <div className="space-y-3">
-                        {qn.options.map((opt, i) => {
+                        {qn.options.map((opt: string, i: number) => {
                             const letter = LETTERS[i];
                             const isCorrect = letter === qn.correct_answer;
                             const isPicked = letter === picked;

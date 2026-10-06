@@ -5,7 +5,7 @@ import { Icon } from "../components/ui/Icon";
 import { Mascot } from "../components/ui/Mascot";
 import { cn } from "../utils/utils";
 import {
-    getAssessments, getFlashcardDecks, getDayTitle,
+    getAssessments, getFlashcardDecks,
     type Assessment as AssessmentSet, type FlashcardDeck,
 } from "../mocks/assessment.mock";
 import { fade } from "../components/assessment/shared";
@@ -93,7 +93,7 @@ export function Assessment() {
                                                         key={a._id}
                                                         index={i}
                                                         icon="help-circle"
-                                                        title={getDayTitle(a.sprint_day_id)}
+                                                        title={`Quiz Set ${i + 1}`}
                                                         meta={`${a.questions.length} questions`}
                                                         badge={a.is_completed ? "Completed" : "Not started"}
                                                         onClick={() => setActiveQuiz(a)}
@@ -117,7 +117,7 @@ export function Assessment() {
                                                     key={d._id}
                                                     index={i}
                                                     icon="albums"
-                                                    title={getDayTitle(d.sprint_day_id)}
+                                                    title={`Flashcard Deck ${i + 1}`}
                                                     meta={`${d.cards.length} cards · ${d.reviewed_count} reviewed`}
                                                     badge={d.is_completed ? "Completed" : "New"}
                                                     onClick={() => setActiveDeck(d)}

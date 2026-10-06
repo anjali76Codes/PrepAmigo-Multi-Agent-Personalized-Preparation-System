@@ -73,7 +73,7 @@ export function DeckRunner({ deck, onExit }: { deck: FlashcardDeck; onExit: () =
                                 <span className="text-xs font-bold uppercase tracking-wider text-on-chrome-muted">Answer</span>
                                 <p className="text-xl md:text-2xl font-medium leading-relaxed">{card.back}</p>
                                 <div className="flex flex-wrap justify-center gap-1.5">
-                                    {card.tags.map((t) => (
+                                    {card.tags.map((t: string) => (
                                         <span key={t} className="px-2.5 py-0.5 rounded-full bg-chrome-hover border border-chrome-border text-xs">{t}</span>
                                     ))}
                                 </div>
