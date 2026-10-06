@@ -439,45 +439,38 @@ def assemble_plan(
     # highest-priority topics get them). Every one found stays in the
     # resource pack.
     left = {"book": max_books, "paper": max_papers}
-    fallbacks: dict[str, list[str]] = {"borrowed": [], "search_links": []}
-    all_days: list[dict[str, Any]] = []  # every planned day in order, with its references
-    for topic in borrow_references(topics, modules):
+    topic_references_by_day = {}
+    for topic in topics:
         kind_of = lambda ref: ("paper" if ref["url"] in topic["paper_urls"]  # noqa: E731
                                else "book" if ref["type"] == "book" else "")
-        daily = [r for r in topic["references"] if left.get(kind_of(r)) is None]
+        daily = [r for r in topic["references"] if not kind_of(r)]
         companions = []
         for kind in ("book", "paper"):
             found = [r for r in topic["references"] if kind_of(r) == kind]
-            if left[kind] and found:
+            if (left[kind] is None or left[kind] > 0) and found:
                 companions.append(found[0])
-                left[kind] -= 1
-        days = wording[topic["key"]][: topic["days"]]
-        searched = any(day.get("found") for day in days)
-        if not daily and not companions and not searched:
-            # nothing found, or only books/papers past the plan's cap
-            daily = search_references(topic["name"])
-            fallbacks["search_links"].append(topic["name"])
-        elif topic.get("borrowed"):
-            fallbacks["borrowed"].append(topic["name"])
-        day_titles = [d["title"] for d in days]
-        per_day = place_references(daily, day_titles, topic["name"])
-        per_day[0] = per_day[0] + companions
-        per_day = choose_references(per_day, days, daily + companions, companions)
-        # a day the model and the searches left empty (a search-only topic
-        # whose budget ran out) revisits what its other days found
-        # material a gap search found for one day can serve a related one
-        found = [ref for day in days for ref in day.get("found") or []]
-        per_day = revisit_references(
-            per_day, _unique(daily + found) or companions or _unique([r for d in per_day for r in d]),
-            day_titles, topic["name"])
-        per_day = mark_required(per_day)
-        all_days.extend({"topic": topic, "wording": day, "references": refs} for day, refs in zip(days, per_day))
+                if left[kind] is not None:
+                    left[kind] -= 1
+        per_day = place_references(daily, [d["title"] for d in wording[topic["key"]][: topic["days"]]], topic["name"])
+        if per_day:
+            per_day[0] = per_day[0] + companions
+        topic_references_by_day[topic["key"]] = per_day
 
-    # Sprints are fixed blocks of at most sprint_max_days (7) consecutive
-    # days, across topic boundaries, so every sprint has the two
-    # assessment/flashcard chunks (days 1-3 and 4-7) those agents expect
-    parts = split_evenly(list(range(len(all_days))), -(-len(all_days) // sprint_max_days))
-    for part in parts:
+    # Now group all topics into 7-day sprints
+    all_days = []
+    for topic in topics:
+        for i in range(topic["days"]):
+            all_days.append({
+                "topic_key": topic["key"],
+                "topic_name": topic["name"],
+                "topic_overview": topic["overview"],
+                "topic_effort": topic["effort"],
+                "day_wording": wording[topic["key"]][i],
+                "references": topic_references_by_day[topic["key"]][i],
+            })
+            
+    parts = split_evenly(list(range(len(all_days))), -(-len(all_days) // 7))
+    for part_number, part in enumerate(parts, start=1):
         sprint_start = start_date + timedelta(days=day_number)
         sprint_days = []
         for i in part:

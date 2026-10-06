@@ -1,77 +1,50 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChatInput } from '../components/chat/ChatInput';
+import { ChatInput, type AttachedFile } from '../components/chat/ChatInput';
 import { Messages } from '../components/chat/Messages';
 import type { Message } from '../components/chat/Messages';
-import type { JourneyStep, JourneyAction } from '../components/chat/AgentJourney';
-
+import type { JourneyStep } from '../components/chat/AgentJourney';
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
 import { cn } from '../utils/utils';
+import { useAuth } from '../hooks/useAuth';
+import { featureFlags } from '../config/featureFlags';
+import { AgentStreamClient } from '../lib/agentStream/agentStreamClient';
+import type { AgentStreamEvent } from '../lib/agentStream/types';
 
-// 6 nodes per scenario. Rename agents to match your AGENTS list if you like.
-const JOURNEYS: Record<'setup' | 'plan-update' | 'missed-task' | 'flashcards' | 'fallback', JourneyStep[]> = {
-  setup: [
-    { agent: 'Intake Agent', text: 'Reading your goal…' },
-    { agent: 'Company Research', text: 'Analyzing Company X…' },
-    { agent: 'Job Intelligence', text: 'Extracting role expectations…' },
-    { agent: 'Research Agent', text: 'Collecting prep resources…' },
-    { agent: 'Skill Gap Agent', text: 'Comparing against your skills…' },
-    { agent: 'Planner Agent', text: 'Building your 45-day roadmap…' },
-  ],
-  'plan-update': [
-    { agent: 'Intake Agent', text: 'Understanding what went wrong…' },
-    { agent: 'Assessment Agent', text: 'Analyzing your quiz results…' },
-    { agent: 'Skill Gap Agent', text: 'Finding weak topics…' },
-    { agent: 'Research Agent', text: 'Picking better resources…' },
-    { agent: 'Planner Agent', text: 'Reprioritizing upcoming sprints…' },
-    { agent: 'Reviewer Agent', text: 'Double-checking the new plan…' },
-  ],
-  'missed-task': [
-    { agent: 'Intake Agent', text: 'Checking what you missed…' },
-    { agent: 'Progress Agent', text: 'Reviewing your streak…' },
-    { agent: 'Research Agent', text: 'Checking topic priorities…' },
-    { agent: 'Skill Gap Agent', text: 'Estimating the impact…' },
-    { agent: 'Planner Agent', text: 'Redistributing workload…' },
-    { agent: 'Reviewer Agent', text: 'Making sure it stays balanced…' },
-  ],
-  flashcards: [
-    { agent: 'Intake Agent', text: 'Reading your request…' },
-    { agent: 'Planner Agent', text: 'Fetching relevant topics…' },
-    { agent: 'Research Agent', text: 'Pulling key concepts…' },
-    { agent: 'Assessment Agent', text: 'Generating flashcards…' },
-    { agent: 'Difficulty Agent', text: 'Tuning difficulty levels…' },
-    { agent: 'Reviewer Agent', text: 'Polishing the deck…' },
-  ],
-  fallback: [
-    { agent: 'Intake Agent', text: 'Reading your message…' },
-    { agent: 'Planner Agent', text: 'Thinking…' },
-    { agent: 'Research Agent', text: 'Looking for context…' },
-    { agent: 'Skill Gap Agent', text: 'Checking your profile…' },
-    { agent: 'Assessment Agent', text: 'Weighing options…' },
-    { agent: 'Reviewer Agent', text: 'Wrapping up…' },
-  ],
-};
-
-const STEP_MS = 1500;   // time the mascot spends at each node
-const FINISH_MS = 1000; // time to show the "cheer" state before the answer appears
+const PIPELINE_STEPS: JourneyStep[] = [
+  { agent: 'Supervisor', text: 'Analyzing your goal and routing…' },
+  { agent: 'Company Research', text: 'Gathering company intelligence…' },
+  { agent: 'Job Intelligence', text: 'Analyzing role expectations…' },
+  { agent: 'Skill Gap Agent', text: 'Evaluating skill gaps…' },
+  { agent: 'Research Agent', text: 'Curating study materials…' },
+  { agent: 'Planner Agent', text: 'Structuring your personalized roadmap…' },
+];
 
 let idCounter = 0;
 const uid = () => `${Date.now()}-${idCounter++}`;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Chat() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const initialFiredRef = useRef(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  
+  const [threadId] = useState<string>(() => `chat-${Date.now()}`);
 
-  const { preps: mockPreps } = useAppContext();
-  
+  const clientRef = useRef<AgentStreamClient | null>(null);
+
+  useEffect(() => {
+    clientRef.current = new AgentStreamClient();
+    return () => {
+      clientRef.current?.close();
+    };
+  }, []);
+
+  const { refreshPreps } = useAppContext();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(0);
@@ -91,19 +64,50 @@ export function Chat() {
   }, [messages]);
 
   const suggestions = [
-    'I have 45 days to prepare for SDE at Company X',
-    'I scored badly on my DSA quiz, adjust my plan',
-    'I missed the last two days',
+    'I have 45 days to prepare for SDE at Google in Seattle',
+    'I want to prepare for Backend Engineer at Stripe',
+    'Help me prepare for Frontend Engineer at Netflix',
     'Give me revision cards for system design',
   ];
 
-  // Shows the journey as the agent's "response", advances it, then removes it.
-  const runJourney = async (
-    steps: JourneyStep[],
-    opts: { finalAction?: JourneyAction; keep?: boolean } = {}
-  ) => {
-    const journeyId = uid();
+  const addAgentMessage = (msg: Omit<Message, 'id' | 'sender'>) =>
+    setMessages((prev) => [...prev, { id: uid(), sender: 'agent', ...msg }]);
 
+  const mapEventToStepIndex = (ev: AgentStreamEvent): number => {
+    const node = String(ev.payload?.node || ev.payload?.agent || '').toLowerCase();
+    const msg = String(ev.payload?.message || ev.payload?.step || '').toLowerCase();
+
+    if (node.includes('supervisor') || ev.type === 'calling_agent') return 0;
+    if (node.includes('company') || msg.includes('company')) return 1;
+    if (node.includes('job') || msg.includes('job') || msg.includes('posting')) return 2;
+    if (node.includes('skill') || msg.includes('gap') || ev.type === 'processing') return 3;
+    if (node.includes('research') || msg.includes('material') || msg.includes('resource')) return 4;
+    if (node.includes('plan') || msg.includes('plan') || ev.type === 'structuring') return 5;
+    return 0;
+  };
+
+  const handleSend = async (text: string, attachedFile?: AttachedFile | null) => {
+    const trimmed = text.trim();
+    if (!trimmed || isProcessing) return;
+
+    // ── AUTH CHECK ────────────────────────────────────────────────────────
+    // If auth is enabled AND user is unauthenticated, DO NOT CALL API!
+    if (featureFlags.enableAuth && !user) {
+      sessionStorage.setItem('prepamigo_pending_query', trimmed);
+      navigate('/login', {
+        state: { initialQuery: trimmed, from: '/dashboard/chat' },
+      });
+      return;
+    }
+
+    const displayContent = attachedFile
+      ? `${trimmed}\n\n📎 Attached Resume: ${attachedFile.name}`
+      : trimmed;
+
+    setMessages((prev) => [...prev, { id: uid(), sender: 'user', content: displayContent }]);
+    setIsProcessing(true);
+
+    const journeyId = uid();
     setMessages((prev) => [
       ...prev,
       {
@@ -111,96 +115,105 @@ export function Chat() {
         sender: 'agent',
         content: '',
         scenario: 'agent-journey',
-        data: { steps, activeIndex: 0, finalAction: opts.finalAction },
+        data: { steps: PIPELINE_STEPS, activeIndex: 0 },
       },
     ]);
 
-    const setIndex = (index: number) =>
+    const updateJourneyIndex = (index: number) => {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === journeyId ? { ...m, data: { ...m.data, activeIndex: index } } : m
+          m.id === journeyId
+            ? {
+                ...m,
+                data: {
+                  ...m.data,
+                  activeIndex: Math.min(index, PIPELINE_STEPS.length - 1),
+                },
+              }
+            : m
         )
       );
-
-    for (let i = 0; i < steps.length; i++) {
-      if (i > 0) setIndex(i);
-      await sleep(STEP_MS);
-    }
-
-    setIndex(steps.length);
-    await sleep(FINISH_MS);
-
-    // Only remove the journey when it has no button to keep alive
-    if (!opts.keep) {
-      setMessages((prev) => prev.filter((m) => m.id !== journeyId));
-    }
-  };
-
-  const addAgentMessage = (msg: Omit<Message, 'id' | 'sender'>) =>
-    setMessages((prev) => [...prev, { id: uid(), sender: 'agent', ...msg }]);
-
-  const handleSend = async (text: string) => {
-    setMessages((prev) => [...prev, { id: uid(), sender: 'user', content: text }]);
-    setIsProcessing(true);
-
-    const lower = text.toLowerCase();
+    };
 
     try {
-      if (
-        (lower.includes('45 days') && lower.includes('company x')) ||
-        lower.includes('preparing for') ||
-        lower.includes('interview at')
-      ) {
-        const companyMatch = text.match(/at\s+([A-Za-z0-9\s_-]+?)(?:\s+in|\s*,|\s*\.|$)/i);
-        const roleMatch = text.match(/for\s+(?:a\s+)?([A-Za-z0-9\s_-]+?)(?:\s+position|\s+at|\s+in|\s*,|\s*\.|$)/i);
-
-        const company = companyMatch ? companyMatch[1].trim() : 'Target Company';
-        const role = roleMatch ? roleMatch[1].trim() : 'Target Role';
-
-        await runJourney(JOURNEYS.setup, {
-          keep: true,
-          finalAction: { label: 'View Roadmap', to: '/roadmap' },
-        });
-        addAgentMessage({
-          content: "I've analyzed the role and generated your personalized roadmap. Here is the summary:",
-          scenario: 'setup',
-          data: { role, company },
-        });
-        ;('all');
-        ;('Planner');
-      } else if (lower.includes('scored badly') || lower.includes('adjust my plan')) {
-        await runJourney(JOURNEYS['plan-update']);
-        addAgentMessage({
-          content: "I've adjusted your roadmap to spend more time on your weak areas.",
-          scenario: 'plan-update',
-        });
-        ;('gaps');
-        ;('Assessment');
-      } else if (lower.includes('missed')) {
-        await runJourney(JOURNEYS['missed-task']);
-        addAgentMessage({
-          content: "No worries! I've shifted your tasks to maintain a balanced workload.",
-          scenario: 'missed-task',
-        });
-        ;('summary');
-        ;('Progress');
-      } else if (lower.includes('revision cards')) {
-        await runJourney(JOURNEYS.flashcards);
-        addAgentMessage({
-          content: "Here's a quick revision deck for System Design:",
-          scenario: 'flashcards',
-          data: mockPreps[0].assessments.flashcardDecks[0],
-        });
-        ;('gaps');
-        ;('Planner');
-      } else {
-        await runJourney(JOURNEYS.fallback);
-        addAgentMessage({
-          content:
-            'I can help with interview preparation, roadmap adjustments, and study materials. Try one of the suggested prompts!',
-        });
+      if (!clientRef.current) {
+        clientRef.current = new AgentStreamClient();
       }
-    } finally {
+
+      await clientRef.current.startAgentRun(
+        trimmed,
+        {
+          onEvent: (event) => {
+            const stepIdx = mapEventToStepIndex(event);
+            updateJourneyIndex(stepIdx);
+          },
+          onWaiting: (payload) => {
+            // ReAct evaluator paused for clarification
+            setMessages((prev) => prev.filter((m) => m.id !== journeyId));
+            const questionText =
+              (typeof payload?.question === 'string'
+                ? payload.question
+                : payload?.question?.question) ||
+              payload?.message ||
+              'I need a few more details to prepare your roadmap. Could you clarify?';
+            addAgentMessage({
+              content: questionText,
+            });
+            setIsProcessing(false);
+          },
+          onCompleted: (payload) => {
+            setMessages((prev) => prev.filter((m) => m.id !== journeyId));
+            const messageText =
+              payload?.message ||
+              payload?.result?.summary ||
+              "I've analyzed your preparation request and generated your roadmap.";
+
+            const company =
+              payload?.result?.company_research?.data?.profile?.name ||
+              payload?.company_profile?.name ||
+              'Target Company';
+            const role = payload?.result?.job_intelligence?.data?.role || 'Target Role';
+            const planId = payload?.plan_id || payload?.result?.plan_id || payload?.result?.study_plan?.plan_id;
+
+            addAgentMessage({
+              content: messageText,
+              scenario: (payload?.result || planId) ? 'setup' : undefined,
+              data: (payload?.result || planId)
+                ? {
+                    role,
+                    company,
+                    planId,
+                  }
+                : undefined,
+            });
+
+            void refreshPreps();
+            // User requested: No autoredirect. The user gets a button to go to the roadmap.
+
+            setIsProcessing(false);
+          },
+          onError: (err) => {
+            setMessages((prev) => prev.filter((m) => m.id !== journeyId));
+            const errorMsg =
+              err instanceof Error
+                ? err.message
+                : err?.detail ||
+                  err?.error ||
+                  'The agent workflow encountered an error. Please try again.';
+            addAgentMessage({
+              content: `Error: ${errorMsg}`,
+            });
+            setIsProcessing(false);
+          },
+        },
+        threadId,
+        attachedFile?.text || user?.profile?.resume_text
+      );
+    } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== journeyId));
+      addAgentMessage({
+        content: `Could not start the workflow: ${err?.message || 'Agent service is unreachable.'}`,
+      });
       setIsProcessing(false);
     }
   };
@@ -210,16 +223,19 @@ export function Chat() {
     if (initialFiredRef.current) return;
 
     const stateQuery = (location.state as { initialQuery?: string })?.initialQuery;
-    const sessionQuery = sessionStorage.getItem("prepamigo_pending_query");
+    const sessionQuery = sessionStorage.getItem('prepamigo_pending_query');
     const queryToFire = stateQuery || sessionQuery;
 
     if (queryToFire && queryToFire.trim()) {
+      if (featureFlags.enableAuth && !user) {
+        return; // Wait until authenticated if auth is enabled
+      }
       initialFiredRef.current = true;
-      sessionStorage.removeItem("prepamigo_pending_query");
+      sessionStorage.removeItem('prepamigo_pending_query');
       window.history.replaceState({}, document.title);
       handleSend(queryToFire.trim());
     }
-  }, []);
+  }, [user]);
 
   const hasStarted = messages.length > 0;
 
@@ -229,10 +245,31 @@ export function Chat() {
         {/* AgentActivity removed: the journey now lives inside the conversation */}
 
         {hasStarted && (
-          <div className="flex-1 overflow-y-auto">
-            <Messages messages={messages} />
-            <div ref={messagesEndRef} className="h-4" />
-          </div>
+          <>
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-white/70 backdrop-blur-xs shrink-0 z-20">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-bold text-navy-900 uppercase tracking-wider">Preparation Agent</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessages([]);
+                  clientRef.current?.close();
+                  clientRef.current = new AgentStreamClient();
+                }}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-border bg-bg text-carbon-700 hover:bg-lavender-100 hover:text-navy-900 transition-colors disabled:opacity-50"
+              >
+                <Icon name="add-outline" className="text-sm" />
+                <span>New Plan</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <Messages messages={messages} />
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
+          </>
         )}
 
         <div

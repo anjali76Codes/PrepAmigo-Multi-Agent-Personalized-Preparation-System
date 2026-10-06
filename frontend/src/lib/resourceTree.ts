@@ -1,5 +1,5 @@
 import { folders, files } from "../data/mockNotes";
-import { MOCK_SPRINTS, MOCK_SPRINT_DAYS } from "../mocks/interviewPlan.mock";
+import type { Prep } from "../data/mockData";
 
 export type TreeNode = {
     id: string; title: string; kind: "folder" | "file";
@@ -9,8 +9,17 @@ export type TreeNode = {
 const file = (id: string, title: string, icon = "document-text", url = "#"): TreeNode =>
     ({ id, title, kind: "file", icon, url });
 
-export function buildTree(): TreeNode[] {
-    const prep: TreeNode = {
+const getResourceIcon = (type?: string) => {
+    const lower = (type || "").toLowerCase();
+    if (lower.includes("video") || lower.includes("youtube")) return "play-circle";
+    if (lower.includes("book") || lower.includes("paper")) return "book";
+    if (lower.includes("problem") || lower.includes("code")) return "code-slash";
+    if (lower.includes("course")) return "school";
+    return "document-text";
+};
+
+export function buildTree(prep?: Prep | null): TreeNode[] {
+    const prepNotes: TreeNode = {
         id: "prep-notes", title: "Prep Notes", kind: "folder",
         children: [
             file("pn-1", "System Design Cheat Sheets", "journal"),
@@ -19,25 +28,25 @@ export function buildTree(): TreeNode[] {
         ],
     };
 
-    const sprints: TreeNode[] = MOCK_SPRINTS.map((s) => {
-        const days = MOCK_SPRINT_DAYS.filter((d) => d.sprint_id === s._id);
+    const sprintsList = prep?.roadmap?.sprints || [];
+    const sprints: TreeNode[] = sprintsList.map((s, sIdx) => {
+        const days = s.days || [];
         const levels: TreeNode[] = [];
         for (let i = 0; i < days.length; i += 3) {
             levels.push({
-                id: `lvl-${s._id}-${i}`, title: `Level ${i / 3 + 1}`, kind: "folder",
-                children: days.slice(i, i + 3).map((d) => ({
-                    id: `task-${d._id}`, title: `Day ${d.day_number}: ${d.topic_title}`, kind: "folder" as const,
+                id: `lvl-${s.id}-${i}`, title: `Level ${i / 3 + 1}`, kind: "folder",
+                children: days.slice(i, i + 3).map((d: any) => ({
+                    id: `task-${d.id || d.dayNumber}`, title: `Day ${d.dayNumber}: ${d.topic}`, kind: "folder" as const,
                     children: [
-                        ...d.objectives.map((o, k) => file(`o-${d._id}-${k}`, o, "journal")),
-                        ...d.references.map((r, k) => file(`r-${d._id}-${k}`, r.title, "document-text", r.url)),
-                        ...(d.references.length === 0
-                            ? [file(`v-${d._id}`, `Watch ${d.topic_title} tutorial`, "play-circle", "https://youtube.com")]
-                            : []),
+                        file(`o-${d.id || d.dayNumber}-0`, d.objective, "journal"),
+                        ...(d.rawReferences || []).map((r: any, k: number) => 
+                            file(`r-${d.id || d.dayNumber}-${k}`, r.title || r.url, getResourceIcon(r.type), r.url)
+                        ),
                     ],
                 })),
             });
         }
-        return { id: `sprint-${s._id}`, title: `Sprint ${s.sprint_number}`, kind: "folder" as const, children: levels };
+        return { id: `sprint-${s.id}`, title: s.title || `Sprint ${sIdx + 1}`, kind: "folder" as const, children: levels };
     });
 
     const notes: TreeNode = {
@@ -48,7 +57,7 @@ export function buildTree(): TreeNode[] {
         ],
     };
 
-    return [prep, ...sprints, notes];
+    return [prepNotes, ...sprints, notes];
 }
 
 export const domainOf = (u?: string) => {

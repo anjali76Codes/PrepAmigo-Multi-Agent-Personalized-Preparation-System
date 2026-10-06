@@ -1,9 +1,22 @@
+"""
+Generic streaming runner for PrepAmigo agents.
+
+Two execution paths:
+  - Live (default, USE_DUMMY_STREAM=false): runs the real LangGraph multi-agent
+    pipeline and streams structured SSE events via streaming/langgraph_bridge.py.
+  - Dummy (USE_DUMMY_STREAM=true): emits scripted PrepAmigo-themed events for
+    UI development without a running LLM.
+
+The interview_prep workflow always runs the real graph regardless of
+USE_DUMMY_STREAM, because its structured output (study plan JSON) cannot be
+meaningfully faked.
+"""
 import asyncio
 import json
 import logging
-import os
 from typing import Any, Dict, Optional
 
+from core.config import settings
 from observability.metrics import collect_metrics
 from tools.plan_db_sync import backend_auth
 
@@ -18,89 +31,95 @@ async def run_dummy_agent_stream(
     query: str,
     publisher: EventPublisher,
     thread_id: str,
-    step_delay: float = 1.0,
+    step_delay: Optional[float] = None,
 ) -> None:
-    """Simulates realistic multi-agent step-by-step execution for testing and UI development."""
-    logger.info("[Dummy Stream] Starting simulated agent execution for query: %s", query)
+    """Simulates PrepAmigo multi-agent step-by-step execution with scripted events.
+    Only active when USE_DUMMY_STREAM=true. The default (false) runs real agents."""
+    delay = step_delay if step_delay is not None else settings.dummy_stream_step_delay
+    logger.info("[Dummy Stream] Starting simulated run for query: %s", query)
 
-    # 1. Thinking (6.0s)
+    # 1. Thinking
     await publisher.emit_event(
         run_id=run_id,
         event_type=EventType.THINKING,
         payload={
             "node": "supervisor",
-            "message": f"Supervisor analyzing travel query: '{query}'...",
-            "next_agent": "flight_booking",
+            "message": f"Analyzing your interview preparation request: '{query}'...",
         },
     )
-    if step_delay > 0:
-        await asyncio.sleep(6.0 * step_delay)
+    if delay > 0:
+        await asyncio.sleep(3.0 * delay)
 
-    # 2. Calling specialist agent (6.0s)
+    # 2. Calling specialist
     await publisher.emit_event(
         run_id=run_id,
         event_type=EventType.CALLING_AGENT,
         payload={
-            "agent": "flight_booking",
-            "message": "Invoked Flight Booking Specialist to formulate flight search query...",
+            "agent": "interview_prep",
+            "message": "Routing to Interview Preparation specialist...",
         },
     )
-    if step_delay > 0:
-        await asyncio.sleep(6.0 * step_delay)
+    if delay > 0:
+        await asyncio.sleep(2.0 * delay)
 
-    # 3. Researching / Tool execution (2.5s)
+    # 3. Researching company
     await publisher.emit_event(
         run_id=run_id,
         event_type=EventType.RESEARCHING,
         payload={
-            "node": "tools",
-            "tool": "search_flights",
-            "message": "Searching flight availability and comparing airline pricing...",
-            "parameters": {"route": query, "departure": "2026-10-15"},
+            "node": "company_research",
+            "message": "Researching company profile and engineering culture...",
         },
     )
-    if step_delay > 0:
-        await asyncio.sleep(2.5 * step_delay)
+    if delay > 0:
+        await asyncio.sleep(2.5 * delay)
 
-    # 4. Safety & Guardrails (6.0s)
+    # 4. Researching job market
+    await publisher.emit_event(
+        run_id=run_id,
+        event_type=EventType.RESEARCHING,
+        payload={
+            "node": "job_intelligence",
+            "message": "Analyzing job postings and required skills for the role...",
+        },
+    )
+    if delay > 0:
+        await asyncio.sleep(2.5 * delay)
+
+    # 5. Processing skill gap
     await publisher.emit_event(
         run_id=run_id,
         event_type=EventType.PROCESSING,
         payload={
-            "node": "guardrails",
-            "message": "Running budget validation, PII safety checks, and policy compliance...",
-            "guardrail_flags": {"pii_check": "pass", "budget_check": "pass"},
+            "node": "skill_gap",
+            "message": "Evaluating skill gaps against job requirements...",
         },
     )
-    if step_delay > 0:
-        await asyncio.sleep(6.0 * step_delay)
+    if delay > 0:
+        await asyncio.sleep(2.0 * delay)
 
-    # 5. Structuring final payload (1.5s)
+    # 6. Structuring plan
     await publisher.emit_event(
         run_id=run_id,
         event_type=EventType.STRUCTURING,
         payload={
-            "message": "Formatting verified flight options into structured itinerary format...",
+            "message": "Building your personalized study plan...",
         },
     )
-    if step_delay > 0:
-        await asyncio.sleep(1.5 * step_delay)
+    if delay > 0:
+        await asyncio.sleep(1.5 * delay)
 
-    # 6. Completed (~10s total elapsed)
-
-    # 6. Completed
+    # 7. Completed
     await publisher.emit_event(
         run_id=run_id,
         event_type=EventType.COMPLETED,
         payload={
-            "status": "success",
+            "status": "complete",
             "threadId": thread_id,
-            "message": f"Found 3 best flight options for '{query}' with top recommendation on Air France at $480.",
-            "flights": [
-                {"airline": "Air France", "price": "$480", "duration": "7h 45m", "stops": "Direct"},
-                {"airline": "Delta Airlines", "price": "$520", "duration": "8h 10m", "stops": "1 Stop"},
-                {"airline": "British Airways", "price": "$550", "duration": "8h 30m", "stops": "1 Stop"},
-            ],
+            "message": (
+                f"Interview preparation plan ready for: '{query}'. "
+                "[Dummy mode — set USE_DUMMY_STREAM=false to run real agents.]"
+            ),
         },
     )
     logger.info("[Dummy Stream] Completed simulated run %s", run_id)
@@ -121,17 +140,24 @@ async def execute_agent_stream(
     plan_days: Optional[int] = None,
     auth_token: Optional[str] = None,
 ) -> None:
-    """Executes the agent workflow. Uses dummy simulation if configured or
-    if LLM is unavailable. The real path is agent-agnostic: whichever
-    specialist the supervisor routes to (chat, research, ...) streams
-    through streaming/langgraph_bridge.py without this function knowing
-    about it by name. `user_id` enables long-term memory for agents that
-    use it (e.g. content research)."""
+    """Execute the agent workflow, streaming events via Redis pub/sub.
+
+    - Live mode (USE_DUMMY_STREAM=false, default): runs the real LangGraph
+      multi-agent graph and publishes structured SSE events.
+    - Dummy mode (USE_DUMMY_STREAM=true): emits scripted PrepAmigo-themed events
+      without running the LLM — for UI development only.
+
+    The `interview_prep` workflow always uses the real graph regardless of
+    USE_DUMMY_STREAM, because its output is structured plan JSON.
+    """
     pub = publisher or get_event_publisher()
     tid = thread_id or f"run-{run_id}"
 
+    # Resolve dummy mode: per-call override > settings
     if use_dummy is None:
-        use_dummy = os.getenv("USE_DUMMY_STREAM", "true").strip().lower() in {"true", "1", "yes"}
+        use_dummy = settings.use_dummy_stream
+
+    # interview_prep always runs live — dummy output is meaningless for it
     if workflow_mode == "interview_prep":
         use_dummy = False
 
@@ -142,6 +168,7 @@ async def execute_agent_stream(
             payload={"status": "failed", "detail": "The interview-preparation workflow is unavailable."},
         )
         return
+
     if use_dummy or graph is None:
         await run_dummy_agent_stream(run_id=run_id, query=query, publisher=pub, thread_id=tid)
         return
@@ -152,25 +179,49 @@ async def execute_agent_stream(
     from graph.errors import friendly_error_detail
     from streaming.langgraph_bridge import bridge_graph_turn
 
-    logger.info("Starting LangGraph streaming run %s (thread: %s, user: %s)", run_id, tid, user_id or "anonymous")
+    logger.info(
+        "Starting LangGraph run %s (thread: %s, user: %s, mode: %s)",
+        run_id, tid, user_id or "anonymous", workflow_mode or "chat",
+    )
     config = {"configurable": {"thread_id": tid}}
+
     if resume_input is not None:
         inputs: Any = Command(resume=resume_input)
     else:
-        inputs = {
-            "messages": [HumanMessage(content=query)],
-            "workflow_mode": workflow_mode,
-            "workflow_input": workflow_input or {},
-            "workflow_text_input": workflow_text_input,
-            "interview_prep_input": {},
-            "workflow_clarification_rounds": 0,
-        }
-        if workflow_mode == "interview_prep":
-            inputs["workflow_input"] = workflow_input or {}
-        if user_id:
-            inputs["user_id"] = user_id
-        if plan_days:
-            inputs["plan_total_days"] = plan_days
+        snapshot = None
+        if graph is not None and hasattr(graph, "aget_state"):
+            try:
+                snapshot = await graph.aget_state(config)
+            except Exception:
+                snapshot = None
+        if snapshot is not None and "interview_prep_pause" in (snapshot.next or ()):
+            inputs = Command(resume={"answer": query})
+        else:
+            wf_input = workflow_input or {}
+            resume_text = wf_input.get("resume_text") or wf_input.get("candidate_resume_text")
+            inputs = {
+                "messages": [HumanMessage(content=query)],
+                "workflow_mode": workflow_mode,
+                "workflow_input": wf_input,
+                "workflow_text_input": workflow_text_input,
+                "interview_prep_input": {},
+                "workflow_clarification_rounds": 0,
+            }
+            if resume_text:
+                inputs["task_context"] = {"candidate_resume_text": str(resume_text).strip()}
+            if user_id:
+                inputs["user_id"] = user_id
+            from tools.duration import extract_duration_days
+
+            resolved_days = plan_days
+            if not resolved_days:
+                resolved_days = (
+                    extract_duration_days(wf_input.get("total_days") or wf_input.get("plan_days") or wf_input.get("days"))
+                    or extract_duration_days(query)
+                    or extract_duration_days(workflow_text_input)
+                )
+            if resolved_days:
+                inputs["plan_total_days"] = resolved_days
 
     await pub.emit_event(
         run_id=run_id,
@@ -186,17 +237,11 @@ async def execute_agent_stream(
                 async for event_type, payload in bridge_graph_turn(graph, inputs, config):
                     await pub.emit_event(run_id=run_id, event_type=event_type, payload=payload)
             finally:
-                # per-agent time/token/cache breakdown, for the server log
-                logger.info("Run %s metrics %s", run_id, json.dumps(run_metrics.summary()))
+                logger.info("Run %s metrics: %s", run_id, json.dumps(run_metrics.summary()))
     except Exception as exc:
-        # the traceback goes to the server log only; a client-facing
-        # payload should never carry raw internals (see graph/errors.py)
-        logger.exception("Agent streaming run %s encountered error: %s", run_id, exc)
+        logger.exception("Agent run %s encountered error: %s", run_id, exc)
         await pub.emit_event(
             run_id=run_id,
             event_type=EventType.FAILED,
-            # "error" keeps the raw exception text (existing contract, for
-            # logs/debugging on the client side); "detail" is the
-            # user-facing message main.py's /api/chat also uses
             payload={"error": str(exc), "detail": friendly_error_detail(exc), "status": "error"},
         )

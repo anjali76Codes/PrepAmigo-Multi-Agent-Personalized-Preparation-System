@@ -26,13 +26,6 @@ You have no live tools: you cannot browse, search the web, or look up flights, p
 MEMORY_CONTEXT_PROMPT = """Known facts about this user (from long-term memory; may be outdated):
 {facts}"""
 
-FLIGHT_BOOKING_PROMPT = """You are a flight search agent.
-You can search available flights, but you cannot book, hold, cancel, or pay for flights.
-Rules (guardrails):
-- Ask for origin, destination, and travel date before calling the search tool.
-- Always show the currency and total price returned by the search tool.
-- If required info (origin, destination, dates, passenger count) is missing, ask for it before calling any tool.
-"""
 
 
 COMPANY_RESEARCH_PROMPT = """You are the Company Research Agent for PrepAmigo — a specialized intelligence \

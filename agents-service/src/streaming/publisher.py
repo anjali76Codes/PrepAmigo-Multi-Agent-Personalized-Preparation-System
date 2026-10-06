@@ -2,6 +2,7 @@ import logging
 import os
 from typing import Any, Dict, Optional
 import redis.asyncio as aioredis
+from core.config import settings
 from .models import AgentStreamEvent, EventType
 
 logger = logging.getLogger(__name__)
@@ -38,9 +39,9 @@ def standardize_payload(event_type: EventType, payload: Dict[str, Any]) -> Dict[
 class EventPublisher:
     """Publishes domain events to Redis Pub/Sub and buffers recent history for client replay."""
 
-    def __init__(self, redis_url: Optional[str] = None, ttl_seconds: int = 3600):
-        self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379")
-        self.ttl_seconds = ttl_seconds
+    def __init__(self, redis_url: Optional[str] = None, ttl_seconds: Optional[int] = None):
+        self.redis_url = redis_url or settings.redis_url
+        self.ttl_seconds = ttl_seconds if ttl_seconds is not None else settings.redis_event_ttl_seconds
         self._redis: Optional[aioredis.Redis] = None
 
     async def get_redis(self) -> aioredis.Redis:

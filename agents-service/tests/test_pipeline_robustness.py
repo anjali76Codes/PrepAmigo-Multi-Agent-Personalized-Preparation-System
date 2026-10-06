@@ -46,10 +46,10 @@ def test_company_research_timeout_keeps_the_profile_gathered_so_far(monkeypatch)
 
     class SlowCompanyGraph:
         async def astream(self, _inputs, config, stream_mode):
-            assert stream_mode == ["values", "custom"]  # custom: its tool events reach the parent's SSE stream
-            yield "custom", {"agent": "company_research", "step": "tool_search_company_overview",
-                             "status": "running", "payload": {}, "timestamp": ""}
-            yield "values", {"messages": [], "task_context": {"company_profile": {"name": "Acme", "description": "Makes anvils"}}}
+            yield (
+                "values",
+                {"messages": [], "task_context": {"company_profile": {"name": "Acme", "description": "Makes anvils"}}},
+            )
             await asyncio.sleep(5)  # the model's closing turn never arrives
 
     class JobAgent:

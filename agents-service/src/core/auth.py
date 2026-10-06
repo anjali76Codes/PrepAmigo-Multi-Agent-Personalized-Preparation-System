@@ -7,16 +7,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set ENABLE_AUTH=true to require JWT auth; false (or unset) bypasses auth.
-ENABLE_AUTH = os.getenv("ENABLE_AUTH", "false").strip().lower() in {"1", "true", "yes", "on"}
+from core.config import settings
 
-# This should match the JWT_SECRET in your backend/.env
-JWT_SECRET = os.getenv("JWT_SECRET")
+# Authentication is required if ENABLE_AUTH=true, or unconditionally in production
+ENABLE_AUTH = settings.enable_auth or (settings.environment == "production")
+JWT_SECRET = settings.jwt_secret
 
 if not JWT_SECRET:
-    print("WARNING: JWT_SECRET environment variable is not set!")
     if ENABLE_AUTH:
-        raise RuntimeError("JWT_SECRET must be configured when ENABLE_AUTH is enabled")
+        raise RuntimeError("JWT_SECRET must be configured when ENABLE_AUTH is enabled or ENVIRONMENT=production")
 
 ALGORITHM = "HS256"
 

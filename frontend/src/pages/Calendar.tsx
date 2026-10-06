@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
@@ -7,13 +7,12 @@ import { Link } from 'react-router-dom';
 import { cn } from '../utils/utils';
 
 import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
-import { MOCK_SPRINT_DAYS } from '../mocks/interviewPlan.mock';
 import type { ISprintDay } from '../mocks/interviewPlan.mock';
 
 export function Calendar() {
   const shouldReduceMotion = useReducedMotion();
   const { preps } = useAppContext();
-  const [selectedPrepId, setSelectedPrepId] = useState<string>(preps[0]?.id || 'prep-1');
+  const [selectedPrepId, setSelectedPrepId] = useState<string>(preps[0]?.id || '');
   const [activeTab, setActiveTab] = useState<'today' | 'backlog' | 'upcoming'>('today');
   const [showBanner, setShowBanner] = useState(true);
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -22,8 +21,38 @@ export function Calendar() {
 
   const selectedPrep = preps.find(p => p.id === selectedPrepId) || preps[0];
 
-  // Interactive task state mapped from Mock Data
-  const [tasks, setTasks] = useState<ISprintDay[]>(MOCK_SPRINT_DAYS);
+  const mappedPrepTasks: ISprintDay[] = useMemo(() => {
+    if (!selectedPrep?.roadmap?.sprints) return [];
+    return selectedPrep.roadmap.sprints.flatMap((s) =>
+      (s.days || []).map((d: any) => ({
+        _id: d.id || `${s.id}-day-${d.dayNumber}`,
+        sprint_id: s.id,
+        day_number: d.dayNumber,
+        scheduled_date: d.date,
+        topic_title: d.topic,
+        topic_description: d.objective || '',
+        objectives: (d.objectives && d.objectives.length > 0) ? d.objectives : [d.objective].filter(Boolean),
+        estimated_minutes: d.estimatedMinutes || 60,
+        references: (d.rawReferences || []).map((r: any) => ({
+          title: r.title || r.url,
+          url: r.url,
+        })),
+        status: (d.status === 'done' ? 'completed' : d.status === 'today' ? 'in_progress' : 'pending') as
+          | 'completed'
+          | 'in_progress'
+          | 'pending',
+        completed_at: d.status === 'done' ? new Date().toISOString() : null,
+        createdAt: d.date,
+        updatedAt: d.date,
+      }))
+    );
+  }, [selectedPrep]);
+
+  const [tasks, setTasks] = useState<ISprintDay[]>([]);
+
+  useEffect(() => {
+    setTasks(mappedPrepTasks);
+  }, [mappedPrepTasks]);
 
   const todayTasks = tasks.filter(t => t.status === 'in_progress');
   const upcomingTasks = tasks.filter(t => t.status === 'pending');
@@ -77,6 +106,25 @@ export function Calendar() {
   };
 
   const currentList = activeTab === 'today' ? todayTasks : activeTab === 'backlog' ? backlogTasks : upcomingTasks;
+
+  if (preps.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-center h-full">
+        <div className="w-16 h-16 rounded-full bg-navy-50 text-navy-700 flex items-center justify-center text-3xl mb-4">
+          <Icon name="calendar-outline" />
+        </div>
+        <h2 className="text-2xl font-bold text-carbon-900 mb-2">No Scheduled Tasks</h2>
+        <p className="text-sm text-carbon-500 max-w-md mb-6">
+          You don't have an active study schedule yet. Create your preparation plan to populate your daily timeline.
+        </p>
+        <Link to="/dashboard/chat">
+          <Button variant="primary" className="flex items-center gap-2">
+            Create Schedule in Chat <Icon name="arrow-forward-outline" />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">

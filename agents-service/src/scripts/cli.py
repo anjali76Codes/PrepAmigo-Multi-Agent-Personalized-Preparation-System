@@ -55,10 +55,22 @@ DIM, RESET = "\033[2m", "\033[0m"
 def show_step(event: dict) -> None:
     from streaming.langgraph_bridge import _event_type_for_step
 
-    event_type = _event_type_for_step(event.get("step", "")).value.upper()
+    step_name = event.get("step", "")
+    event_type = _event_type_for_step(step_name).value.upper()
     status = event.get("status", "running")
     payload = event.get("payload", {})
-    message = payload.get("message") or f"{event.get('agent')}: {event.get('step')}"
+    message = payload.get("message")
+    if not message:
+        if step_name == "parallel_agents":
+            cr_status = payload.get("company_research", "done")
+            ji_status = payload.get("job_intelligence", "done")
+            message = f"Company Research: {cr_status}, Job Intelligence: {ji_status}"
+        elif step_name == "skill_gap_analysis":
+            message = f"Skill gaps: {payload.get('gaps_count', 0)}, Readiness: {payload.get('readiness_score', 0)}%"
+        elif step_name == "planning_stage":
+            message = f"Study plan ready ({payload.get('total_days', 0)} days, {payload.get('sprints', 0)} sprints)"
+        else:
+            message = f"{event.get('agent', 'agent')}: {step_name}"
 
     CYAN = "\033[36m"
     GREEN = "\033[32m"
@@ -89,6 +101,10 @@ async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
     async for item in stream_turn(graph, inputs, config):
         if item["type"] == "route":
             print(f"\033[33m  [SSE: CALLING_AGENT] → {item['agent']}\033[0m", flush=True)
+        elif item["type"] == "waiting":
+            payload = item.get("payload", {})
+            q = payload.get("question") or payload
+            print(f"\033[33m  [SSE: WAITING] Awaiting user response: {q}\033[0m", flush=True)
         elif item["type"] == "step":
             show_step(item["event"])
         elif item["type"] == "token":
@@ -97,9 +113,9 @@ async def run_turn(graph, inputs: dict, config: dict, stream: bool) -> None:
                 replying = True
             print(item["content"], end="", flush=True)
         elif item["type"] == "final":
-            if replying:
-                print("\n\033[32m  [SSE: COMPLETED] Turn complete.\033[0m", flush=True)
-    print("\n")
+            if not replying and item.get("content"):
+                print(f"Agent: {item['content']}", flush=True)
+            print("\033[32m  [SSE: COMPLETED] Turn complete.\033[0m\n", flush=True)
 
 
 async def run_repl(user_id: str, stream: bool):
@@ -282,7 +298,7 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     serpapi_mode = f"{GREEN}live API (SERPAPI_ENABLED=true){RESET}" if settings.serpapi_enabled else f"{DIM}dummy fixtures (SERPAPI_ENABLED=false){RESET}"
     print(f"  SerpApi  : {serpapi_mode}")
     print(f"{'═'*W}")
-    print(f"\n  {CYAN}Running pipeline...{RESET} All state passes internally between agents.\n")
+    print(f"\n  {CYAN}Running pipeline with live SSE stream telemetry...{RESET}\n")
 
     # Minimal isolated graph: no supervisor, no memory nodes
     # Wired identically to builder.py's interview_prep section
@@ -319,15 +335,28 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
     thread_config = {"configurable": {"thread_id": f"prep-{company.lower().replace(' ', '-')}"}}
 
     start_time = time.perf_counter()
+    state = dict(inputs)
+    print(f"  {CYAN}[SSE: THINKING - RUNNING]{RESET} Initializing pipeline graph and validating requirements...", flush=True)
     with collect_metrics() as run_metrics:
         try:
-            state = await graph.ainvoke(inputs, config=thread_config)
+            async for mode, chunk in graph.astream(inputs, config=thread_config, stream_mode=["updates", "custom"]):
+                if mode == "custom":
+                    show_step(chunk)
+                elif mode == "updates":
+                    for node_name, node_update in chunk.items():
+                        if isinstance(node_update, dict):
+                            state.update(node_update)
+                            if "task_context" in node_update and isinstance(node_update["task_context"], dict):
+                                tc = dict(state.get("task_context") or {})
+                                tc.update(node_update["task_context"])
+                                state["task_context"] = tc
         except Exception as exc:
             elapsed = time.perf_counter() - start_time
             print(f"\n  {RED}Pipeline failed after {elapsed:.2f}s: {exc}{RESET}\n")
             _print_metrics(run_metrics.summary())
             return
     elapsed_sec = time.perf_counter() - start_time
+    print(f"  {GREEN}[SSE: COMPLETED]{RESET} All workflow stages completed.\n", flush=True)
 
     # every model call failing means nothing below is a real result: say so
     # up front instead of letting empty stages look like findings

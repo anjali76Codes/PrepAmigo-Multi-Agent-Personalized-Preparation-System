@@ -22,8 +22,10 @@ from observability import configure_logging
 from streaming.publisher import get_event_publisher
 from streaming.runner import execute_agent_stream
 from core.auth import verify_token
+from core.config import settings
 from routers.job_intelligence_router import router as job_intelligence_router
 from routers.skill_gap_router import router as skill_gap_router
+from routers.stream_router import router as stream_router
 from agents.interview_prep_fields import WORKFLOW_FIELDS
 
 configure_logging()
@@ -109,11 +111,11 @@ async def lifespan(app: FastAPI):
     await app.state.publisher.close()
 
 
-app = FastAPI(title="TravelAmigo Agents", lifespan=lifespan)
+app = FastAPI(title=settings.app_title, lifespan=lifespan)
 
 cors_origins = [
     origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    for origin in settings.cors_origins.split(",")
     if origin.strip()
 ]
 if cors_origins:
@@ -125,8 +127,9 @@ if cors_origins:
         allow_headers=["*"],
     )
 
-app.include_router(job_intelligence_router)
-app.include_router(skill_gap_router)
+app.include_router(job_intelligence_router, tags=["Job Intelligence"])
+app.include_router(skill_gap_router, tags=["Skill Gap"])
+app.include_router(stream_router, tags=["Streaming"])
 
 START_TIME = time.time()
 
@@ -137,7 +140,7 @@ def health_check():
         "status": "UP",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "uptime": time.time() - START_TIME,
-        "environment": os.getenv("ENVIRONMENT", "development"),
+        "environment": settings.environment,
     }
 
 
@@ -235,3 +238,33 @@ async def execute_agent_async(
         auth_token=authorization,
     )
     return {"status": "accepted", "runId": request.runId}
+
+
+class ExtractResumeRequest(BaseModel):
+    filename: str
+    base64_data: str
+
+
+@app.post("/internal/agent/extract-resume")
+async def extract_resume(req: ExtractResumeRequest):
+    import base64
+    from routers.skill_gap_router import extract_text_from_pdf, extract_text_from_docx
+
+    try:
+        raw_bytes = base64.b64decode(req.base64_data)
+        fname = req.filename.lower()
+        if fname.endswith(".pdf"):
+            text = extract_text_from_pdf(raw_bytes)
+        elif fname.endswith(".docx"):
+            text = extract_text_from_docx(raw_bytes)
+        elif fname.endswith(".txt") or fname.endswith(".md"):
+            text = raw_bytes.decode("utf-8", errors="ignore")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format (.pdf, .docx, .txt, .md)")
+
+        return {"success": True, "text": text, "filename": req.filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to extract resume text: {e}")
+        raise HTTPException(status_code=400, detail=str(e))

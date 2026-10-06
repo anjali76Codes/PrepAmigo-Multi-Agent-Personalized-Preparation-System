@@ -29,6 +29,7 @@ from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
+from tools.duration import extract_duration_days, resolve_plan_total_days
 from tools.plan_db_sync import sync_generated_plan_to_db
 from tools.plan_builder import plan_topics, schedule
 
@@ -219,13 +220,16 @@ class InterviewPrepOrchestrator:
         response = None
         try:
             response = await asyncio.wait_for(
-                get_llm(guarded=True, temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=12
+                get_llm(temperature=0).ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
+                timeout=settings.interview_prep_extract_timeout_seconds,
             )
             content = _message_text(response).strip()
-            if content.startswith("```"):
-                content = content.split("\n", 1)[-1]
-            if content.endswith("```"):
-                content = content[:-3]
+            if "```json" in content:
+                content = content.split("```json", 1)[1].split("```", 1)[0]
+            elif "```" in content:
+                content = content.split("```", 1)[1].split("```", 1)[0]
+            elif "{" in content and "}" in content:
+                content = content[content.find("{"):content.rfind("}") + 1]
             parsed = json.loads(content.strip())
             if isinstance(parsed, dict):
                 return workflow_fields.normalize_workflow_fields(parsed)
@@ -263,6 +267,15 @@ class InterviewPrepOrchestrator:
         if missing and state.get("messages") and can_extract_conversation and not extracted_from_text:
             normalized = _merge_input(normalized, await self._extract_fields(state))
             missing = workflow_fields.missing_required_fields(normalized)
+        # Resolve requested plan duration in days (e.g. 90 days, 30 days, 60 days)
+        extracted_days = resolve_plan_total_days(
+            state,
+            [
+                state.get("workflow_text_input"),
+                resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None),
+            ],
+        )
+
         if missing:
             rounds = int(state.get("workflow_clarification_rounds") or 0) + 1
             if rounds > MAX_CLARIFICATION_ROUNDS:
@@ -276,7 +289,7 @@ class InterviewPrepOrchestrator:
                     "messages": [AIMessage(content=message)],
                 }
             question = _clarification_question(missing, normalized)
-            return {
+            res = {
                 "interview_prep_input": normalized,
                 "workflow_status": "awaiting_input",
                 "workflow_clarification_rounds": rounds,
@@ -288,14 +301,20 @@ class InterviewPrepOrchestrator:
                 "workflow_resume_input": {},
                 "messages": [AIMessage(content=question)],
             }
+            if extracted_days:
+                res["plan_total_days"] = extracted_days
+            return res
 
-        return {
+        res = {
             "interview_prep_input": normalized,
             "workflow_status": "running",
             "workflow_clarification_rounds": int(state.get("workflow_clarification_rounds") or 0),
             "workflow_question": None,
             "workflow_resume_input": {},
         }
+        if extracted_days:
+            res["plan_total_days"] = extracted_days
+        return res
 
     async def prepare(self, state: dict[str, Any]) -> dict[str, Any]:
         with agent_scope("prepare"):
@@ -516,10 +535,29 @@ class InterviewPrepOrchestrator:
 
         company = canonical_company(values.get("company", ""), company_profile.get("name", ""))
         role = values.get("role", "")
-        resume_text = (state.get("task_context") or {}).get("candidate_resume_text", "")
+        task_context = dict(state.get("task_context") or {})
+        wf_input = state.get("workflow_input") or {}
+
+        resume_text = (
+            task_context.get("candidate_resume_text")
+            or wf_input.get("resume_text")
+            or wf_input.get("candidate_resume_text")
+            or ""
+        )
+        has_user_resume = bool(resume_text.strip())
+
+        if not has_user_resume:
+            # Baseline resume so skill-gap analysis and planner can build a comprehensive study plan
+            resume_text = (
+                f"Candidate Software Engineer\n"
+                f"Target Role: {role}\n"
+                f"Skills: Core Programming, Software Engineering Fundamentals, Git, Basic System Design\n"
+                f"Experience: Software Engineer with 2 years of general development experience.\n"
+                f"Education: Bachelor's Degree in Computer Science\n"
+            )
+            task_context["candidate_resume_text"] = resume_text
 
         # Merge upstream results into task_context so downstream nodes can read them
-        task_context = dict(state.get("task_context") or {})
         if company_profile:
             task_context["company_profile"] = company_profile
         if job_intelligence:
@@ -531,7 +569,7 @@ class InterviewPrepOrchestrator:
         await dispatch_event(
             make_event("interview_prep", "skill_gap_analysis", "running", {
                 "message": f"Analyzing skill gaps for {role} at {company}...",
-                "has_resume": bool(resume_text.strip()),
+                "has_resume": has_user_resume,
             }),
             None,
         )
@@ -715,11 +753,17 @@ class InterviewPrepOrchestrator:
             None,
         )
 
+        requested_days = (
+            state.get("plan_total_days")
+            or resolve_plan_total_days(state)
+            or settings.plan_total_days
+        )
+
         try:
             output = await self.planner_agent.build_plan(
                 materials, priority_gaps, role, company, user_id=state.get("user_id"),
                 focus=prep_focus(task_context.get("job_intelligence"), task_context.get("company_profile")),
-                total_days=state.get("plan_total_days") or settings.plan_total_days,
+                total_days=requested_days,
             )
         except Exception as exc:
             logger.warning("Planning stage failed: %s", exc, exc_info=True)
@@ -806,7 +850,10 @@ class InterviewPrepOrchestrator:
                 raise _SkipEvaluator()
             llm = get_llm(guarded=True, temperature=0, max_tokens=120,
                           profile="fast" if settings.evaluator_llm == "fast" else "default")
-            response = await asyncio.wait_for(llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=10)
+            response = await asyncio.wait_for(
+                llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG),
+                timeout=settings.interview_prep_evaluator_timeout_seconds,
+            )
             content = _message_text(response).strip()
             if content.startswith("```"):
                 content = content.split("\n", 1)[-1]

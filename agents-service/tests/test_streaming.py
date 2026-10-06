@@ -64,13 +64,13 @@ async def test_dummy_agent_stream():
 
     await run_dummy_agent_stream(
         run_id="run-dummy-test",
-        query="Flights to London",
+        query="Senior Python Backend Engineer at Google",
         publisher=publisher,
         thread_id="test-thread",
         step_delay=0,
     )
 
-    assert publisher.emit_event.call_count == 6
+    assert publisher.emit_event.call_count == 7
     last_call = publisher.emit_event.call_args_list[-1]
     assert last_call.kwargs["event_type"] == EventType.COMPLETED
 

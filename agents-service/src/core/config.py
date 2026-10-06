@@ -11,12 +11,15 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]  # agents-service/
+REPO_ROOT = Path(__file__).resolve().parents[3]     # repository root/
+
+# Try loading from agents-service/.env first, then repo root/.env, then current working directory
+load_dotenv(PACKAGE_ROOT / ".env")
+load_dotenv(REPO_ROOT / ".env")
 load_dotenv()
 
-logger = logging.getLogger(__name__)
-
-# agents-service/ (this file is src/core/config.py); .data/ lives here
-SERVICE_ROOT = Path(__file__).resolve().parents[2]
+SERVICE_ROOT = PACKAGE_ROOT
 
 
 def service_path(value: str) -> Path:
@@ -44,12 +47,10 @@ class Settings:
     # without the thinking capability. "true" turns it back on, empty
     # leaves it to the model's own default.
     ollama_reasoning: str = os.getenv("OLLAMA_REASONING", "false").strip().lower()
-    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
     # --- Fast model profile (optional) ---
-    # A second, OpenAI-compatible endpoint (e.g. Groq) for small calls where
-    # latency matters more than depth. Used only by agents whose *_LLM
-    # setting is "fast"; unset, those agents use the main model above.
+    # A second, OpenAI-compatible endpoint (e.g. Groq) for latency-sensitive
+    # calls. Only agents whose *_LLM setting is "fast" use it; leave empty to
+    # use the main Ollama model everywhere. Not required for normal operation.
     fast_llm_base_url: str = os.getenv("FAST_LLM_BASE_URL", "").strip()
     fast_llm_model: str = os.getenv("FAST_LLM_MODEL", "").strip()
     fast_llm_api_key: str = os.getenv("FAST_LLM_API_KEY", "").strip()
@@ -141,7 +142,41 @@ class Settings:
     mem0_qdrant_url: str = os.getenv("MEM0_QDRANT_URL", "").strip()
     mem0_qdrant_api_key: str = os.getenv("MEM0_QDRANT_API_KEY", "").strip()
     ollama_embed_model: str = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text").strip()
-    openai_embed_model: str = os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small").strip()
+
+    # --- App metadata ---
+    app_title: str = os.getenv("APP_TITLE", "PrepAmigo Agents").strip()
+
+    # --- Database (MongoDB) ---
+    # Connection URI for MongoDB. Only used when mongo_enabled is true.
+    mongo_uri: str = os.getenv("MONGO_URI", "mongodb://localhost:27017").strip()
+    # Set MONGO_ENABLED=true to persist agent outputs (e.g. skill-gap reports) to MongoDB.
+    mongo_enabled: bool = os.getenv("MONGO_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+    # --- Redis / SSE ---
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379").strip()
+    # How long agent event history is kept in Redis (for client reconnect replay).
+    redis_event_ttl_seconds: int = int(os.getenv("REDIS_EVENT_TTL_SECONDS", "3600") or 3600)
+    # SSE keep-alive ping interval in seconds (prevents browser/proxy timeout).
+    sse_ping_interval_seconds: int = int(os.getenv("SSE_PING_INTERVAL_SECONDS", "15") or 15)
+    # If Python stops emitting events for this long, the SSE endpoint sends a
+    # failed event and closes (prevents the client hanging on a crashed worker).
+    sse_watchdog_timeout_seconds: int = int(os.getenv("SSE_WATCHDOG_TIMEOUT_SECONDS", "35") or 35)
+
+    # --- Streaming mode ---
+    # false (default) = run real LangGraph agents.
+    # true = emit scripted PrepAmigo-themed dummy SSE events (UI dev only).
+    # interview_prep workflow always uses the real graph regardless of this flag.
+    use_dummy_stream: bool = os.getenv("USE_DUMMY_STREAM", "false").strip().lower() in {"1", "true", "yes", "on"}
+    # Delay multiplier for dummy stream steps. Only used when use_dummy_stream is true.
+    dummy_stream_step_delay: float = float(os.getenv("DUMMY_STREAM_STEP_DELAY", "1.0") or 1.0)
+
+    # --- Auth & Environment ---
+    environment: str = os.getenv("ENVIRONMENT", "development").strip().lower()
+    enable_auth: bool = os.getenv("ENABLE_AUTH", "false").strip().lower() in {"1", "true", "yes", "on"}
+    jwt_secret: str = os.getenv("JWT_SECRET", "").strip()
+
+    # --- CORS ---
+    cors_origins: str = os.getenv("CORS_ORIGINS", "").strip()
 
     # --- User knowledge graph (see graph/knowledge_graph.py) ---
     # JSON file for the graph; empty keeps the graph in-process only.
@@ -239,12 +274,25 @@ class Settings:
     interview_prep_branch_timeout_seconds: float = float(
         os.getenv("INTERVIEW_PREP_BRANCH_TIMEOUT_SECONDS", "90") or 90
     )
+    # budget for the LLM call that extracts interview-prep fields (company, role, location)
+    # from a free-form chat query. Gives sufficient headroom for local/cloud Ollama models.
+    interview_prep_extract_timeout_seconds: float = float(
+        os.getenv("INTERVIEW_PREP_EXTRACT_TIMEOUT_SECONDS", "60") or 60
+    )
+    # budget for the ReAct evaluator LLM call
+    interview_prep_evaluator_timeout_seconds: float = float(
+        os.getenv("INTERVIEW_PREP_EVALUATOR_TIMEOUT_SECONDS", "30") or 30
+    )
     # budget for the one LLM call that turns job postings into required
     # skills. Everything downstream depends on it (no required skills = no
     # gaps = no plan), so it gets more room than a nice-to-have call; it
     # still sits inside the branch budget above.
     job_intelligence_llm_timeout_seconds: float = float(
         os.getenv("JOB_INTELLIGENCE_LLM_TIMEOUT_SECONDS", "60") or 60
+    )
+    # cap on the skills and summary tokens generated by the job intelligence extraction call
+    job_intelligence_max_output_tokens: int = int(
+        os.getenv("JOB_MAX_OUTPUT_TOKENS", os.getenv("JOB_INTELLIGENCE_MAX_OUTPUT_TOKENS", "900")) or 900
     )
     # --- Per-agent model routing ---
     # Each *_LLM picks "default" (the main model) or "fast" (FAST_LLM_*).
@@ -346,6 +394,10 @@ class Settings:
     # most days one planner LLM call writes, keeping every call small no
     # matter how long the plan is
     planner_days_per_call: int = int(os.getenv("PLANNER_DAYS_PER_CALL", "10") or 10)
+    # token headroom for each chunk of planned days
+    planner_max_tokens: int = int(os.getenv("PLANNER_MAX_TOKENS", "1400") or 1400)
+    # per-chunk LLM narrative synthesis budget in seconds
+    planner_narrative_timeout_seconds: float = float(os.getenv("PLANNER_NARRATIVE_TIMEOUT_SECONDS", "45") or 45)
 
     # most skill gaps researched per run (highest priority first); each costs
     # one search round + one LLM write-up, so this bounds research time and
@@ -377,8 +429,8 @@ class Settings:
         return max(0, int(self.plan_gap_searches))
 
     def validate(self) -> None:
-        if self.llm_provider not in {"openai", "ollama"}:
-            raise ValueError("LLM_PROVIDER must be either 'openai' or 'ollama'")
+        if self.llm_provider != "ollama":
+            raise ValueError("LLM_PROVIDER must be 'ollama' (OpenAI integration removed)")
         if self.memory_provider not in {"local", "mem0", "mem0_oss"}:
             raise ValueError("MEMORY_PROVIDER must be one of 'local', 'mem0', 'mem0_oss'")
         if not self.ollama_model:
@@ -388,10 +440,6 @@ class Settings:
         parsed_url = urlparse(self.ollama_base_url)
         if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
             raise ValueError("OLLAMA_BASE_URL must be a valid HTTP(S) URL")
-        if self.llm_provider == "openai" and not self.openai_api_key:
-            raise ValueError("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
-        if self.llm_provider == "openai" and not self.openai_model:
-            raise ValueError("OPENAI_MODEL must not be empty")
         if self.research_timeout_seconds <= 0:
             raise ValueError("RESEARCH_TIMEOUT_SECONDS must be a positive number")
         if self.research_synthesis_timeout_seconds <= 0:
@@ -495,7 +543,10 @@ def llm_concurrency(cfg: Settings | None = None, profile: str = "default") -> in
         return cfg.fast_llm_max_concurrency * len(cfg.fast_llm_keys())
     if cfg.llm_max_concurrency > 0:
         return cfg.llm_max_concurrency
-    return 1 if cfg.llm_provider == "ollama" else 4
+    # Ollama is the only supported primary provider; parallel requests offer
+    # no speedup on a single local process. Raise LLM_MAX_CONCURRENCY
+    # if you run Ollama with OLLAMA_NUM_PARALLEL > 1.
+    return 1
 
 
 def get_llm(temperature: float = 0.2, max_tokens: int | None = None, profile: str = "default",
@@ -681,26 +732,14 @@ def _build_llm(temperature: float = 0.2, max_tokens: int | None = None, profile:
         # A free fast tier runs out mid-run (Groq: 1,000 output tokens a
         # minute). The same call then runs on the main model (or the
         # agent's own *_MODEL), so a rate limit costs speed, never the result.
-        if not fallback:
-            return fast
-        return fast.with_fallbacks([_build_llm(temperature=temperature, max_tokens=max_tokens, model=model)])
-    model = model or (settings.openai_model if settings.llm_provider == "openai" else settings.ollama_model)
-    # the model's own cache key leaves out the model name and temperature
-    # (ChatOllama's is just its type), so they go into the cache's key here
+        return fast.with_fallbacks([get_llm(temperature=temperature, max_tokens=max_tokens, model=model)])
+    # Primary provider: Ollama
+    model = model or settings.ollama_model
     cache = llm_response_cache(
-        f"{settings.llm_provider}:{model}:temperature={temperature}:max_tokens={max_tokens}"
+        f"ollama:{model}:temperature={temperature}:max_tokens={max_tokens}"
         f":reasoning={settings.ollama_reasoning}"
     )
     common = {"temperature": temperature, "callbacks": [METRICS_CALLBACK], "cache": cache}
-    if settings.llm_provider == "openai":
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(
-            model=model,
-            api_key=settings.openai_api_key,
-            **({"max_tokens": max_tokens} if max_tokens else {}),
-            **common,
-        )
-    # default: local ollama
     from langchain_ollama import ChatOllama
     options: dict = {}
     if settings.ollama_reasoning:

@@ -8,6 +8,8 @@ export interface IUserProfile {
   skills: string[];
   github_url?: string;
   resume_url?: string;
+  resume_filename?: string;
+  resume_text?: string;
 }
 
 export interface IUser extends Document {
@@ -31,6 +33,8 @@ const profileSchema = new Schema<IUserProfile>(
     skills: { type: [String], default: [] },
     github_url: { type: String, trim: true },
     resume_url: { type: String, trim: true },
+    resume_filename: { type: String, trim: true },
+    resume_text: { type: String },
   },
   { _id: false },
 );

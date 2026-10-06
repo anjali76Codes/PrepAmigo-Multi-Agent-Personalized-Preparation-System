@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { ProgressStats } from '../components/preps/ProgressStats';
 import { BadgeGrid } from '../components/preps/BadgeGrid';
@@ -7,11 +8,33 @@ import { SkillLevelBars } from '../components/preps/SkillLevelBars';
 import { MilestoneTrack } from '../components/preps/MilestoneTrack';
 import { TitleCard } from '../components/preps/TitleCard';
 import { Mascot } from '../components/ui/Mascot';
+import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
 
 export function Progress() {
   const shouldReduceMotion = useReducedMotion();
-  const { preps } = useAppContext();
-  const prep = preps[0];
+  const { preps, activePrep } = useAppContext();
+  const prep = activePrep || preps[0];
+
+  if (!prep || !prep.learningContext?.progress) {
+    return (
+      <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
+          <div className="w-16 h-16 bg-lavender-100 rounded-2xl flex items-center justify-center text-chrome mb-4">
+            <Icon name="analytics-outline" className="text-3xl" />
+          </div>
+          <h2 className="text-2xl font-bold text-carbon-900 mb-2">No Active Roadmap</h2>
+          <p className="text-carbon-500 text-sm mb-6">
+            Track your learning velocity, skill level progress, and earned XP once you have generated a preparation plan.
+          </p>
+          <Link to="/dashboard/chat">
+            <Button variant="primary">Start a New Prep</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const progress = prep.learningContext.progress;
 
   return (

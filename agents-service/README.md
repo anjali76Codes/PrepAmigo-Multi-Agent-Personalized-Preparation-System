@@ -1,4 +1,4 @@
-# TravelAmigo Agents
+# PrepAmigo Agents
 
 This folder contains the Python FastAPI service and its LangGraph agent runtime.
 
@@ -9,7 +9,7 @@ cd agents-service
 uv sync --dev
 ```
 
-Create a `.env` file in this folder. The default local provider is Ollama:
+Create a `.env` file in this folder (copy from `.env.example`). The supported primary provider is Ollama:
 
 ```dotenv
 LLM_PROVIDER=ollama
@@ -20,11 +20,11 @@ SERPAPI_API_KEY=your-serpapi-key
 
 The value of `OLLAMA_MODEL` must match a model installed in your Ollama instance. Check available models with `ollama list`, install the documented default with `ollama pull llama3.1`, or set `OLLAMA_MODEL` to an existing model name.
 
-`SERPAPI_API_KEY` powers live search. Set `SERPAPI_ENABLED=false` to disable live SerpApi calls across Company Research, Job Intelligence, Content Research, Interview Intelligence, and Flight Search. Tools then read provider-shaped engine responses from `SERPAPI_DUMMY_DATA_PATH` (defaults to `serpapi_fixtures.example.json`); missing engines fall back to empty built-in fixtures. The file accepts either a top-level engine map or `{ "engines": { ... } }`; each engine may also define `by_query` and `default` entries. `USE_DUMMY_STREAM` is separate and only toggles the scripted SSE demo.
+`SERPAPI_API_KEY` powers live search. Set `SERPAPI_ENABLED=false` to disable live SerpApi calls across Company Research, Job Intelligence, Content Research, and Interview Intelligence. Tools then read provider-shaped engine responses from `SERPAPI_DUMMY_DATA_PATH` (defaults to `serpapi_fixtures.example.json`); missing engines fall back to empty built-in fixtures. `USE_DUMMY_STREAM` is separate (defaults to `false` = runs real agents; set `true` only for scripted dummy SSE UI testing).
 
-For OpenAI, use `LLM_PROVIDER=openai` and provide `OPENAI_API_KEY` and `OPENAI_MODEL`.
+Optional fast tier: configure `FAST_LLM_BASE_URL`, `FAST_LLM_MODEL`, and `FAST_LLM_API_KEY` to route small, latency-sensitive calls to any OpenAI-compatible provider (e.g. Groq).
 
-`POST /internal/agent/execute` needs Redis (`REDIS_URL`, default `redis://localhost:6379`); run one locally with `redis-server` or `docker run -p 6379:6379 redis`. Set `USE_DUMMY_STREAM=false` to have it drive the real graph instead of the scripted demo used for frontend development.
+`POST /internal/agent/execute` and `GET /api/agent/stream/{run_id}` need Redis (`REDIS_URL`, default `redis://localhost:6379`); run one with Docker: `docker run -d --name redis -p 6379:6379 redis:alpine`.
 
 ## Run
 
@@ -32,13 +32,23 @@ For OpenAI, use `LLM_PROVIDER=openai` and provide `OPENAI_API_KEY` and `OPENAI_M
 uv run uvicorn --app-dir src main:app --reload
 ```
 
-For the local interactive CLI, run `uv run python src/scripts/cli.py --user <your-id>`. The `--user` value keys long-term memory (default `demo-user`). The CLI streams the reply as it is generated and shows routing and research-step progress; `--no-stream` waits for the full reply instead. The default comes from `STREAM_RESPONSES` (on unless set to `false`).
+For the local interactive CLI:
+```shell
+# Full multi-agent interactive REPL with live streaming
+uv run python src/scripts/cli.py --user <your-id>
+
+# Run full interview-prep pipeline test with live terminal SSE telemetry
+uv run python src/scripts/cli.py --prep --company "Stripe" --role "Backend Engineer"
+```
 
 The service exposes:
 
 - `GET /health` for liveness information.
+- `GET /api/agent/stream/{run_id}` — direct Server-Sent Events (SSE) stream for client frontend connection (no Node.js relay required). Replays event history and streams live events with 15s keep-alive pings and 35s silence watchdog.
 - `POST /api/chat` for agent requests; waits for the full reply and returns it as JSON. Good for scripts/tests; no step-by-step progress.
-- `POST /internal/agent/execute` — the decoupled trigger for the Redis-backed SSE pipeline (`docs/agents/SSE_STREAMING_GUIDE.md` at the repo root): accepts `{runId, query, thread_id?, user_id?}` for chat, or `workflow_mode: "interview_prep"` with `workflow_input` for structured orchestration. A same-thread `resume_input` continues an interrupted workflow with LangGraph `Command(resume=...)`. Progress and the final reply are published to Redis on `agent:events:{runId}` for the Node.js gateway to relay over SSE.
+- `POST /internal/agent/execute` — the decoupled trigger for the Redis-backed SSE pipeline: accepts `{runId, query, thread_id?, user_id?}` for chat, or `workflow_mode: "interview_prep"` with `workflow_input` for structured orchestration.
+- `POST /api/agents/job-intelligence` and `/raw-search` — job search and intelligence extraction endpoints.
+- `POST /api/agents/skill-gap` — resume parsing and skill gap evaluation endpoint.
 
 Example request:
 
@@ -62,7 +72,7 @@ To add a simple (one node, then done) agent, register it in `src/agents/registry
 
 Every specialist also appends a compact `AgentHandoff` (`src/graph/state.py`) to `state["handoffs"]` — `{agent, kind, summary, data}`, where `data` is small and structured (ids, urls, counts), not the full reply. That's the state-based handover contract: a downstream node or agent later in the turn reads a previous agent's structured output from `handoffs` instead of re-parsing its chat message. It's reset each turn like `execution_events`. Today every turn is single-hop (one specialist runs, then the turn ends), so `handoffs` mostly documents intent for now — but any new agent gets it for free by subclassing `BaseAgent`, or (for a fixed-pipeline agent like research) building one the same shape. `company_research` doesn't emit one yet (it predates the contract and overrides `__call__` directly).
 
-Requests for learning resources (for example "find me resources to learn dynamic programming for Google") go to the Content Research Agent, described below. A request for both company context and current role-market signals (for example "prepare me for a backend interview at Datadog in Seattle") goes to the parallel Interview Prep Orchestrator. A general company-dossier request goes to Company Research (`src/agents/company_research_agent.py`); test it standalone with `uv run python src/scripts/cli.py --company "Datadog"`. The flight-search agent is kept in `src/agents/flight_booking_agent.py` but is not wired into the graph.
+Requests for learning resources (for example "find me resources to learn dynamic programming for Google") go to the Content Research Agent, described below. A request for both company context and current role-market signals (for example "prepare me for a backend interview at Datadog in Seattle") goes to the parallel Interview Prep Orchestrator. A general company-dossier request goes to Company Research (`src/agents/company_research_agent.py`); test it standalone with `uv run python src/scripts/cli.py --company "Datadog"`. The deprecated flight-search agent is archived under `src/agents/_archived/`.
 
 Requests about a company's specific interview rounds, role-based question patterns, candidate experiences, or reported hiring-process changes go to `src/agents/interview_intelligence_node.py`. It runs Google Search, Google Related Questions, Google News, and YouTube searches concurrently; immediately follows a fresh Search result token with Google AI Overview when available; fetches available transcripts for top matching videos; then synthesizes one source-linked brief. Candidate reports are treated as anecdotes, AI Overview claims are checked against references, and missing sources are reported as coverage gaps. Only the final `completed` SSE event carries the Markdown report, in its `message` field.
 

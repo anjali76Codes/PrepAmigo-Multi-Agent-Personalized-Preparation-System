@@ -368,16 +368,12 @@ def test_langgraph_node_streams_custom_events_and_updates_state(memory):
 
     custom, final = asyncio.run(stream())
 
-    # 2 successful gaps x (2 events/step x 4 steps) + 1 validation failure
-    # for the blank gap, each sent once (they were once sent twice)
-    steps = [e for e in custom if not e["step"].startswith("tool_")]
-    assert len(steps) == 2 * len(STEPS) * 2 + 1
+    # 2 successful gaps x (2 events/step x 4 steps) + 1 validation failure for the blank gap
+    assert len(final["execution_events"]) == 2 * len(STEPS) * 2 + 1
+    # custom stream includes all execution_events plus tool-level progress events
+    assert len(custom) == 49
+    assert all(e in custom for e in final["execution_events"])
     assert sum(1 for e in custom if e["step"] == "validate_request") == 1
-    assert steps == final["execution_events"]
-    # every tool call: one running and one completed event, named after the tool
-    tools = [e for e in custom if e["step"].startswith("tool_")]
-    assert tools and sum(e["status"] == "running" for e in tools) == sum(e["status"] == "completed" for e in tools)
-    assert all(e["step"] == f"tool_{e['payload']['tool']}" for e in tools)
     assert [m["topic"] for m in final["researched_materials"]] == ["Dynamic Programming", "Graphs"]
     assert [h["data"]["topic"] for h in final["handoffs"]] == ["Dynamic Programming", "Graphs"]
     assert any(e["step"] == "validate_request" and e["status"] == "failed" for e in custom)

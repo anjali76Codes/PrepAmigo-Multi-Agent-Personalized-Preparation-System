@@ -1,10 +1,247 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { AuthenticatedRequest } from "../types/authenticated-request.js";
 import { config } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 import { redisClient, createRedisSubscriber } from "../config/redis.js";
+import { Types } from "mongoose";
+import { User } from "../models/User.js";
+import { Plan } from "../models/Plan.js";
+import { Sprint } from "../models/Sprint.js";
+import { SprintDay, ReferenceType } from "../models/SprintDay.js";
+import { PlanProgress } from "../models/PlanProgress.js";
 import { AgentStreamEvent, InterviewPrepField, InterviewPrepRequestBody, RunAgentRequestBody } from "./types.js";
+
+const VALID_REFERENCE_TYPES: ReadonlySet<string> = new Set([
+  "video",
+  "article",
+  "documentation",
+  "problem",
+  "course",
+  "book",
+]);
+
+function normalizeReferenceType(type: unknown): ReferenceType {
+  if (typeof type === "string") {
+    const lower = type.toLowerCase().trim();
+    if (VALID_REFERENCE_TYPES.has(lower)) {
+      return lower as ReferenceType;
+    }
+    if (lower.includes("video") || lower.includes("youtube")) return "video";
+    if (lower.includes("book") || lower.includes("paper")) return "book";
+    if (lower.includes("article") || lower.includes("blog") || lower.includes("post")) return "article";
+    if (lower.includes("problem") || lower.includes("leetcode") || lower.includes("exercise") || lower.includes("task")) return "problem";
+    if (lower.includes("course") || lower.includes("tutorial")) return "course";
+  }
+  return "documentation";
+}
+
+const savedRunPlanMap = new Map<string, string>(); // runId -> mongoPlanId
+const savingRunPlanMap = new Map<string, Promise<string | null>>(); // runId -> in-flight save promise
+const runUserMap = new Map<string, string>(); // runId -> userId
+
+export async function persistGeneratedPlan(
+  rawStudyPlan: any,
+  runId: string,
+  userId?: string | null,
+): Promise<string | null> {
+  if (savedRunPlanMap.has(runId)) {
+    return savedRunPlanMap.get(runId)!;
+  }
+  if (savingRunPlanMap.has(runId)) {
+    return savingRunPlanMap.get(runId)!;
+  }
+
+  const savePromise = (async () => {
+    try {
+      if (!rawStudyPlan || typeof rawStudyPlan !== "object") return null;
+
+      // 1. Access the plan part of the JSON and save to Plan collection
+      const planData = rawStudyPlan.plan || rawStudyPlan.nested_plan || rawStudyPlan;
+
+      const resolvedUserId = userId || runUserMap.get(runId) || planData.user_id || rawStudyPlan.user_id;
+      let targetUserId: Types.ObjectId;
+      if (resolvedUserId && Types.ObjectId.isValid(resolvedUserId)) {
+        targetUserId = new Types.ObjectId(resolvedUserId);
+      } else {
+        const defaultUser = await User.findOneAndUpdate(
+          { email: "local-development-user@localhost.invalid" },
+          { $setOnInsert: { name: "Local developer" } },
+          { new: true, upsert: true, setDefaultsOnInsert: true },
+        );
+        targetUserId = defaultUser._id;
+      }
+
+      const totalDays = Number(planData.total_days) || 30;
+      const startDate = new Date(planData.start_date || Date.now());
+      const endDate = new Date(planData.end_date || startDate.getTime() + totalDays * 86400000);
+
+      const plan = await Plan.create({
+        user_id: targetUserId,
+        plan_name: (planData.plan_name || `${planData.company || "Target"} ${planData.role || "Role"} Preparation`).trim(),
+        company: (planData.company || "Target Company").trim(),
+        role: (planData.role || "Target Role").trim(),
+        total_days: totalDays,
+        start_date: startDate,
+        end_date: endDate,
+        sprints: [],
+        status: "in_progress",
+        completion_percent: 0,
+      });
+
+      // 2. Access sprints and sprint_days parts of the JSON
+      const rawSprints: any[] = Array.isArray(rawStudyPlan.sprints)
+        ? rawStudyPlan.sprints
+        : Array.isArray(rawStudyPlan.sprint)
+        ? rawStudyPlan.sprint
+        : Array.isArray(planData.sprints)
+        ? planData.sprints
+        : [];
+
+      const rawDays: any[] = Array.isArray(rawStudyPlan.sprint_days)
+        ? rawStudyPlan.sprint_days
+        : Array.isArray(rawStudyPlan.sprintday)
+        ? rawStudyPlan.sprintday
+        : Array.isArray(rawStudyPlan.days)
+        ? rawStudyPlan.days
+        : Array.isArray(planData.sprint_days)
+        ? planData.sprint_days
+        : [];
+
+      const createdSprintIds: Types.ObjectId[] = [];
+
+      for (let idx = 0; idx < rawSprints.length; idx++) {
+        const s = rawSprints[idx];
+        const sprintNumber = Number(s.sprint_number) || (idx + 1);
+
+        // Days for this sprint: nested in sprint OR matching sprint_number from sprint_days
+        const sprintDaysList: any[] = Array.isArray(s.sprint_days) && s.sprint_days.length > 0
+          ? s.sprint_days
+          : rawDays.filter((d: any) => d && Number(d.sprint_number) === sprintNumber);
+
+        // Place sprint object in Sprint collection
+        const sprint = await Sprint.create({
+          plan_id: plan._id,
+          sprint_number: sprintNumber,
+          sprint_name: (s.sprint_name || `Sprint ${sprintNumber}`).trim(),
+          start_date: new Date(s.start_date || startDate),
+          end_date: new Date(s.end_date || endDate),
+          total_days: Number(s.total_days) || (sprintDaysList.length > 0 ? sprintDaysList.length : 7),
+          sprint_days: [],
+          status: sprintNumber === 1 ? "in_progress" : "pending",
+          completion_percent: 0,
+        });
+
+        // Place sprint day objects in SprintDay collection
+        const dayIds: Types.ObjectId[] = [];
+        for (const d of sprintDaysList) {
+          const dayNumber = Number(d.day_number) || (dayIds.length + 1);
+
+          const rawReferences = Array.isArray(d.references) ? d.references : [];
+          const cleanedReferences = rawReferences.map((ref: any) => ({
+            type: normalizeReferenceType(ref?.type),
+            title: String(ref?.title || "Reference Material").trim().slice(0, 300),
+            url: String(ref?.url || "https://example.com").trim().slice(0, 2048),
+            source: ref?.source ? String(ref.source).trim().slice(0, 200) : undefined,
+            description: ref?.description ? String(ref.description).trim().slice(0, 2000) : undefined,
+            is_required: ref?.is_required !== false,
+          }));
+
+          const sprintDay = await SprintDay.create({
+            sprint_id: sprint._id,
+            day_number: dayNumber,
+            scheduled_date: new Date(d.scheduled_date || sprint.start_date),
+            topic_title: String(d.topic_title || `Day ${dayNumber}`).trim().slice(0, 200),
+            topic_description: d.topic_description ? String(d.topic_description).trim().slice(0, 4000) : undefined,
+            objectives: Array.isArray(d.objectives)
+              ? d.objectives.map((obj: any) => String(obj).trim().slice(0, 500)).filter(Boolean).slice(0, 30)
+              : [],
+            estimated_minutes: Number(d.estimated_minutes) > 0 ? Number(d.estimated_minutes) : 60,
+            references: cleanedReferences.slice(0, 50),
+            status: dayNumber === 1 && sprintNumber === 1 ? "in_progress" : "pending",
+          });
+
+          dayIds.push(sprintDay._id);
+        }
+
+        await Sprint.updateOne({ _id: sprint._id }, { $set: { sprint_days: dayIds } });
+        createdSprintIds.push(sprint._id);
+      }
+
+      await Plan.updateOne({ _id: plan._id }, { $set: { sprints: createdSprintIds } });
+
+      await PlanProgress.findOneAndUpdate(
+        { user_id: targetUserId, plan_id: plan._id },
+        {
+          $setOnInsert: {
+            user_id: targetUserId,
+            plan_id: plan._id,
+            xp_points: 0,
+            completed_day_count: 0,
+            completed_day_dates: [],
+            weekly_bonus_count: 0,
+            streak_count: 0,
+            longest_streak: 0,
+            trophies: [],
+          },
+        },
+        { upsert: true, setDefaultsOnInsert: true },
+      );
+
+      await User.updateOne({ _id: targetUserId }, { $addToSet: { plans: plan._id } });
+
+      const mongoPlanId = plan._id.toString();
+      savedRunPlanMap.set(runId, mongoPlanId);
+      logger.info(`[Agent Gateway] Persisted study plan ${mongoPlanId} for runId ${runId} with ${createdSprintIds.length} sprints`);
+      return mongoPlanId;
+    } catch (err) {
+      logger.error(`[Agent Gateway] Failed to persist study plan for runId ${runId}:`, err);
+      return null;
+    } finally {
+      savingRunPlanMap.delete(runId);
+    }
+  })();
+
+  savingRunPlanMap.set(runId, savePromise);
+  return savePromise;
+}
+
+function listenAndPersistPlanInBackground(runId: string, userId?: string | null): void {
+  const channelKey = `agent:events:${runId}`;
+  const sub = createRedisSubscriber();
+  sub.subscribe(channelKey).catch((err) => {
+    logger.warn(`[Agent Gateway] Background subscriber error for runId ${runId}:`, err);
+  });
+
+  const cleanup = async () => {
+    try {
+      await sub.unsubscribe(channelKey);
+      await sub.quit();
+    } catch {}
+  };
+
+  const timer = setTimeout(cleanup, 300000); // 5-minute cleanup
+
+  sub.on("message", async (_channel: string, msg: string) => {
+    try {
+      const event: AgentStreamEvent = JSON.parse(msg);
+      if (event.type === "completed") {
+        clearTimeout(timer);
+        const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
+        if (studyPlan) {
+          await persistGeneratedPlan(studyPlan, runId, userId);
+        }
+        await cleanup();
+      } else if (event.type === "failed") {
+        clearTimeout(timer);
+        await cleanup();
+      }
+    } catch (err) {
+      logger.error(`[Agent Gateway] Background plan listener message error for runId ${runId}:`, err);
+    }
+  });
+}
 
 const defaultSteps: Record<AgentStreamEvent["type"], string> = {
   thinking: "thinking",
@@ -67,6 +304,49 @@ async function emitFailureToRedis(runId: string, errorMessage: string): Promise<
   }
 }
 
+function pythonAuthHeaders(req: AuthenticatedRequest): Record<string, string> {
+  const sessionToken = (req as any).cookies?.session;
+  let bearerToken = req.headers?.authorization || (sessionToken ? `Bearer ${sessionToken}` : undefined);
+  if (!bearerToken && req.user?.id) {
+    try {
+      const generated = jwt.sign(
+        { sub: req.user.id, id: req.user.id, email: req.user.email || "user@prepamigo.local" },
+        config.JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+      bearerToken = `Bearer ${generated}`;
+    } catch {
+      // fallback
+    }
+  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (bearerToken) headers.Authorization = bearerToken;
+  return headers;
+}
+
+function extractPlanDays(text: string | undefined): number | undefined {
+  if (!text || typeof text !== "string") return undefined;
+  // Match "90 days", "90-day", "90 day", etc.
+  const dayMatch = text.match(/\b(\d{1,3})\s*(?:-| )?days?\b/i);
+  if (dayMatch && dayMatch[1]) {
+    const val = parseInt(dayMatch[1], 10);
+    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+  }
+  // Match "3 months", "2 months", "1 month"
+  const monthMatch = text.match(/\b(\d{1,2})\s*(?:-| )?months?\b/i);
+  if (monthMatch && monthMatch[1]) {
+    const val = parseInt(monthMatch[1], 10) * 30;
+    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+  }
+  // Match "6 weeks", "4 weeks", "1 week"
+  const weekMatch = text.match(/\b(\d{1,2})\s*(?:-| )?weeks?\b/i);
+  if (weekMatch && weekMatch[1]) {
+    const val = parseInt(weekMatch[1], 10) * 7;
+    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+  }
+  return undefined;
+}
+
 /**
  * POST /api/agent/run
  * Generates runId, triggers Python agent service asynchronously, and returns runId immediately.
@@ -76,7 +356,7 @@ export async function runAgentHandler(
   res: Response,
 ): Promise<void> {
   try {
-    const { query, threadId } = req.body;
+    const { query, threadId, resumeText } = req.body;
     if (!query || typeof query !== "string" || query.trim().length === 0) {
       res.status(400).json({ error: "query is required and cannot be empty" });
       return;
@@ -84,15 +364,54 @@ export async function runAgentHandler(
 
     const runId = uuidv4();
 
+    let userId: string | null = null;
+    const authReq = req as unknown as AuthenticatedRequest;
+    if (authReq.user?.id || authReq.user?.sub) {
+      userId = (authReq.user?.id || authReq.user?.sub)?.toString() || null;
+    } else if (config.ENABLE_AUTH) {
+      res.status(401).json({ error: "Authentication required to run the preparation agent." });
+      return;
+    } else {
+      try {
+        const defaultUser = await User.findOne({ email: "local-development-user@localhost.invalid" });
+        if (defaultUser) userId = defaultUser._id.toString();
+      } catch {
+        // Non-blocking in dev
+      }
+    }
+
+    // Auto-ingest profile resume if not explicitly attached in chat
+    let effectiveResumeText = resumeText;
+    if (!effectiveResumeText && userId && Types.ObjectId.isValid(userId)) {
+      try {
+        const dbUser = await User.findById(userId).select("profile.resume_text");
+        if (dbUser?.profile?.resume_text) {
+          effectiveResumeText = dbUser.profile.resume_text;
+          logger.info(`[Agent Gateway] Using stored profile resume for user ${userId}`);
+        }
+      } catch (err) {
+        logger.warn(`[Agent Gateway] Could not load user profile resume:`, err);
+      }
+    }
+
+    // Start background listener to persist plan when completed
+    if (userId) runUserMap.set(runId, userId);
+    listenAndPersistPlanInBackground(runId, userId);
+
+    const planDays = extractPlanDays(query);
+
     // Trigger Python LangGraph service asynchronously (non-blocking)
     const pythonEndpoint = `${config.AGENTS_SERVICE_URL}/internal/agent/execute`;
     fetch(pythonEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pythonAuthHeaders(authReq),
       body: JSON.stringify({
         runId,
         query: query.trim(),
         thread_id: threadId || null,
+        user_id: userId,
+        plan_days: planDays,
+        workflow_input: effectiveResumeText ? { resume_text: String(effectiveResumeText).slice(0, 50000) } : {},
       }),
     })
       .then(async (response) => {
@@ -126,6 +445,31 @@ export async function runAgentHandler(
   }
 }
 
+export async function parseResumeHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { filename, base64Data } = req.body;
+    if (!base64Data || !filename) {
+      res.status(400).json({ success: false, error: "Missing filename or base64Data" });
+      return;
+    }
+    const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/extract-resume`, {
+      method: "POST",
+      headers: pythonAuthHeaders(req as unknown as AuthenticatedRequest),
+      body: JSON.stringify({ filename, base64_data: base64Data }),
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      res.status(response.status).json({ success: false, error: errText });
+      return;
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    logger.error("[Agent Gateway] Failed to parse resume:", error);
+    res.status(500).json({ success: false, error: error?.message || "Failed to parse resume" });
+  }
+}
+
 type WorkflowRun = { runId: string; threadId: string };
 type WorkflowReservation = { run: WorkflowRun; created: boolean };
 
@@ -154,13 +498,6 @@ function workflowInput(body: InterviewPrepRequestBody): Record<string, string> {
   return fields;
 }
 
-function pythonAuthHeaders(req: AuthenticatedRequest): Record<string, string> {
-  const sessionToken = (req as any).cookies?.session;
-  const bearerToken = req.headers.authorization || (sessionToken ? `Bearer ${sessionToken}` : undefined);
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (bearerToken) headers.Authorization = bearerToken;
-  return headers;
-}
 
 async function reserveWorkflowRun(
   userId: string,
@@ -193,6 +530,8 @@ function triggerInterviewPrep(
         input.role && `role ${input.role}`,
         input.location && `location ${input.location}`,
       ].filter(Boolean).join(", ") || "my next role"}.`;
+  if (userId) runUserMap.set(run.runId, userId);
+  listenAndPersistPlanInBackground(run.runId, userId);
   fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/execute`, {
     method: "POST",
     headers: pythonAuthHeaders(req),
@@ -202,6 +541,7 @@ function triggerInterviewPrep(
       query,
       thread_id: run.threadId,
       user_id: userId,
+      plan_days: extractPlanDays(userMessage || query),
       workflow_mode: "interview_prep",
       workflow_input: resume ? {} : input,
       workflow_text_input: resume ? null : userMessage || null,
@@ -443,6 +783,18 @@ export async function streamAgentHandler(
         try {
           const event: AgentStreamEvent = JSON.parse(item);
 
+          if (event.type === "completed") {
+            const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
+            if (studyPlan) {
+              const streamUserId = (req as any).user?.id || (req as any).user?.sub || runUserMap.get(runId);
+              const savedPlanId = await persistGeneratedPlan(studyPlan, runId, streamUserId);
+              if (savedPlanId) {
+                event.payload.plan_id = savedPlanId;
+                if (event.payload.result) event.payload.result.plan_id = savedPlanId;
+              }
+            }
+          }
+
           if (shouldSend) {
             sendSSEMessage(res, event);
           } else if (event.id === lastEventId) {
@@ -469,12 +821,25 @@ export async function streamAgentHandler(
     logger.info(`[Agent Gateway] Subscribing to Redis channel: ${channelKey}`);
     await subscriber.subscribe(channelKey);
 
-    subscriber.on("message", (_channel: string, message: string) => {
+    subscriber.on("message", async (_channel: string, message: string) => {
       if (isClosed || res.writableEnded) return;
 
       try {
         const event: AgentStreamEvent = JSON.parse(message);
         logger.info(`[Agent Gateway] Received live event '${event.type}' from Redis for runId ${runId}`);
+
+        if (event.type === "completed") {
+          const studyPlan = event.payload?.result?.study_plan || event.payload?.study_plan;
+          if (studyPlan) {
+            const streamUserId = (req as any).user?.id || (req as any).user?.sub || runUserMap.get(runId);
+            const savedPlanId = await persistGeneratedPlan(studyPlan, runId, streamUserId);
+            if (savedPlanId) {
+              event.payload.plan_id = savedPlanId;
+              if (event.payload.result) event.payload.result.plan_id = savedPlanId;
+            }
+          }
+        }
+
         sendSSEMessage(res, event);
 
         // Reset inactivity watchdog when a live domain event arrives

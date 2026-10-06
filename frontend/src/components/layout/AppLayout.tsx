@@ -43,6 +43,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKe
 
 import { useAuth } from "../../hooks/useAuth";
 import { featureFlags } from "../../config/featureFlags";
+import { OnboardingDialog } from "../auth/OnboardingDialog";
 
 export function AppLayout() {
   const { user, loading, logout } = useAuth();
@@ -50,6 +51,27 @@ export function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  React.useEffect(() => {
+    if (!user) {
+      setShowOnboarding(false);
+      return;
+    }
+
+    // Purge legacy unscoped flag that could block new signups in the same browser session
+    sessionStorage.removeItem("prepamigo_onboarding_skipped");
+
+    const userKey = user.id || user.sub;
+    const isSkipped = sessionStorage.getItem(`prepamigo_onboarding_skipped_${userKey}`) === "true";
+    const hasTargetRole = Boolean(user.profile?.target_role && user.profile.target_role.trim());
+
+    if (!hasTargetRole && !isSkipped) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [user]);
 
   // Authentication guard controlled via featureFlags (VITE_ENABLE_AUTH)
   if (featureFlags.enableAuth) {
@@ -88,6 +110,10 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen bg-carbon-900 text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
+      <OnboardingDialog
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
       {/* Desktop Sidebar */}
       <motion.aside
         initial={{ width: 256 }}

@@ -35,11 +35,14 @@ export async function listPlansHandler(req: AuthenticatedRequest, res: Response)
   if (!userId) return;
   try {
     const plans = await Plan.find({ user_id: userId })
-      .select("plan_name company role total_days start_date end_date completion_percent status createdAt updatedAt")
+      .select("plan_name company role total_days start_date end_date completion_percent status createdAt updatedAt sprints")
       .populate({
         path: "sprints",
-        select: "sprint_number sprint_name total_days completion_percent status start_date end_date",
         options: { sort: { sprint_number: 1 } },
+        populate: {
+          path: "sprint_days",
+          options: { sort: { day_number: 1 } },
+        },
       })
       .sort({ createdAt: -1 })
       .lean();

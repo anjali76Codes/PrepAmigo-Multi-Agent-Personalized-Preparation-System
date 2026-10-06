@@ -10,21 +10,19 @@ import pymongo
 
 from core.config import settings, get_llm
 from core.auth import verify_token
+from schemas.api import SuccessResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# MongoDB setup (lazy initialization)
+# MongoDB setup (lazy initialization — only used when MONGO_ENABLED=true)
 _mongo_client = None
+
 def get_db():
     global _mongo_client
     if not _mongo_client:
-        mongo_uri = settings.mem0_qdrant_url or "mongodb://localhost:27017" # using whatever config, defaulting to local
-        # If user has a specific MONGO_URI, we'd use os.getenv("MONGO_URI", "mongodb://localhost:27017")
-        import os
-        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-        _mongo_client = pymongo.MongoClient(mongo_uri)
+        _mongo_client = pymongo.MongoClient(settings.mongo_uri)
     return _mongo_client["prepamigo"]
 
 # ----------------- PDF / DOCX Parsing -----------------
@@ -157,7 +155,12 @@ async def evaluate_gaps(candidate_profile: dict, job_requirements: List[dict]) -
 
 
 # ----------------- Router -----------------
-@router.post("/api/agents/skill-gap", dependencies=[Depends(verify_token)])
+@router.post(
+    "/api/agents/skill-gap",
+    response_model=SuccessResponse,
+    dependencies=[Depends(verify_token)],
+    summary="Analyze candidate resume against job intelligence to identify skill gaps",
+)
 async def analyze_skill_gap(
     resume: UploadFile = File(...),
     job_intelligence_data: str = Form(...)
@@ -236,33 +239,35 @@ async def analyze_skill_gap(
         score = (len(matched_skills) * 1.0 + len(partial_skills) * 0.5) / total_required
         readiness_score = int(min(100, max(0, score * 100)))
 
-    # Store in MongoDB
-    try:
-        db = get_db()
-        db.skill_gap_reports.insert_one({
-            "timestamp": datetime.utcnow(),
-            "resume_text": resume_text, # As requested to store
-            "candidate_profile": candidate_profile,
-            "gap_report": {
-                "matched_skills": matched_skills,
-                "partial_skills": partial_skills,
-                "missing_skills": missing_skills,
-                "extra_skills": extra_skills,
-                "priority_gaps": priority_gaps,
-                "readiness_score": readiness_score,
-                "coverage": coverage
-            }
-        })
-    except Exception as e:
-        logger.error(f"Failed to store report in MongoDB: {e}")
-        # non-fatal
+    # Store in MongoDB only when explicitly enabled via MONGO_ENABLED=true
+    if settings.mongo_enabled:
+        try:
+            db = get_db()
+            db.skill_gap_reports.insert_one({
+                "timestamp": datetime.utcnow(),
+                "resume_text": resume_text,
+                "candidate_profile": candidate_profile,
+                "gap_report": {
+                    "matched_skills": matched_skills,
+                    "partial_skills": partial_skills,
+                    "missing_skills": missing_skills,
+                    "extra_skills": extra_skills,
+                    "priority_gaps": priority_gaps,
+                    "readiness_score": readiness_score,
+                    "coverage": coverage
+                }
+            })
+        except Exception as e:
+            logger.error("Failed to store skill-gap report in MongoDB: %s", e)
+            # non-fatal: the response is returned regardless
 
-    return {
+    report_data = {
         "matched_skills": matched_skills,
         "partial_skills": partial_skills,
         "missing_skills": missing_skills,
         "extra_skills": extra_skills,
         "priority_gaps": priority_gaps,
         "readiness_score": readiness_score,
-        "coverage": coverage
+        "coverage": coverage,
     }
+    return SuccessResponse(data=report_data)

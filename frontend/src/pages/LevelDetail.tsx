@@ -4,17 +4,49 @@ import { Mascot } from "../components/ui/Mascot";
 import { DayTaskCard } from "../components/ui/DayTaskCard";
 import type { ResourceItem } from "../components/ui/DayTaskCard";
 import { useState, useMemo } from "react";
-import { MOCK_SPRINTS, MOCK_SPRINT_DAYS } from "../mocks/interviewPlan.mock";
+import { useAppContext } from "../context/AppContext";
+import { plansApi } from "../lib/api/plans";
+
+function formatReferenceType(type?: string): string {
+  if (!type) return "Article";
+  const lower = type.toLowerCase();
+  if (lower.includes("video") || lower.includes("youtube")) return "Video";
+  if (lower.includes("book") || lower.includes("paper")) return "Book";
+  if (lower.includes("doc")) return "Documentation";
+  if (lower.includes("problem") || lower.includes("code") || lower.includes("leetcode")) return "Problem";
+  if (lower.includes("course") || lower.includes("tutorial")) return "Course";
+  return "Article";
+}
 
 export function LevelDetail() {
   const { sprintId, levelId } = useParams();
+  const { activePrep } = useAppContext();
   
-  // Find sprint
+  // Find sprint from activePrep
+  const sprintList = activePrep?.roadmap?.sprints || [];
   const parsedSprintNum = sprintId?.replace('sprint-', '');
-  const sprint = MOCK_SPRINTS.find(s => s._id === sprintId || s.sprint_number.toString() === parsedSprintNum) || MOCK_SPRINTS[0];
+  const sprint = sprintList.find((s: any, idx: number) => 
+    s.id === sprintId || (idx + 1).toString() === parsedSprintNum || s.title?.includes(parsedSprintNum || '')
+  ) || sprintList[0];
   
   // Get days for this sprint
-  const allDays = MOCK_SPRINT_DAYS.filter(d => d.sprint_id === sprint?._id);
+  const allDays = (sprint?.days || []).map((d: any) => ({
+    _id: d.id || `${sprint?.id}-day-${d.dayNumber}`,
+    sprint_id: sprint?.id,
+    day_number: d.dayNumber,
+    scheduled_date: d.date,
+    topic_title: d.topic,
+    topic_description: d.objective || '',
+    objectives: (d.objectives && d.objectives.length > 0) ? d.objectives : [d.objective].filter(Boolean),
+    estimated_minutes: d.estimatedMinutes || 60,
+    references: (d.rawReferences || []).map((r: any) => ({
+      title: r.title || r.url,
+      url: r.url,
+      type: r.type,
+      description: r.description,
+    })),
+    status: d.status === 'done' ? 'completed' : 'pending',
+  }));
 
   // Distribute into levels (e.g., 3 days per level => 5 levels for 15 days)
   const daysPerLevel = 3;
@@ -48,14 +80,19 @@ export function LevelDetail() {
       else next.add(taskId);
       return next;
     });
+    if (taskId && !taskId.includes('day-')) {
+      void plansApi.completeDay(taskId).catch(err => {
+        console.warn('[LevelDetail] Could not complete day on backend:', err);
+      });
+    }
   };
 
-  if (!sprint) {
+  if (!activePrep || !sprint) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-bg h-full">
         <Mascot variant="sad.png" size="xl" />
         <h2 className="text-2xl font-bold text-carbon-900">Sprint not found</h2>
-        <Link to="/dashboard" className="text-navy-600 hover:underline">Go back home</Link>
+        <Link to="/roadmap" className="text-navy-600 hover:underline">Go to Roadmap</Link>
       </div>
     );
   }
@@ -71,10 +108,10 @@ export function LevelDetail() {
           </Link>
           <div>
             <div className="text-xs font-bold text-carbon-400 uppercase tracking-wider">
-              Sprint {sprint.sprint_number}
+              Sprint {(sprint as any).sprint_number || sprintList.indexOf(sprint) + 1}
             </div>
             <h1 className="text-2xl font-extrabold text-carbon-900">
-              {sprint.sprint_name}
+              {(sprint as any).sprint_name || sprint.title}
             </h1>
           </div>
         </div>
@@ -105,16 +142,16 @@ export function LevelDetail() {
                 {level.days.map(day => {
                   // Map objectives and references to ResourceItem format for the DayTaskCard
                   const resources: ResourceItem[] = [
-                    ...day.objectives.map((obj, idx) => ({
-                      id: `obj-${idx}`,
-                      type: "Note" as const,
+                    ...day.objectives.map((obj: string, idx: number) => ({
+                      id: `obj-${day._id}-${idx}`,
+                      type: "Note",
                       title: obj,
                       url: "#"
                     })),
-                    ...day.references.map((ref, idx) => ({
-                      id: `ref-${idx}`,
-                      type: "Article" as const,
-                      title: ref.title,
+                    ...day.references.map((ref: any, idx: number) => ({
+                      id: `ref-${day._id}-${idx}`,
+                      type: formatReferenceType(ref.type),
+                      title: ref.title || ref.url,
                       url: ref.url
                     }))
                   ];

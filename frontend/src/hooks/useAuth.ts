@@ -1,50 +1,140 @@
-import { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { featureFlags } from "../config/featureFlags";
 
-interface User {
+export type ExperienceLevel = "student" | "fresher" | "experienced";
+
+export interface UserProfile {
+  target_role?: string;
+  experience_level?: ExperienceLevel;
+  skills: string[];
+  github_url?: string;
+  resume_url?: string;
+  resume_filename?: string;
+  resume_text?: string;
+}
+
+export interface User {
+  id?: string;
   sub: string;
   email: string;
   name: string;
+  profile?: UserProfile;
 }
 
-export function useAuth() {
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  refreshUser: () => Promise<User | null>;
+  logout: () => Promise<boolean>;
+  updateProfile: (profileData: Partial<UserProfile>) => Promise<boolean>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
-      credentials: "include",
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setUser(data.user))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    if (!featureFlags.enableAuth) {
+      setUser(null);
+      setLoading(false);
+      return null;
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/auth/me`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const loadedUser = data.user ?? null;
+        setUser(loadedUser);
+        return loadedUser;
+      } else {
+        setUser(null);
+        return null;
+      }
+    } catch (err) {
+      console.warn("[Auth] Failed to load session:", err);
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const logout = async () => {
+  useEffect(() => {
+    void refreshUser();
+  }, [refreshUser]);
+
+  const updateProfile = useCallback(async (profileData: Partial<UserProfile>): Promise<boolean> => {
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/auth/logout`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
-      );
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/auth/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(profileData),
+      });
 
-      if (res.ok) {
-        setUser(null);
-        return true;
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data.user) {
+        setUser(data.user);
+      } else if (data.profile) {
+        setUser((prev) => (prev ? { ...prev, profile: data.profile } : null));
       }
-
-      return false;
-    } catch (error) {
-      console.error("Logout failed:", error);
+      return true;
+    } catch (err) {
+      console.error("[Auth] Failed to update profile:", err);
       return false;
     }
-  };
+  }, []);
 
-  return {
-    user,
-    loading,
-    logout,
-  };
+  const logout = useCallback(async (): Promise<boolean> => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (user) {
+        sessionStorage.removeItem(`prepamigo_onboarding_skipped_${user.id || user.sub}`);
+      }
+      sessionStorage.removeItem("prepamigo_onboarding_skipped");
+      setUser(null);
+      return res.ok;
+    } catch (err) {
+      console.error("[Auth] Logout failed:", err);
+      setUser(null);
+      return false;
+    }
+  }, [user]);
+
+  return React.createElement(
+    AuthContext.Provider,
+    {
+      value: {
+        user,
+        loading,
+        setUser,
+        refreshUser,
+        logout,
+        updateProfile,
+      },
+    },
+    children
+  );
+}
+
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

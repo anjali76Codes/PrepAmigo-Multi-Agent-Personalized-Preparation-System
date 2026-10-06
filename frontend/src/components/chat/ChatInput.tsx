@@ -50,6 +50,59 @@ function SquareIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+function PaperclipIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg
+      className={cn("pointer-events-none select-none shrink-0", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+function FileTextIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      className={cn("pointer-events-none select-none shrink-0", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className = "w-3 h-3" }: { className?: string }) {
+  return (
+    <svg
+      className={cn("pointer-events-none select-none shrink-0", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 
 
 // ─── Slash Templates ─────────────────────────────────────────────────────────
@@ -158,8 +211,14 @@ function createRecognition(): SpeechRecognitionInstance | null {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+export interface AttachedFile {
+  name: string;
+  size: number;
+  text: string;
+}
+
 export interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (message: string, attachedFile?: AttachedFile | null) => void;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
@@ -180,6 +239,11 @@ export function ChatInput({
   const [activeTemplateIndex, setActiveTemplateIndex] = useState(0);
   const [sttSupported, setSttSupported] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
@@ -259,11 +323,72 @@ export function ChatInput({
     };
   }, [autoResize]);
 
+  // ── File Selection & Parsing ─────────────────────────────────────────────
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    e.target.value = "";
+    setFileError(null);
+
+    if (file.size > 10 * 1024 * 1024) {
+      setFileError("File exceeds 10MB limit.");
+      return;
+    }
+
+    const name = file.name;
+    const lower = name.toLowerCase();
+
+    setIsParsingFile(true);
+    try {
+      if (lower.endsWith(".txt") || lower.endsWith(".md")) {
+        const text = await file.text();
+        setAttachedFile({ name, size: file.size, text });
+      } else if (lower.endsWith(".pdf") || lower.endsWith(".docx")) {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const res = reader.result as string;
+            const base64 = res.split(",")[1] || "";
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const base64 = await base64Promise;
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+        const response = await fetch(`${apiUrl}/api/agent/parse-resume`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: name, base64Data: base64 }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ error: "Failed to extract text from file" }));
+          throw new Error(errData.error || `Server returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        setAttachedFile({ name, size: file.size, text: data.text });
+      } else {
+        setFileError("Unsupported format. Please upload .txt, .md, .pdf, or .docx.");
+      }
+    } catch (err: any) {
+      console.error("Resume file extraction failed:", err);
+      setFileError(err.message || "Failed to process resume file.");
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if ((!trimmed && !attachedFile) || disabled || isParsingFile) return;
 
     // Stop recording on submit
     if (isRecordingRef.current) {
@@ -276,13 +401,16 @@ export function ChatInput({
       }
     }
 
-    onSend(trimmed);
+    const messageToSend = trimmed || "Review my resume and create a preparation roadmap.";
+    onSend(messageToSend, attachedFile);
     setText("");
+    setAttachedFile(null);
+    setFileError(null);
     setShowTemplates(false);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [text, disabled, onSend]);
+  }, [text, attachedFile, disabled, isParsingFile, onSend]);
 
   // ── Recording actions: Start, Pause ───────────────────────────────────────
 
@@ -483,6 +611,50 @@ export function ChatInput({
               : "border-border hover:border-carbon-300/70"
         )}
       >
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".txt,.md,.pdf,.docx"
+          className="hidden"
+        />
+
+        {/* Attached file chip or loading state */}
+        {(attachedFile || isParsingFile || fileError) && (
+          <div className="flex flex-wrap items-center gap-2 pb-2 mb-2 border-b border-border/40">
+            {isParsingFile && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-navy-600 bg-navy-50 border border-navy-200/80 px-2.5 py-1 rounded-full animate-pulse">
+                <FileTextIcon className="w-3.5 h-3.5 text-navy-600" />
+                <span>Reading resume file...</span>
+              </span>
+            )}
+            {attachedFile && !isParsingFile && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-carbon-800 bg-surface-muted border border-border px-2.5 py-1 rounded-full shadow-2xs group">
+                <FileTextIcon className="w-3.5 h-3.5 text-chrome-accent shrink-0" />
+                <span className="truncate max-w-[200px]" title={attachedFile.name}>
+                  {attachedFile.name}
+                </span>
+                <span className="text-[10px] text-carbon-400 font-mono">
+                  ({(attachedFile.size / 1024).toFixed(0)} KB)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAttachedFile(null)}
+                  className="ml-1 p-0.5 rounded-full hover:bg-carbon-200 text-carbon-400 hover:text-carbon-800 transition-colors cursor-pointer"
+                  title="Remove file"
+                >
+                  <CloseIcon className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {fileError && (
+              <span className="text-xs text-red-500 font-medium">
+                {fileError}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Textarea */}
         <textarea
           ref={textareaRef}
@@ -539,8 +711,26 @@ export function ChatInput({
             </button>
           )}
 
-          {/* Dynamic action button (Mic / Square / Send) */}
+          {/* Dynamic action buttons (Paperclip / Mic / Square / Send) */}
           <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
+            {/* Paperclip attachment button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isParsingFile}
+              aria-label="Attach resume"
+              title={attachedFile ? `Attached: ${attachedFile.name}` : "Attach resume (.txt, .md, .pdf, .docx)"}
+              className={cn(
+                "w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer",
+                attachedFile
+                  ? "bg-navy-100 text-navy-900 border border-navy-300 shadow-2xs"
+                  : "bg-surface-muted/90 text-carbon-700 hover:bg-surface-muted hover:text-carbon-900 border border-border/80 active:scale-95 shadow-2xs",
+                (disabled || isParsingFile) && "opacity-40 pointer-events-none cursor-not-allowed"
+              )}
+            >
+              <PaperclipIcon className="w-4 h-4 sm:w-5 sm:h-5 text-carbon-700" />
+            </button>
+
             {isRecording ? (
               /* Pause recording button (Square) */
               <button
@@ -552,7 +742,7 @@ export function ChatInput({
               >
                 <SquareIcon className="w-4 h-4 text-white" />
               </button>
-            ) : hasText ? (
+            ) : (hasText || attachedFile) ? (
               /* Both buttons: Mic to add more voice, and Send to submit */
               <>
                 <button
@@ -577,7 +767,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={disabled}
+                  disabled={disabled || isParsingFile}
                   aria-label="Send message"
                   title="Send message"
                   className={cn(

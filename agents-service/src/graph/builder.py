@@ -21,7 +21,7 @@ registered (factory=None) for the supervisor prompt/routing but wired
 explicitly below; its loop still ends at save_memory like every other
 specialist. Add a similar tool-calling agent by following that pattern.
 
-The flight_booking agent is kept in the codebase but not registered.
+The flight_booking agent is archived (see agents/_archived/). Not registered.
 
 Memory, research and company_research nodes may be async or sync — LangGraph
 runs either as a node. Run the compiled graph with ainvoke/astream. Research
