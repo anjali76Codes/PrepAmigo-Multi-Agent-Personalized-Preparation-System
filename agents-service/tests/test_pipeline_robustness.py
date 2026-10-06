@@ -2,6 +2,7 @@
 gaps, partial company research kept, and one-line logs for expected
 failures."""
 import asyncio
+import dataclasses
 import logging
 
 import agents.interview_prep_orchestrator as orchestrator_module
@@ -206,8 +207,10 @@ def test_a_rate_limited_fast_model_hands_the_call_to_the_main_model(monkeypatch)
         fast_llm_api_key="k", llm_provider="ollama"))
     llm = config.get_llm(temperature=0, max_tokens=300, profile="fast", model="small-main-model")
 
-    fast, (main,) = llm.runnable, llm.fallbacks
+    budgeted, (main,) = llm.runnable, llm.fallbacks
+    fast = budgeted.chat_model  # inside the rate budget (core/rate_budget.py)
     assert (fast.model_name, fast.max_retries) == ("fast-model", 0)  # no backoff before falling back
+    assert fast.include_response_headers  # x-ratelimit-* headers reach the budget
     assert main.model == "small-main-model"  # the agent's own *_MODEL, on the main provider
 
     class RateLimited(FakeListChatModel):
@@ -319,3 +322,243 @@ def test_serpapi_requests_are_limited_to_a_few_at_a_time(monkeypatch):
         list(pool.map(lambda i: serpapi_client.serpapi_search({"engine": "google", "q": f"q{i}"}), range(8)))
 
     assert state["peak"] == 2
+
+
+class _AsyncSearch:
+    """A SerpApi search submitted with async=true: the submit answers at once
+    with an id; the archive says "Processing" `polls_needed` times, then has
+    the result."""
+    submitted: list[dict] = []
+    polls: list[str] = []
+    polls_needed = 2
+
+    def __init__(self, params):
+        self.params = dict(params)
+        self.timeout = 60000
+
+    def get_dict(self):
+        type(self).submitted.append(self.params)
+        assert self.params.get("async") == "true"
+        return {"search_metadata": {"id": f"id-{len(type(self).submitted)}", "status": "Processing"}}
+
+    def get_search_archive(self, search_id):
+        type(self).polls.append(search_id)
+        if len(type(self).polls) <= type(self).polls_needed:
+            return {"search_metadata": {"id": search_id, "status": "Processing"}}
+        return {"search_metadata": {"id": search_id, "status": "Success"}, "organic_results": [{"title": "ok"}]}
+
+
+def _async_serpapi(monkeypatch, polls_needed=2, **overrides):
+    import sys
+    import types
+
+    import tools.serpapi_client as serpapi_client
+
+    search = type("Search", (_AsyncSearch,), {"submitted": [], "polls": [], "polls_needed": polls_needed})
+    monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=search))
+    monkeypatch.setattr(serpapi_client, "settings", Settings(
+        serpapi_api_key="k", serpapi_enabled=True, serpapi_async=True, **overrides))
+    monkeypatch.setattr(serpapi_client, "get_response_cache", lambda: None)
+    monkeypatch.setattr(serpapi_client, "POLL_FIRST_SECONDS", 0.01)
+    monkeypatch.setattr(serpapi_client, "POLL_MIN_SECONDS", 0.01)
+    monkeypatch.setattr(serpapi_client, "POLL_MAX_SECONDS", 0.01)
+    # archive reads go through read_archive (only the key is sent)
+    monkeypatch.setattr(serpapi_client, "read_archive",
+                        lambda search_id, timeout: search({}).get_search_archive(search_id))
+    return serpapi_client, search
+
+
+def test_a_slow_search_is_waited_for_and_paid_for_once(monkeypatch):
+    """A timed-out request was still run (and charged) by SerpApi, and the
+    retry was a second paid search from zero. Async: one submit, free polls."""
+    serpapi_client, search = _async_serpapi(monkeypatch, polls_needed=3)
+
+    result = serpapi_client.serpapi_search({"engine": "google", "q": "x"})
+
+    assert result["organic_results"] == [{"title": "ok"}]
+    assert len(search.submitted) == 1 and search.polls == ["id-1"] * 4
+
+
+def test_an_async_search_gives_up_at_its_deadline_without_resubmitting(monkeypatch):
+    import pytest
+
+    serpapi_client, search = _async_serpapi(monkeypatch, polls_needed=10**6, serpapi_result_timeout_seconds=0.1)
+
+    with pytest.raises(TimeoutError, match="did not finish in 0.1s"):
+        serpapi_client.serpapi_search({"engine": "google", "q": "x"})
+    assert len(search.submitted) == 1
+
+
+def test_a_running_async_search_does_not_hold_a_request_slot(monkeypatch):
+    """One slow search used to keep a slot for 8s while the rest queued."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    serpapi_client, search = _async_serpapi(monkeypatch, polls_needed=0, serpapi_max_concurrency=1)
+    original = search.get_search_archive
+    started = []
+
+    def slow_archive(self, search_id):
+        started.append(search_id)
+        time.sleep(0.2)  # the search is still running on SerpApi's side
+        return original(self, search_id)
+
+    monkeypatch.setattr(search, "get_search_archive", slow_archive)
+    begin = time.monotonic()
+    with ThreadPoolExecutor(4) as pool:
+        list(pool.map(lambda i: serpapi_client.serpapi_search({"engine": "google", "q": f"q{i}"}), range(4)))
+
+    assert time.monotonic() - begin < 0.6  # 4 x 0.2s, overlapping despite one slot
+    assert len(search.submitted) == 4
+
+
+def test_no_cache_runs_never_use_async(monkeypatch):
+    """SerpApi does not accept async with no_cache."""
+    import sys
+    import types
+
+    from tools.cache import bypass_caches
+
+    serpapi_client, _ = _async_serpapi(monkeypatch)
+    seen = []
+
+    class Search:
+        def __init__(self, params):
+            seen.append(params)
+
+        def get_dict(self):
+            return {"organic_results": []}
+
+    monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=Search))
+    bypass_caches()
+    try:
+        serpapi_client.serpapi_search({"engine": "google", "q": "x"})
+    finally:
+        bypass_caches(False)
+
+    assert seen[0]["no_cache"] == "true" and "async" not in seen[0]
+
+
+def test_research_covers_only_the_gaps_the_plan_has_room_for(monkeypatch):
+    """A 10-day plan has room for 3 topics (3 days each at least): research
+    used to run for 6 gaps and pay for 3 that were never planned."""
+    from agents.interview_prep_orchestrator import plannable_gaps
+
+    gaps = [{"skill": f"Skill {i}", "effort": "High" if i < 4 else "Medium"} for i in range(8)]
+    names = [g["skill"] for g in gaps]
+    base = Settings(plan_max_topics=6, plan_min_days_per_topic=3, company_module="off")
+    monkeypatch.setattr(orchestrator_module, "settings", base)
+
+    assert plannable_gaps(names, gaps, 10) == {"Skill 0", "Skill 1", "Skill 2"}
+    assert plannable_gaps(names, gaps, 45) == {f"Skill {i}" for i in range(6)}
+    assert plannable_gaps(names, gaps, 90) == {f"Skill {i}" for i in range(6)}  # PLAN_MAX_TOPICS
+
+    # the company-platform module takes the plan's first slot
+    monkeypatch.setattr(orchestrator_module, "settings", dataclasses.replace(base, company_module="on"))
+    assert plannable_gaps(names, gaps, 10) == {"Skill 0", "Skill 1"}
+
+
+def test_a_no_cache_search_that_times_out_is_collected_async_not_bought_again(monkeypatch):
+    """--no-cache: the first attempt waits on a no_cache request; its retry
+    is submitted async (SerpApi refuses async with no_cache) and polled,
+    instead of a second cut-off request and a failure."""
+    import sys
+    import types
+
+    from tools.cache import bypass_caches
+
+    serpapi_client, _ = _async_serpapi(monkeypatch)
+    sent, polls = [], []
+
+    class Search:
+        def __init__(self, params):
+            self.params = dict(params)
+
+        def get_dict(self):
+            sent.append(self.params)
+            if "no_cache" in self.params:
+                raise TimeoutError("Read timed out. (read timeout=8.0)")
+            return {"search_metadata": {"id": "s1", "status": "Processing"}}
+
+        def get_search_archive(self, search_id):
+            polls.append(search_id)
+            return {"search_metadata": {"id": search_id, "status": "Success"}, "organic_results": [{"title": "ok"}]}
+
+    monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=Search))
+    monkeypatch.setattr(serpapi_client, "read_archive", lambda search_id, timeout: Search({}).get_search_archive(search_id))
+    bypass_caches()
+    try:
+        result = serpapi_client.serpapi_search({"engine": "google", "q": "x"})
+    finally:
+        bypass_caches(False)
+
+    assert result["organic_results"] == [{"title": "ok"}]
+    assert [("no_cache" in p, "async" in p) for p in sent] == [(True, False), (False, True)]
+    assert polls == ["s1"]
+
+
+def test_an_async_answer_without_results_is_read_from_the_archive_not_cached_empty(monkeypatch):
+    import sys
+    import types
+
+    serpapi_client, _ = _async_serpapi(monkeypatch)
+
+    class Search:
+        def __init__(self, params):
+            pass
+
+        def get_dict(self):
+            return {"search_metadata": {"id": "s2", "status": "Success"}, "search_parameters": {}}
+
+        def get_search_archive(self, search_id):
+            return {"search_metadata": {"id": search_id, "status": "Success"}, "organic_results": [{"title": "ok"}]}
+
+    monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=Search))
+    monkeypatch.setattr(serpapi_client, "read_archive", lambda search_id, timeout: Search({}).get_search_archive(search_id))
+
+    assert serpapi_client.serpapi_search({"engine": "google", "q": "x"})["organic_results"] == [{"title": "ok"}]
+
+
+def test_an_empty_serpapi_account_stops_further_searches_but_not_the_cache(monkeypatch, tmp_path):
+    """"Your account has run out of searches." came back 33 times in one run,
+    with tracebacks: after the first, nothing more is sent."""
+    import sys
+    import types
+
+    import pytest
+
+    import tools.serpapi_client as serpapi_client
+    from tools.cache import ResponseCache
+
+    sent = []
+
+    class Search:
+        def __init__(self, params):
+            sent.append(params)
+
+        def get_dict(self):
+            return {"error": "Your account has run out of searches."}
+
+    cache = ResponseCache(tmp_path)
+    cache.set("serpapi", {"engine": "youtube", "search_query": "cached"}, {"video_results": [{"title": "kept"}]})
+    monkeypatch.setitem(sys.modules, "serpapi", types.SimpleNamespace(GoogleSearch=Search))
+    monkeypatch.setattr(serpapi_client, "settings", Settings(serpapi_api_key="k", serpapi_enabled=True,
+                                                             serpapi_async=False))
+    monkeypatch.setattr(serpapi_client, "get_response_cache", lambda: cache)
+
+    first = serpapi_client.serpapi_search({"engine": "google", "q": "a"})
+    assert first["error"].startswith("Your account has run out")
+    with pytest.raises(serpapi_client.SearchUnavailable, match="run out of searches"):
+        serpapi_client.serpapi_search({"engine": "youtube", "search_query": "b"})
+    assert len(sent) == 1  # the second search never went out
+    # what is already cached still answers
+    assert serpapi_client.serpapi_search({"engine": "youtube", "search_query": "cached"})["video_results"] == [{"title": "kept"}]
+
+
+def test_outages_log_one_line_not_a_traceback(caplog):
+    from observability.timing import log_failure
+    from tools.serpapi_client import SearchUnavailable
+
+    with caplog.at_level(logging.WARNING):
+        log_failure(logging.getLogger("t"), "Company Research branch failed", SearchUnavailable("out of searches"))
+    assert caplog.records[-1].exc_info is None

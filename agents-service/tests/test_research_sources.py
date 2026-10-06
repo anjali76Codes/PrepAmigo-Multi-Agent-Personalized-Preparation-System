@@ -139,10 +139,12 @@ def test_planning_notes_instead_of_a_module_are_retried_once_then_rejected():
     assert result["module"]["content_markdown"] == "## Overview\nReal module."
     assert "first line of your answer must be exactly: ## Overview" in retried.prompts[1][-1].content
 
-    with pytest.raises(ResearchAgentError, match="did not return a learning module"):
-        asyncio.run(agent(fake_tools(), llm=SequenceLLM(notes, notes)).run(
-            ResearchRequest(user_id="u1", target_role="SWE", target_company="Acme", topic_or_skill_gap="Dynamic Programming"),
-            memories=[]))
+    # notes twice: never stored; the topic keeps its resources with a short note
+    kept = asyncio.run(agent(fake_tools(), llm=SequenceLLM(notes, notes)).run(
+        ResearchRequest(user_id="u1", target_role="SWE", target_company="Acme", topic_or_skill_gap="Dynamic Programming"),
+        memories=[]))
+    assert notes not in kept["module"]["content_markdown"]
+    assert kept["module"]["content_markdown"].startswith("## Overview\nDynamic Programming:")
 
 
 # ---- catalogues ------------------------------------------------------------------------

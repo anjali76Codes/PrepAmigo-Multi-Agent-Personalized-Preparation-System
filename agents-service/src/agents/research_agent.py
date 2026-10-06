@@ -86,6 +86,7 @@ from tools.research_tools import (
     search_youtube_tutorials,
 )
 from tools.relevance import canonical_url, not_learning_material, relevance, title_key, youtube_video_id
+from tools.serpapi_client import SearchUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +362,8 @@ class ContentResearchAgent:
         # built lazily so constructing the agent needs no running model
         if self._llm is None:
             # capped: an uncapped write-up once ran to 4,800 tokens (27s)
-            self._llm = get_llm(temperature=0.3, max_tokens=settings.research_max_output_tokens or None,
+            self._llm = get_llm(guarded=True, temperature=0.3, max_tokens=settings.research_max_output_tokens or None,
+                                profile=getattr(settings, "research_llm", "default"),
                                 model=getattr(settings, "research_model", "") or None)
         return self._llm
 
@@ -373,8 +375,12 @@ class ContentResearchAgent:
         if self._llm is not None:
             return self._llm
         if self._compact_llm is None:
+            # RESEARCH_LLM=fast: the write-ups on the fast model (and its key
+            # pool), falling back to the research model when it has no room
             self._compact_llm = get_llm(
-                temperature=0.3, max_tokens=getattr(settings, "research_compact_max_output_tokens", 0) or None,
+                guarded=True, temperature=0.3,
+                max_tokens=getattr(settings, "research_compact_max_output_tokens", 0) or None,
+                profile=getattr(settings, "research_llm", "default"),
                 model=getattr(settings, "research_model", "") or None)
         return self._compact_llm
 
@@ -443,16 +449,11 @@ class ContentResearchAgent:
             return {"researched_materials": [], "execution_events": events, "handoffs": []}
 
         requests = await self._select_kinds(requests)
-
-        async def forward_event(event: AgentEvent) -> None:
-            events.append(event)
-            await dispatch_event(event, None)
-
+        # research_many already writes every event to the graph stream;
+        # the callback only records it (re-dispatching it here sent each
+        # research step to SSE twice)
         results = await self.research_many(
-            requests,
-            on_event=forward_event,
-            memories=await self._recall_once(state, requests),
-        )
+            requests, on_event=events.append, memories=await self._recall_once(state, requests))
 
         return {
             "researched_materials": [r["module"] for r in results if r],
@@ -479,7 +480,7 @@ class ContentResearchAgent:
         response = None
         try:
             if self._scope_llm is None:
-                self._scope_llm = get_llm(temperature=0, max_tokens=40 + 30 * len(requests), profile=scope)
+                self._scope_llm = get_llm(guarded=True, temperature=0, max_tokens=40 + 30 * len(requests), profile=scope)
             response = await asyncio.wait_for(
                 self._scope_llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=JUDGE_TIMEOUT_SECONDS)
             text = re.sub(r"<think>.*?</think>", "", _message_text(response), flags=re.S)
@@ -565,12 +566,28 @@ class ContentResearchAgent:
     async def _synthesis_phase(self, request: ResearchRequest, ctx: dict[str, Any]) -> AsyncIterator[AgentEvent]:
         """Writing the module is bound by LLM generation speed, not tool-call
         efficiency, so it gets its own budget instead of sharing the research
-        phase's clock (RESEARCH_SYNTHESIS_TIMEOUT_SECONDS)."""
-        async for event in self._run_step(
-            "synthesize_learning_module", self._synthesize_learning_module, request, ctx,
-            settings.research_synthesis_timeout_seconds,
-        ):
-            yield event
+        phase's clock (RESEARCH_SYNTHESIS_TIMEOUT_SECONDS).
+
+        A write-up that fails or times out (or is skipped because the model
+        is answering too slowly, observability/llm_health.py) no longer
+        costs the topic its resources: the searches were paid for, so the
+        module is kept with a short note made from them (resources_note),
+        and the planner still references them."""
+        try:
+            async for event in self._run_step(
+                "synthesize_learning_module", self._synthesize_learning_module, request, ctx,
+                settings.research_synthesis_timeout_seconds,
+            ):
+                yield event
+        except ResearchAgentError:
+            if not ctx.get("materials"):
+                raise
+            ctx["module"] = self._module(request, ctx, resources_note(request.topic_or_skill_gap, ctx["materials"]))
+            logger.info("Research %r: write-up unavailable; kept its %d resources with a short note",
+                        request.topic_or_skill_gap, len(ctx["materials"]))
+            yield make_event(AGENT_NAME, "synthesize_learning_module", "completed", {
+                "topic": request.topic_or_skill_gap, "note": "resources_only",
+                "message": "Write-up unavailable; the resources found are kept."})
 
     async def research_many(
         self,
@@ -640,7 +657,8 @@ class ContentResearchAgent:
             raise ResearchAgentError(f"{step} failed: {error}") from exc
         except Exception as exc:
             duration_ms = round((time.perf_counter() - start) * 1000, 1)
-            logger.exception("Research step %s failed for topic %r", step, topic)
+            # a slow or unreachable model is one line; a bug keeps its traceback
+            log_failure(logger, f"Research step {step} failed for topic {topic!r}", exc)
             yield make_event(AGENT_NAME, step, "failed",
                               {"topic": topic, "error": str(exc), "duration_ms": duration_ms})
             raise ResearchAgentError(f"{step} failed: {exc}") from exc
@@ -725,6 +743,18 @@ class ContentResearchAgent:
                 fallback_name=kind,
             )
             timings[kind] = metadata["duration_ms"]
+            if kind == "docs" and not request.official_queries and not result.get("results") \
+                    and result.get("source") == "serpapi":
+                # Google answered "Fully empty" for the precise query (seen for
+                # Rust, Anchor and Solana in one run): one plainer try, one
+                # credit, only when the first found nothing at all
+                plain = _query(request.topic_or_skill_gap, request.domain, "tutorial")
+                logger.info("Research %r: no docs for the precise query; trying %r", request.topic_or_skill_gap, plain)
+                result, metadata = await invoke_tool_with_events(
+                    self.tools[kind], {"query": plain, "limit": limit}, agent=AGENT_NAME,
+                    timeout=settings.research_tool_timeout_seconds, fallback_name=kind,
+                )
+                timings[kind] += metadata["duration_ms"]
             return result
 
         outcomes = await asyncio.gather(*(call(kind) for kind in kinds), return_exceptions=True)
@@ -738,7 +768,8 @@ class ContentResearchAgent:
         filtered: dict[str, int] = {}
         for kind, outcome in zip(kinds, outcomes):
             if isinstance(outcome, BaseException):
-                logger.warning("Research tool %s failed: %s", kind, outcome or type(outcome).__name__)
+                # str(TimeoutError()) is "": name the exception instead
+                logger.warning("Research tool %s failed: %s", kind, str(outcome) or type(outcome).__name__)
                 errors[kind] = str(outcome) or type(outcome).__name__
                 continue
             sources[kind] = outcome.get("source", "unknown")
@@ -775,7 +806,8 @@ class ContentResearchAgent:
                     seen_titles.add(name_key)
                 candidates.append({**item, "_kind": kind, "_live": live})
         if not sources:
-            raise RuntimeError(f"All research sources failed: {errors}")
+            # every source down (e.g. SerpApi out of searches): an outage, not a bug
+            raise SearchUnavailable(f"All research sources failed: {errors}")
 
         rejected = await self._judge(request, [c for c in candidates if c["_live"]])
         materials: list[dict[str, Any]] = []
@@ -820,7 +852,7 @@ class ContentResearchAgent:
         response = None
         try:
             if self._judge_llm is None:
-                self._judge_llm = get_llm(temperature=0, max_tokens=120, profile=judge)
+                self._judge_llm = get_llm(guarded=True, temperature=0, max_tokens=120, profile=judge)
             response = await asyncio.wait_for(
                 self._judge_llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG), timeout=JUDGE_TIMEOUT_SECONDS)
             text = re.sub(r"<think>.*?</think>", "", _message_text(response), flags=re.S)
@@ -925,7 +957,14 @@ class ContentResearchAgent:
             logger.info("Research %r: unlinked %d URL(s) the model cited but search never returned",
                         request.topic_or_skill_gap, invented_links)
 
-        module = {
+        module = self._module(request, ctx, content)
+        ctx["module"] = module
+        usage = getattr(response, "usage_metadata", None)
+        return {"module": module, **({"usage": dict(usage)} if usage else {})}
+
+    @staticmethod
+    def _module(request: ResearchRequest, ctx: dict, content: str) -> dict[str, Any]:
+        return {
             "id": f"module-{uuid.uuid4().hex[:12]}",
             "topic": request.topic_or_skill_gap,
             "target_role": request.target_role,
@@ -935,14 +974,24 @@ class ContentResearchAgent:
             "resources": ctx["materials"],
             "transcripts": [
                 {k: t[k] for k in ("video_id", "title", "url", "truncated", "total_chars") if k in t}
-                for t in ctx["transcripts"]
+                for t in ctx.get("transcripts") or []
             ],
             "uses_mock_sources": any(source in {"mock", "dummy"} for source in ctx["sources"].values()),
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
-        ctx["module"] = module
-        usage = getattr(response, "usage_metadata", None)
-        return {"module": module, **({"usage": dict(usage)} if usage else {})}
+
+
+def resources_note(topic: str, materials: list[dict[str, Any]]) -> str:
+    """A short note for a topic whose write-up was unavailable, made from
+    what research found: an overview saying so, and the resources' titles
+    as what to work through (in the order research ranked them)."""
+    titles = [_truncate(" ".join(str(m.get("title") or "").split()), 90) for m in materials[:6]]
+    lines = "\n".join(f"- {title}" for title in titles if title)
+    return sanitize_text(
+        f"## Overview\n{topic}: the study resources research found for this topic. "
+        "A written summary was not available for this run.\n\n"
+        f"## Practice\nWork through, in order:\n{lines}"
+    )
 
 
 _OVERVIEW_HEADING = re.compile(r"^##\s+Overview\s*$", re.M | re.I)

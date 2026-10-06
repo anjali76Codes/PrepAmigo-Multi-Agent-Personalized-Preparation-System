@@ -186,6 +186,9 @@ Each agent can use a different model, set in `.env`:
 - LLM calls, input and output tokens actually spent (cache hits excluded), and peak context (the largest single prompt).
 - API calls, the slowest live call, and the time saved by cache hits. `(Nc)` means N of the calls were served from the cache.
 - The three slowest calls of the run.
+- An `Inference <model>` line per model: calls, output tokens per second end to end, and, when the provider reports its generation time (Ollama's `eval_duration`, Groq's `completion_time`), its pure generation speed and the average wait per call before and around generation. A provider under load shows up in the wait first.
+
+Every live model call is also logged as one line: `llm agent=research model=... in=566 out=496 duration_s=58.90 tok_s=8.4 gen_tok_s=... wait_s=...` (cache hits as `cache_hit=true`).
 
 LLM calls are recorded by a callback on every model from `get_llm`. API calls are recorded by `cached_fetch` and `track_tool`, and each one is attributed to the agent whose `agent_scope` it ran in.
 
@@ -203,10 +206,13 @@ If a mem0 mode cannot start (missing or rejected key, unreachable model), the se
 
 The last stage of `interview_prep` (`src/agents/planner_agent.py`) turns the skill-gap report and research modules into a plan in the backend's own `plan → sprints → sprint_days` shape.
 
-**Plan length and scaling.** A plan is `PLAN_TOTAL_DAYS` long (default 45), or whatever a run asks for (`--days` on the CLI, `plan_days` on `/internal/agent/execute`). The days are split across skill gaps by priority (a missing skill gets twice a partial one), and each gap's days are cut into sprints of at most `PLAN_SPRINT_MAX_DAYS`. Plan length never multiplies the expensive work:
+**Plan length and scaling.** A plan is `PLAN_TOTAL_DAYS` long (default 45), or whatever a run asks for (`--days` on the CLI, `plan_days` on `/internal/agent/execute`). The days are split across skill gaps by priority (a missing skill gets twice a partial one), and the plan's days, in topic order, are cut into sprints of at most `PLAN_SPRINT_MAX_DAYS` (default 7) across topic boundaries, each named after the topics it covers ("Claude & Salesforce"), so every sprint has the two assessment/flashcard chunks (days 1-3 and 4-7). Plan length never multiplies the expensive work:
 
 - The plan goes deep rather than wide: at most `PLAN_MAX_TOPICS` gaps (default 6, highest priority first), and never more than fit with `PLAN_MIN_DAYS_PER_TOPIC` days each (default 3). The rest are listed under `coverage.not_scheduled`.
-- Research stays one module per gap, for at most `RESEARCH_MAX_GAPS` gaps (highest priority first). A long gap reuses its module's resources across its days. Gaps past the cap are still planned, without references.
+- Research stays one module per gap, and only for the gaps the plan has room for (a 10-day plan fits 3 topics, so 3 are researched, not 6), at most `RESEARCH_MAX_GAPS`.
+- The planner model picks each day's references: its wording call lists the topic's resources by number and it returns the 1-2 that teach that day's subject, so "Exception Handling" gets the exception-handling guide, not whichever link came next. It can only pick listed resources; code validates the picks and falls back to word-matching placement for any day it skipped.
+- For a day none of the resources covers, the model names a short search; up to `PLAN_GAP_SEARCHES` of these run (auto: one per 5 plan days), shared across topics by their days, while the rest of the plan is written. Job adverts, sales pages and off-subject results are dropped.
+- Every day has at least one reference. A reference repeated on a later day is optional (`is_required: false`). A planned topic without research borrows what other topics' research found about it, then gap searches, then a labelled video and documentation search link (`coverage.reference_fallbacks` names them).
 - Day wording comes from small LLM calls: one per chunk of up to `PLANNER_DAYS_PER_CALL` days of one topic. Each prompt holds only that topic's concepts plus the titles already planned for it. A failed chunk falls back on its own.
 - Stages that fan out (research write-ups, planner chunks, company+job) run up to `LLM_MAX_CONCURRENCY` calls at once: 1 by default on Ollama, where parallel requests measured no faster.
 
@@ -215,7 +221,7 @@ The last stage of `interview_prep` (`src/agents/planner_agent.py`) turns the ski
 - `plan`: the backend contract (`src/schemas/study_plan.py`, mirroring the Zod schemas in `backend/src/utils/planApi.ts` and parser_agent's `CompletePlan`). The backend creates it through three strict endpoints (`POST /plans`, `/plans/:id/sprints`, `/sprints/:id/days`), so the caller posts each level's own fields; ids, `user_id`, `status` and completion are set server-side.
 - `resource_pack`: all curated resources grouped by type, deduped.
 - `learning_modules`: each research module's markdown.
-- `coverage`: days per topic; which gaps were researched (a gap whose research failed or was past the cap is still planned, with no references); `not_scheduled` lists gaps left out because the plan had fewer days than gaps.
+- `coverage`: days per topic; which gaps were researched (a gap whose research failed or was past the cap is still planned, with borrowed references or search links, listed in `reference_fallbacks`); `not_scheduled` lists gaps left out because the plan had fewer days than gaps.
 - `narrative_source`: `llm`, `partial` or `fallback`, i.e. whose wording the days use.
 
 **Reliability.** The LLM never produces the plan's structure. Sprint/day counts, dates, day numbering and references are computed in code, and the result is validated against `StudyPlan`, which checks the backend's field limits *and* the arithmetic (totals, date ranges, contiguous day numbers) that LLM-written JSON gets wrong while still passing type checks. The model only writes each day's title and objectives, grounded in the module's Key Concepts. That text is parsed per topic, and anything unusable falls back to concept-based wording for that topic alone. Swapping `OLLAMA_MODEL` can change the wording, never the shape. Ollama's schema-constrained output mode isn't relied on: on `nemotron-3-nano:30b-cloud` it was ignored outright.

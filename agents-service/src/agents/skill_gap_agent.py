@@ -71,7 +71,7 @@ async def _call_llm_json(prompt: str, fallback: Any) -> Any:
     """One model call returning parsed JSON, or `fallback` when the call
     fails, times out or does not contain a JSON object."""
     profile = "fast" if settings.skill_gap_llm == "fast" else "default"
-    llm = get_llm(temperature=0, max_tokens=settings.skill_gap_max_output_tokens or None, profile=profile)
+    llm = get_llm(guarded=True, temperature=0, max_tokens=settings.skill_gap_max_output_tokens or None, profile=profile)
     response = None
     try:
         response = await asyncio.wait_for(

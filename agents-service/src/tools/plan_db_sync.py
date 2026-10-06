@@ -2,13 +2,36 @@
 Sequential database synchronization client for storing LLM-generated study plans in MongoDB
 via the backend API endpoints (Plan -> Sprint -> SprintDays).
 """
+import contextvars
 import logging
-from typing import Any, Optional
+from contextlib import contextmanager
+from typing import Any, Iterator, Optional
 import httpx
 
 from core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# The requesting user's backend token for this run. The backend's plan
+# routes (requireAuth) save a plan under whoever the token names: without
+# one they answer 401 in production, and in development save it under a
+# placeholder "Local developer" account the user never sees. Kept in a
+# context variable for the run, never in graph state (checkpointed) or
+# graph config (copied into tracing metadata).
+_backend_token: contextvars.ContextVar[str | None] = contextvars.ContextVar("backend_token", default=None)
+
+
+@contextmanager
+def backend_auth(authorization: str | None) -> Iterator[None]:
+    """Use the caller's token (an Authorization header value or a bare
+    token) for every plan sync inside the block."""
+    token = (authorization or "").strip()
+    token = token[7:].strip() if token.lower().startswith("bearer ") else token
+    reset = _backend_token.set(token or None)
+    try:
+        yield
+    finally:
+        _backend_token.reset(reset)
 
 
 class PlanDBSyncError(Exception):
@@ -21,7 +44,7 @@ class PlanDBSyncClient:
 
     def __init__(self, base_url: str | None = None, auth_token: str | None = None, timeout: float = 30.0):
         self.base_url = (base_url or getattr(settings, "backend_api_url", "http://localhost:3000")).rstrip("/")
-        self.auth_token = auth_token
+        self.auth_token = auth_token or _backend_token.get()
         self.timeout = timeout
 
     def _headers(self) -> dict[str, str]:
@@ -220,5 +243,9 @@ async def sync_generated_plan_to_db(
         result = await client.sync_plan(plan_output)
         return result
     except Exception as exc:
-        logger.warning("Automated DB sync failed: %s", exc)
-        return {"success": False, "error": str(exc)}
+        hint = ""
+        if "HTTP 401" in str(exc):
+            hint = (" (the backend needs the user's login token: runs started through the backend carry it;"
+                    " a CLI run has none)")
+        logger.warning("Automated DB sync failed: %s%s", str(exc)[:300], hint)
+        return {"success": False, "error": str(exc)[:300] + hint}

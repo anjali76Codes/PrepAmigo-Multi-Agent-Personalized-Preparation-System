@@ -13,7 +13,7 @@ _src_dir = str(Path(__file__).resolve().parent)
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 
@@ -210,6 +210,7 @@ async def execute_agent_async(
     request: ExecuteAgentRequest,
     background_tasks: BackgroundTasks,
     auth_payload: Any = Depends(verify_token),
+    authorization: str | None = Header(None),
 ):
     """
     Decoupled trigger endpoint: initiates the multi-agent graph in a
@@ -233,6 +234,8 @@ async def execute_agent_async(
         workflow_text_input=request.workflow_text_input,
         resume_input=request.resume_input,
         plan_days=request.plan_days,
+        # the user's own token: their plan is saved under them (plan_db_sync)
+        auth_token=authorization,
     )
     return {"status": "accepted", "runId": request.runId}
 

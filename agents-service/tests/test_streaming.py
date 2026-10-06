@@ -9,6 +9,11 @@ from streaming.runner import execute_agent_stream, run_dummy_agent_stream
 
 @pytest.fixture
 def client():
+    # without the lifespan (no `with TestClient(...)`), startup hasn't set
+    # these; the tests used to pass only when an earlier test had run it
+    for name in ("graph", "publisher"):
+        if not hasattr(app.state, name):
+            setattr(app.state, name, None)
     return TestClient(app)
 
 
@@ -115,3 +120,73 @@ async def test_execute_agent_stream_passes_user_id_into_the_graph_input(monkeypa
     )
 
     assert seen_inputs.get("user_id") == "subhaan"
+
+
+@pytest.mark.anyio
+async def test_the_users_token_reaches_the_plan_sync_and_never_the_graph(monkeypatch):
+    """The backend saves a plan under whoever its token names: without the
+    user's token it was a 401 (production) or a placeholder user."""
+    from tools.plan_db_sync import PlanDBSyncClient
+
+    seen = {}
+
+    async def fake_bridge(graph, inputs, config):
+        seen["headers"] = PlanDBSyncClient()._headers()  # what a plan sync would send
+        seen["inputs"], seen["config"] = inputs, config
+        return
+        yield  # pragma: no cover - makes this an async generator
+
+    monkeypatch.setattr("streaming.langgraph_bridge.bridge_graph_turn", fake_bridge)
+    publisher = EventPublisher()
+    publisher.emit_event = AsyncMock()
+
+    await execute_agent_stream(run_id="run-auth", query="prep me", graph=MagicMock(), publisher=publisher,
+                               user_id="u1", use_dummy=False, auth_token="Bearer user-jwt")
+
+    assert seen["headers"]["Authorization"] == "Bearer user-jwt"
+    assert "user-jwt" not in repr(seen["inputs"]) + repr(seen["config"])  # not checkpointed or traced
+    assert "Authorization" not in PlanDBSyncClient()._headers()  # only for that run
+
+
+def test_the_token_is_visible_inside_a_graph_node():
+    """LangGraph runs nodes in tasks of their own; the run's token must
+    still be there when the planner node syncs the plan."""
+    import asyncio
+    from typing import TypedDict
+
+    from langgraph.graph import END, START, StateGraph
+
+    from tools.plan_db_sync import PlanDBSyncClient, backend_auth
+
+    class State(TypedDict, total=False):
+        header: str
+
+    async def planner_node(state):
+        return {"header": PlanDBSyncClient()._headers().get("Authorization", "")}
+
+    builder = StateGraph(State)
+    builder.add_node("planner", planner_node)
+    builder.add_edge(START, "planner")
+    builder.add_edge("planner", END)
+    graph = builder.compile()
+
+    async def run():
+        with backend_auth("Bearer from-backend"):
+            return await graph.ainvoke({})
+
+    assert asyncio.run(run())["header"] == "Bearer from-backend"
+
+
+def test_the_execute_endpoint_passes_the_callers_token_on(client, monkeypatch):
+    import main
+
+    captured = {}
+
+    async def fake_execute(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(main, "execute_agent_stream", fake_execute)
+    response = client.post("/internal/agent/execute", json={"runId": "r1", "query": "q"},
+                           headers={"Authorization": "Bearer user-jwt"})
+
+    assert response.status_code == 200 and captured["auth_token"] == "Bearer user-jwt"

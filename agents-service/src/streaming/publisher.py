@@ -63,7 +63,8 @@ class EventPublisher:
                 pipe.publish(channel, event_json)
                 await pipe.execute()
 
-            logger.info(
+            # debug: with tool lifecycle events a run publishes ~100 of these
+            logger.debug(
                 "[Redis Publisher] Published '%s' event (id: %s) -> channel '%s' & history '%s'",
                 event.type.value,
                 event.id,

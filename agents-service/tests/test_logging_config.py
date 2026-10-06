@@ -44,3 +44,15 @@ def test_empty_log_file_means_console_only(tmp_path, monkeypatch):
     assert len(logging.getLogger().handlers) == 1
     assert isinstance(logging.getLogger().handlers[0], logging.StreamHandler)
     reset()
+
+
+def test_relative_data_paths_resolve_to_the_service_root_not_src():
+    """config.py moving into src/core/ once sent logs, plans and caches to
+    src/.data/ instead of agents-service/.data/."""
+    from pathlib import Path
+
+    from core.config import SERVICE_ROOT, service_path
+
+    assert (SERVICE_ROOT / "pyproject.toml").is_file() and (SERVICE_ROOT / "src").is_dir()
+    assert service_path(".data/plans") == SERVICE_ROOT / ".data" / "plans"
+    assert service_path("/tmp/x") == Path("/tmp/x")

@@ -34,6 +34,7 @@ from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from tools.company_research_tools import normalize_company_profile, search_company_news, search_company_overview
 from tools.plan_builder import parse_json_object
+from tools.serpapi_client import SearchUnavailable, account_unavailable
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ class DirectCompanyResearch:
     def llm(self):
         if self._llm is None:
             profile = "fast" if settings.company_research_llm == "fast" else "default"
-            self._llm = get_llm(temperature=0, max_tokens=BRIEF_MAX_TOKENS, profile=profile)
+            self._llm = get_llm(guarded=True, temperature=0, max_tokens=BRIEF_MAX_TOKENS, profile=profile)
         return self._llm
 
     async def run(self, company: str, role: str = "") -> dict[str, Any]:
@@ -167,7 +168,9 @@ class DirectCompanyResearch:
             fixed_overview, fixed_news = await self._search(corrected)
             overview, news = fixed_overview or overview, fixed_news or news
         if not overview and not news:
-            raise RuntimeError("company searches returned no usable results")
+            down = account_unavailable()
+            raise SearchUnavailable("company searches returned no usable results"
+                                    + (f" (SerpApi: {down})" if down else ""))
 
         name = (overview.get("knowledge_graph") or {}).get("title") or corrected or company
         profile = normalize_company_profile(company_name=name, search_data=overview, news_data=news)

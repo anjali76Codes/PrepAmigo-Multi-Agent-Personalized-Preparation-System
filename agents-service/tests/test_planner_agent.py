@@ -224,8 +224,13 @@ def test_references_map_to_the_backend_enum_drop_bad_urls_and_spread_across_days
     }
     assert next(r for r in refs if "papers" in r["url"])["type"] == "article"
     # docs/video spread one per day; the book and the paper ride along on day one
-    assert [len(d["references"]) for d in claude_days] == [3, 1, 0, 0, 0]
+    assert [len(d["references"]) for d in claude_days] == [3, 1, 2, 2, 2]
     assert [r["type"] for r in claude_days[0]["references"]] == ["documentation", "book", "article"]
+    # the practice and review days revisit the docs and the video, as optional
+    revisits = [r for d in claude_days[2:] for r in d["references"]]
+    assert {r["type"] for r in revisits} == {"documentation", "video"}
+    assert not any(r["is_required"] for r in revisits)
+    assert [r["is_required"] for r in claude_days[0]["references"]] == [True, False, False]
 
 
 def test_papers_are_capped_per_plan_like_books(planner_settings):
@@ -237,7 +242,12 @@ def test_papers_are_capped_per_plan_like_books(planner_settings):
     output = build(modules=modules, gaps=[{"skill": f"T{i}", "effort": "High"} for i in range(3)], total_days=9)
 
     days = output["sprint_days"]
-    assert [d["day_number"] for d in days if d["references"]] == [1, 4]
+    papers = [(d["day_number"], r["url"]) for d in days for r in d["references"] if "arxiv" in r["url"]]
+    assert {url for _, url in papers} == {"https://arxiv.org/abs/00", "https://arxiv.org/abs/10"}
+    assert [day for day, _ in papers if day in (1, 4)] == [1, 4]  # each on its topic's first day
+    # T2's papers are past the cap: its days get search links, never nothing
+    assert all(d["references"] for d in days)
+    assert output["coverage"]["reference_fallbacks"]["search_links"] == ["T2"]
     assert len(output["resource_pack"]["paper"]) == 6
 
 
@@ -277,8 +287,13 @@ def test_gap_without_research_is_planned_and_reported():
     output = build(total_days=10)
 
     salesforce = [d for d in output["sprint_days"] if d["topic_title"].startswith("Salesforce")]
-    assert salesforce and all(d["references"] == [] for d in salesforce)
+    # nothing was found about it anywhere: labelled search links, never an empty day
+    assert salesforce and all(d["references"] for d in salesforce)
+    urls = {r["url"] for d in salesforce for r in d["references"]}
+    assert urls == {"https://www.youtube.com/results?search_query=Salesforce+tutorial",
+                    "https://www.google.com/search?q=Salesforce+official+documentation"}
     assert output["coverage"]["unresearched"] == ["Salesforce"]
+    assert output["coverage"]["reference_fallbacks"] == {"borrowed": [], "search_links": ["Salesforce"]}
     assert output["coverage"]["researched"] == ["Claude", "Enterprise Integration"]
 
 
@@ -320,7 +335,8 @@ def test_the_same_video_under_two_urls_is_referenced_once_as_a_video():
     output = build(modules=modules, gaps=[{"skill": "Claude", "effort": "High"}], total_days=3)
 
     refs = [r for d in output["sprint_days"] for r in d["references"]]
-    assert len(refs) == 1 and refs[0]["type"] == "video"
+    assert len({r["url"] for r in refs}) == 1 and {r["type"] for r in refs} == {"video"}
+    assert len(output["sprint_days"][0]["references"]) == 1
     assert len(output["resource_pack"]["video"]) == 1 and "documentation" not in output["resource_pack"]
 
 
@@ -398,8 +414,8 @@ def test_days_for_a_partly_known_skill_skip_the_basics():
 
     build(llm=llm, gaps=gaps, total_days=8)
 
-    claude = next(p for p in llm.prompts if '"Claude"' in p)
-    salesforce = next(p for p in llm.prompts if '"Salesforce"' in p)
+    claude = next(p for p in llm.prompts if 'studying "Claude"' in p)
+    salesforce = next(p for p in llm.prompts if 'studying "Salesforce"' in p)
     assert "used the API in one project" in claude and "skip the beginner basics" in claude
     assert "skip the beginner basics" not in salesforce
 

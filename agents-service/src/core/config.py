@@ -2,9 +2,11 @@
 Central config. One switch (LLM_PROVIDER) decides which model backs every
 agent, so swapping local <-> cloud never touches agent code.
 """
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
@@ -52,6 +54,12 @@ class Settings:
     fast_llm_base_url: str = os.getenv("FAST_LLM_BASE_URL", "").strip()
     fast_llm_model: str = os.getenv("FAST_LLM_MODEL", "").strip()
     fast_llm_api_key: str = os.getenv("FAST_LLM_API_KEY", "").strip()
+    # FAST_LLM_KEY_POOL=on: spread fast-model calls over every key in
+    # FAST_LLM_API_KEYS (comma-separated) as well as FAST_LLM_API_KEY, each
+    # with its own rate budget (core/rate_budget.py). off: FAST_LLM_API_KEY
+    # only (or the first of FAST_LLM_API_KEYS). Off by default.
+    fast_llm_api_keys: str = os.getenv("FAST_LLM_API_KEYS", "").strip()
+    fast_llm_key_pool: bool = os.getenv("FAST_LLM_KEY_POOL", "off").strip().lower() in {"1", "true", "yes", "on"}
     # sent as `reasoning_effort` when set (e.g. "none" turns a thinking
     # model's hidden reasoning off on Groq); empty sends nothing
     fast_llm_reasoning_effort: str = os.getenv("FAST_LLM_REASONING_EFFORT", "").strip()
@@ -59,19 +67,40 @@ class Settings:
     # chunks). Kept low: a free tier's tokens-per-minute cap is hit by
     # volume, and a burst gains nothing once it is.
     fast_llm_max_concurrency: int = int(os.getenv("FAST_LLM_MAX_CONCURRENCY", "2") or 2)
+    # the fast model's rate limits (core/rate_budget.py), defaults = Groq's
+    # free tier for qwen/qwen3.8-27b; 0 = no limit. Spent up to HEADROOM of
+    # each; a call that doesn't fit within MAX_WAIT_SECONDS runs on the main
+    # model instead. The day's use is kept in FAST_LLM_BUDGET_FILE.
+    fast_llm_rpm: int = int(os.getenv("FAST_LLM_RPM", "30") or 0)
+    fast_llm_tpm: int = int(os.getenv("FAST_LLM_TPM", "8000") or 0)
+    fast_llm_rpd: int = int(os.getenv("FAST_LLM_RPD", "1000") or 0)
+    fast_llm_tpd: int = int(os.getenv("FAST_LLM_TPD", "200000") or 0)
+    fast_llm_limit_headroom: float = float(os.getenv("FAST_LLM_LIMIT_HEADROOM", "0.85") or 0.85)
+    fast_llm_max_wait_seconds: float = float(os.getenv("FAST_LLM_MAX_WAIT_SECONDS", "3") or 0)
+    fast_llm_budget_file: str = os.getenv("FAST_LLM_BUDGET_FILE", ".data/rate_budget.json").strip()
     serpapi_api_key: str = os.getenv("SERPAPI_API_KEY", "").strip()
     serpapi_enabled: bool = os.getenv("SERPAPI_ENABLED", "true").strip().lower() in {
         "1", "true", "yes", "on",
     }
     # SerpApi is usually 1-3s but occasionally hangs (a 54.8s search was
-    # seen). Each attempt is cut off after this many seconds and tried again,
-    # up to SERPAPI_MAX_ATTEMPTS: a retry normally answers in a second or two.
+    # seen). Each request is cut off after this many seconds: in async mode
+    # (SERPAPI_ASYNC) a submit or an archive read, otherwise the whole
+    # search. A timed-out request is tried again, up to SERPAPI_MAX_ATTEMPTS.
     serpapi_attempt_timeout_seconds: float = float(os.getenv("SERPAPI_ATTEMPT_TIMEOUT_SECONDS", "8") or 8)
     serpapi_max_attempts: int = int(os.getenv("SERPAPI_MAX_ATTEMPTS", "2") or 2)
     # SerpApi requests in flight at once. Six topics searching together
     # (12+ requests) is when the 8s+ answers and timeouts appeared; a few
     # at a time each answer in 1-3s.
     serpapi_max_concurrency: int = int(os.getenv("SERPAPI_MAX_CONCURRENCY", "4") or 4)
+    # Submit searches with SerpApi's async=true and read the result from its
+    # Search Archive (free): a slow search is waited for instead of cut off
+    # at SERPAPI_ATTEMPT_TIMEOUT_SECONDS and paid for again by a retry, and a
+    # request slot is held only while submitting. Off = wait on the request.
+    # Not for SerpApi accounts with "Ludicrous Speed" (SerpApi's own rule).
+    serpapi_async: bool = os.getenv("SERPAPI_ASYNC", "true").strip().lower() in {"1", "true", "yes", "on"}
+    # longest wait for an async search's result; keep it below
+    # RESEARCH_TOOL_TIMEOUT_SECONDS so the tool reports a clear timeout
+    serpapi_result_timeout_seconds: float = float(os.getenv("SERPAPI_RESULT_TIMEOUT_SECONDS", "15") or 15)
     serpapi_dummy_data_path: str = os.getenv(
         "SERPAPI_DUMMY_DATA_PATH", ".data/serpapi_fixtures.json"
     ).strip()
@@ -275,6 +304,9 @@ class Settings:
     job_intelligence_llm: str = os.getenv("JOB_INTELLIGENCE_LLM", "default").strip().lower()
     job_intelligence_model: str = os.getenv("JOB_INTELLIGENCE_MODEL", "").strip()
     research_model: str = os.getenv("RESEARCH_MODEL", "").strip()
+    # research write-ups: default = the main model (RESEARCH_MODEL), fast =
+    # the fast model, falling back to the main one when its budget is full
+    research_llm: str = os.getenv("RESEARCH_LLM", "default").strip().lower() or "default"
     # one small call before any search: which kinds of resource (docs,
     # videos, books, papers) are worth searching for each skill gap. A soft
     # skill needs no papers; a brand-new tool has no books. Saves the
@@ -338,8 +370,27 @@ class Settings:
     plan_max_books: int = int(os.getenv("PLAN_MAX_BOOKS", "2") or 0)
     # likewise for research papers
     plan_max_papers: int = int(os.getenv("PLAN_MAX_PAPERS", "2") or 0)
-    # longest sprint; a gap with more days is split into several sprints
+    # longest sprint: the plan's days are cut into blocks of at most this
+    # many, across topic boundaries (assessments/flashcards cover days 1-3
+    # and 4-7 of each)
     plan_sprint_max_days: int = int(os.getenv("PLAN_SPRINT_MAX_DAYS", "7") or 7)
+    # slow-model circuit breaker (observability/llm_health.py): a call this
+    # long at under 20 tokens/s, or cut off by its caller after this long,
+    # marks its model degraded for LLM_DEGRADED_SECONDS
+    llm_slow_call_seconds: float = float(os.getenv("LLM_SLOW_CALL_SECONDS", "30") or 30)
+    llm_degraded_seconds: float = float(os.getenv("LLM_DEGRADED_SECONDS", "300") or 300)
+    # while the main model is degraded: "fallback" = each call goes straight
+    # to its agent's own fallback (concept-based wording, a resources-only
+    # note); "fast" = calls go to the FAST_LLM_* model, within its rate
+    # budget. fallback by default: a free fast tier (8,000 tokens a minute)
+    # can't absorb a whole run's write-ups and planning.
+    llm_degraded_route: str = os.getenv("LLM_DEGRADED_ROUTE", "fallback").strip().lower() or "fallback"
+    # web searches the planner may run for days none of their topic's
+    # resources covers (the model names the day's subject; one SerpApi
+    # credit each, run while the rest of the plan is being written).
+    # "auto" = one per 5 days of plan (10 days: 2, 45: 9, 90: 18); 0 = off.
+    # Searched results are cached, so a re-run costs nothing.
+    plan_gap_searches: str = os.getenv("PLAN_GAP_SEARCHES", "auto").strip().lower() or "auto"
     # most days one planner LLM call writes, keeping every call small no
     # matter how long the plan is
     planner_days_per_call: int = int(os.getenv("PLANNER_DAYS_PER_CALL", "10") or 10)
@@ -351,7 +402,7 @@ class Settings:
     # most skill gaps researched per run (highest priority first); each costs
     # one search round + one LLM write-up, so this bounds research time and
     # SerpApi credits regardless of plan length. Gaps past it are still
-    # planned, without references.
+    # planned, with references borrowed from other topics or search links.
     research_max_gaps: int = int(os.getenv("RESEARCH_MAX_GAPS", "6") or 6)
 
     # concurrent LLM calls where a stage can fan out (research write-ups,
@@ -363,6 +414,19 @@ class Settings:
 
     def enabled_research_kinds(self) -> tuple[str, ...]:
         return tuple(kind.strip() for kind in self.research_kinds.split(",") if kind.strip())
+
+    def fast_llm_keys(self) -> list[str]:
+        """The fast model's API keys in use: one, or the pool."""
+        pool = [key.strip() for key in self.fast_llm_api_keys.split(",") if key.strip()]
+        keys = ([self.fast_llm_api_key] if self.fast_llm_api_key else []) + (pool if self.fast_llm_key_pool else pool[:1])
+        keys = list(dict.fromkeys(keys))  # the same key twice is one budget
+        return keys if self.fast_llm_key_pool else keys[:1]
+
+    def gap_search_budget(self, total_days: int) -> int:
+        """PLAN_GAP_SEARCHES for a plan of `total_days` days."""
+        if self.plan_gap_searches == "auto":
+            return -(-max(1, total_days) // 5)
+        return max(0, int(self.plan_gap_searches))
 
     def validate(self) -> None:
         if self.llm_provider != "ollama":
@@ -388,16 +452,24 @@ class Settings:
             raise ValueError("RESEARCH_COMPACT_MAX_OUTPUT_TOKENS must not be negative")
         if self.serpapi_attempt_timeout_seconds <= 0 or self.serpapi_max_attempts < 1:
             raise ValueError("SERPAPI_ATTEMPT_TIMEOUT_SECONDS must be positive and SERPAPI_MAX_ATTEMPTS at least 1")
+        if self.llm_degraded_route not in {"fallback", "fast"}:
+            raise ValueError("LLM_DEGRADED_ROUTE must be 'fallback' or 'fast'")
+        if self.plan_gap_searches != "auto" and not self.plan_gap_searches.isdigit():
+            raise ValueError("PLAN_GAP_SEARCHES must be 'auto' or a whole number (0 = off)")
+        if self.serpapi_result_timeout_seconds <= 0:
+            raise ValueError("SERPAPI_RESULT_TIMEOUT_SECONDS must be a positive number")
         unknown = set(self.enabled_research_kinds()) - {"docs", "videos", "books", "papers", "repos"}
         if unknown:
             raise ValueError(f"RESEARCH_KINDS has unknown kinds: {sorted(unknown)}")
         if self.interview_prep_branch_timeout_seconds <= 0:
             raise ValueError("INTERVIEW_PREP_BRANCH_TIMEOUT_SECONDS must be a positive number")
-        for name in ("skill_gap_llm", "planner_llm", "job_intelligence_llm"):
+        for name in ("skill_gap_llm", "planner_llm", "job_intelligence_llm", "research_llm"):
             if getattr(self, name) not in {"default", "fast"}:
                 raise ValueError(f"{name.upper()} must be 'default' or 'fast'")
         if self.research_scope_llm not in {"off", "default", "fast"}:
             raise ValueError("RESEARCH_SCOPE_LLM must be 'off', 'default' or 'fast'")
+        if not 0 < self.fast_llm_limit_headroom <= 1:
+            raise ValueError("FAST_LLM_LIMIT_HEADROOM must be in (0, 1]")
         if self.fast_llm_max_concurrency < 1:
             raise ValueError("FAST_LLM_MAX_CONCURRENCY must be at least 1")
         if self.evaluator_llm not in {"default", "fast", "off"}:
@@ -457,7 +529,7 @@ settings = Settings()
 
 def fast_llm_configured(cfg: Settings | None = None) -> bool:
     cfg = cfg or settings
-    return bool(cfg.fast_llm_base_url and cfg.fast_llm_model and cfg.fast_llm_api_key)
+    return bool(cfg.fast_llm_base_url and cfg.fast_llm_model and cfg.fast_llm_keys())
 
 
 def llm_concurrency(cfg: Settings | None = None, profile: str = "default") -> int:
@@ -467,7 +539,8 @@ def llm_concurrency(cfg: Settings | None = None, profile: str = "default") -> in
     that model is configured."""
     cfg = cfg or settings
     if profile == "fast" and fast_llm_configured(cfg):
-        return cfg.fast_llm_max_concurrency
+        # each key of a pool has its own limits, so the pool takes more
+        return cfg.fast_llm_max_concurrency * len(cfg.fast_llm_keys())
     if cfg.llm_max_concurrency > 0:
         return cfg.llm_max_concurrency
     # Ollama is the only supported primary provider; parallel requests offer
@@ -477,7 +550,158 @@ def llm_concurrency(cfg: Settings | None = None, profile: str = "default") -> in
 
 
 def get_llm(temperature: float = 0.2, max_tokens: int | None = None, profile: str = "default",
-            model: str | None = None):
+            model: str | None = None, *, guarded: bool = False):
+    """A chat model for an agent, via _build_llm (below).
+
+    guarded=True: while the main model is answering too slowly
+    (observability/llm_health.py), calls fail at once with
+    ModelDegradedError, so the caller takes its own fallback straight away
+    (or go to the fast model, with LLM_DEGRADED_ROUTE=fast). Only for callers that just
+    .ainvoke() it: the guard is a plain runnable, without bind_tools or
+    token streaming, so chat agents use the model unguarded."""
+    llm = _build_llm(temperature, max_tokens, profile, model)
+    if not guarded or (profile == "fast" and fast_llm_configured()):
+        return llm  # a fast call already falls back to the main model by itself
+    name = model or (settings.openai_model if settings.llm_provider == "openai" else settings.ollama_model)
+    return _health_guarded(llm, name, temperature, max_tokens)
+
+
+def _within_rate_budget(members: list[tuple[str, Any]], max_tokens: int | None):
+    """The fast model, called only when a rate budget has room
+    (core/rate_budget.py). `members` is one (budget name, chat model) per
+    API key: one normally, several with FAST_LLM_KEY_POOL=on. Each call goes
+    to the key with the most room; a key that answers 429 is paused and the
+    call moves on to the next key; a rejected key is left out. When no key
+    has room soon enough: FastBudgetExhausted, which the caller's fallback
+    to the main model catches."""
+    import asyncio
+    import math
+    import time as _time
+
+    from langchain_core.runnables import RunnableLambda
+
+    from core import rate_budget
+    from core.rate_budget import DEFAULT_COMPLETION_TOKENS, FastBudgetExhausted, estimate_tokens
+
+    chats = dict(members)
+    names = list(chats)
+
+    def plan(value: Any) -> int:
+        return estimate_tokens(value) + (max_tokens or DEFAULT_COMPLETION_TOKENS)
+
+    def refused(tokens: int, wait: float) -> FastBudgetExhausted:
+        why = "today's limit is used up" if wait == math.inf else f"no room for {wait:.1f}s"
+        scope = "every key" if len(names) > 1 else "the key"
+        logger.info("Fast model budget: %s on %s (call of ~%d tokens); using the main model", why, scope, tokens)
+        return FastBudgetExhausted(f"fast model rate budget: {why}")
+
+    def after_error(name: str, reservation: Any, exc: Exception, tried: set[str]) -> bool:
+        """Book the failure; True when the call should move to another key."""
+        rate_budget.budget_for(name).on_error(reservation, exc)
+        if rate_budget.is_bad_key(exc):
+            rate_budget.disable(name, "the provider rejected the key")
+        elif not rate_budget.is_rate_limit(exc):
+            return False  # not about this key: the main model takes the call
+        tried.add(name)
+        return len(names) > len(tried)
+
+    async def ainvoke(value: Any, config: Any = None) -> Any:
+        tokens, deadline, tried = plan(value), _time.monotonic() + settings.fast_llm_max_wait_seconds, set()
+        while True:
+            name, reservation, wait = rate_budget.pick(names, tokens, tried)
+            if name is None:
+                if _time.monotonic() + wait > deadline:
+                    raise refused(tokens, wait)
+                await asyncio.sleep(wait)
+                continue
+            try:
+                response = await chats[name].ainvoke(value, config=config)
+            except Exception as exc:
+                if after_error(name, reservation, exc, tried):
+                    continue
+                raise
+            rate_budget.budget_for(name).settle(reservation, response)
+            return response
+
+    def invoke(value: Any, config: Any = None) -> Any:
+        tokens, deadline, tried = plan(value), _time.monotonic() + settings.fast_llm_max_wait_seconds, set()
+        while True:
+            name, reservation, wait = rate_budget.pick(names, tokens, tried)
+            if name is None:
+                if _time.monotonic() + wait > deadline:
+                    raise refused(tokens, wait)
+                _time.sleep(wait)
+                continue
+            try:
+                response = chats[name].invoke(value, config=config)
+            except Exception as exc:
+                if after_error(name, reservation, exc, tried):
+                    continue
+                raise
+            rate_budget.budget_for(name).settle(reservation, response)
+            return response
+
+    budgeted = RunnableLambda(invoke, afunc=ainvoke, name=f"rate_budgeted:{settings.fast_llm_model}")
+    budgeted.chat_model = members[0][1]  # the (first) model inside, for inspection
+    budgeted.members = names
+    return budgeted
+
+
+def _health_guarded(main: Any, name: str, temperature: float, max_tokens: int | None):
+    from langchain_core.runnables import RunnableLambda
+
+    from observability.llm_health import ModelDegradedError, degraded
+
+    fast: list[Any] = []
+
+    def pick() -> Any:
+        if not degraded(name):
+            return main
+        if settings.llm_degraded_route != "fast" or not fast_llm_configured():
+            raise ModelDegradedError(f"{name} is answering too slowly; call skipped")
+        if not fast:
+            # no fallback to the main model: that is the slow one
+            fast.append(_build_llm(temperature, max_tokens, "fast", None, fallback=False))
+        return fast[0]
+
+    def invoke(value: Any, config: Any = None) -> Any:
+        return pick().invoke(value, config=config)
+
+    async def ainvoke(value: Any, config: Any = None) -> Any:
+        return await pick().ainvoke(value, config=config)
+
+    return RunnableLambda(invoke, afunc=ainvoke, name=f"health_guarded:{name}")
+
+
+def _fast_chat(chat_class: Any, api_key: str, extra: dict[str, Any], temperature: float, max_tokens: int | None):
+    """The fast model on one API key."""
+    from observability.metrics import METRICS_CALLBACK
+    from storage.llm_cache import llm_response_cache
+
+    return chat_class(
+        model=settings.fast_llm_model,
+        api_key=api_key,
+        base_url=settings.fast_llm_base_url,
+        temperature=temperature,
+        # no retries: on a rate limit (429) or any other failure the call
+        # moves to another key or to the main model instead of sitting in
+        # backoff
+        max_retries=0,
+        callbacks=[METRICS_CALLBACK],
+        # one cache for every key: an answer depends on the model, not the key
+        cache=llm_response_cache(
+            f"fast:{settings.fast_llm_base_url}:{settings.fast_llm_model}:temperature={temperature}"
+            f":max_tokens={max_tokens}:reasoning={settings.fast_llm_reasoning_effort}"
+        ),
+        **({"max_tokens": max_tokens} if max_tokens else {}),
+        **({"extra_body": extra} if extra else {}),
+        # x-ratelimit-* headers, for the rate budget's books
+        include_response_headers=True,
+    )
+
+
+def _build_llm(temperature: float = 0.2, max_tokens: int | None = None, profile: str = "default",
+               model: str | None = None, fallback: bool = True):
     """Return a chat model instance based on Settings.LLM_PROVIDER.
     Every agent should call this instead of instantiating a model directly:
     it attaches the run-metrics callback (observability/metrics.py) and the
@@ -496,24 +720,15 @@ def get_llm(temperature: float = 0.2, max_tokens: int | None = None, profile: st
     if profile == "fast" and fast_llm_configured():
         from langchain_openai import ChatOpenAI
 
+        from core.rate_budget import budget_for, key_fingerprint
+
         extra = {"reasoning_effort": settings.fast_llm_reasoning_effort} if settings.fast_llm_reasoning_effort else {}
-        fast = ChatOpenAI(
-            model=settings.fast_llm_model,
-            api_key=settings.fast_llm_api_key,
-            base_url=settings.fast_llm_base_url,
-            temperature=temperature,
-            # no retries: on a rate limit (429) or any other failure the
-            # call goes straight to the main model below instead of
-            # sitting in backoff
-            max_retries=0,
-            callbacks=[METRICS_CALLBACK],
-            cache=llm_response_cache(
-                f"fast:{settings.fast_llm_base_url}:{settings.fast_llm_model}:temperature={temperature}"
-                f":max_tokens={max_tokens}:reasoning={settings.fast_llm_reasoning_effort}"
-            ),
-            **({"max_tokens": max_tokens} if max_tokens else {}),
-            **({"extra_body": extra} if extra else {}),
-        )
+        members = []
+        for index, api_key in enumerate(settings.fast_llm_keys(), start=1):
+            name = f"{settings.fast_llm_model}#{key_fingerprint(api_key)}"
+            budget_for(name, label=f"key{index}")
+            members.append((name, _fast_chat(ChatOpenAI, api_key, extra, temperature, max_tokens)))
+        fast = _within_rate_budget(members, max_tokens)
         # A free fast tier runs out mid-run (Groq: 1,000 output tokens a
         # minute). The same call then runs on the main model (or the
         # agent's own *_MODEL), so a rate limit costs speed, never the result.

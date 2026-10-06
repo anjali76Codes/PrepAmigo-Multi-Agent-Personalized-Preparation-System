@@ -31,6 +31,7 @@ from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
 from tools.duration import extract_duration_days, resolve_plan_total_days
 from tools.plan_db_sync import sync_generated_plan_to_db
+from tools.plan_builder import plan_topics, schedule
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,25 @@ class CompanyBranchState(TypedDict, total=False):
     messages: Annotated[list, add_messages]
     task_context: dict[str, Any]
     guardrail_flags: dict[str, str]
+
+
+def plannable_gaps(skill_gaps: list[str], priority_gaps: list[dict[str, Any]], total_days: int) -> set[str]:
+    """The gaps the planner will give days to, worked out before research
+    with the planner's own scheduling (plan_builder.schedule): a 10-day plan
+    has room for 3 topics, so researching 6 paid for 3 that were never
+    planned. When the company-platform module is on it takes the first
+    slot, so it is counted in. Any gap can be researched if this fails."""
+    gaps = priority_gaps or [{"skill": gap, "effort": "High"} for gap in skill_gaps]
+    if settings.company_module == "on":
+        gaps = [{"skill": "(company platform module)", "effort": "High"}, *gaps]
+    try:
+        scheduled, _ = schedule(plan_topics([], gaps), total_days, settings.plan_max_topics,
+                                settings.plan_min_days_per_topic)
+    except Exception:
+        logger.warning("Could not work out the plan's topics before research; researching every gap", exc_info=True)
+        return set(skill_gaps)
+    keys = {topic["key"] for topic in scheduled}
+    return {gap for gap in skill_gaps if gap.strip().casefold() in keys}
 
 
 def canonical_company(user_value: str, profile_name: str) -> str:
@@ -605,14 +625,21 @@ class InterviewPrepOrchestrator:
             return {"researched_materials": [], "workflow_status": "evaluating"}
 
         # one module per gap, highest priority first (skill_gaps keeps the
-        # skill-gap agent's priority order), capped so research time and
-        # SerpApi spend don't grow with the gap count; the planner still
-        # schedules the rest, without references
-        researched, skipped = skill_gaps[: settings.research_max_gaps], skill_gaps[settings.research_max_gaps:]
+        # skill-gap agent's priority order), only for gaps the plan has room
+        # for and at most RESEARCH_MAX_GAPS, so research time and SerpApi
+        # spend follow the plan, not the gap count; a planned gap past the
+        # cap gets borrowed references, gap searches or search links
+        planned = plannable_gaps(
+            skill_gaps, (state.get("task_context") or {}).get("skill_gap", {}).get("priority_gaps") or [],
+            state.get("plan_total_days") or settings.plan_total_days,
+        )
+        researched = [gap for gap in skill_gaps if gap in planned][: settings.research_max_gaps]
+        skipped = [gap for gap in skill_gaps if gap not in researched]
         await dispatch_event(
             make_event("interview_prep", "research_stage", "running", {
                 "message": f"Researching {len(researched)} skill gap(s)..."
-                + (f" ({len(skipped)} lower-priority gap(s) planned without research)" if skipped else ""),
+                + (f" ({len(skipped)} lower-priority gap(s) not researched: no room in the plan or past the cap)"
+                   if skipped else ""),
                 "gaps": researched,
                 "skipped": skipped,
             }),
@@ -821,7 +848,7 @@ class InterviewPrepOrchestrator:
                 # EVALUATOR_LLM=off: the status is already decided from the
                 # branch results above; the model only rephrases the summary
                 raise _SkipEvaluator()
-            llm = get_llm(temperature=0, max_tokens=120,
+            llm = get_llm(guarded=True, temperature=0, max_tokens=120,
                           profile="fast" if settings.evaluator_llm == "fast" else "default")
             response = await asyncio.wait_for(
                 llm.ainvoke(prompt, config=INTERNAL_LLM_CONFIG),

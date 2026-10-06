@@ -245,12 +245,18 @@ def test_all_sources_failing_emits_failed_event_and_raises(memory):
     assert "All research sources failed" in events[-1]["payload"]["error"]
 
 
-def test_empty_llm_output_fails_synthesis(memory):
+def test_an_unusable_write_up_keeps_the_resources_with_a_short_note(memory):
+    """The searches were paid for: a failed write-up must not cost the topic
+    its resources (three topics lost theirs when the model slowed down)."""
     events = []
-    with pytest.raises(ResearchAgentError):
-        asyncio.run(make_agent(memory, FakeLLM(content="  ")).run(REQUEST, on_event=events.append))
+    result = asyncio.run(make_agent(memory, FakeLLM(content="  ")).run(REQUEST, on_event=events.append))
 
-    assert (events[-1]["step"], events[-1]["status"]) == ("synthesize_learning_module", "failed")
+    assert [(e["step"], e["status"]) for e in events[-2:]] == [
+        ("synthesize_learning_module", "failed"), ("synthesize_learning_module", "completed")]
+    assert events[-1]["payload"]["note"] == "resources_only"
+    module = result["module"]
+    assert module["resources"] and module["content_markdown"].startswith("## Overview\nDynamic Programming:")
+    assert "## Practice" in module["content_markdown"]
 
 
 def test_memory_outage_degrades_gracefully():
@@ -305,14 +311,15 @@ def test_synthesis_has_its_own_time_budget_independent_of_the_research_phase(mem
             return await super().ainvoke(messages)
 
     events = []
-    with pytest.raises(ResearchAgentError):
-        asyncio.run(make_agent(memory, SlowLLM()).run(REQUEST, on_event=events.append))
+    result = asyncio.run(make_agent(memory, SlowLLM()).run(REQUEST, on_event=events.append))
 
-    assert (events[-1]["step"], events[-1]["status"]) == ("synthesize_learning_module", "failed")
-    assert "budget" in events[-1]["payload"]["error"]
+    failed = events[-2]
+    assert (failed["step"], failed["status"]) == ("synthesize_learning_module", "failed")
+    assert "budget" in failed["payload"]["error"]
     # regression: duration_ms must be measured at the moment of failure, not
     # left at 0 by reading it before the Timer context manager exits
-    assert events[-1]["payload"]["duration_ms"] > 0
+    assert failed["payload"]["duration_ms"] > 0
+    assert result["module"]["resources"]  # the topic keeps what research found
 
 
 def test_async_callbacks_are_awaited(memory):

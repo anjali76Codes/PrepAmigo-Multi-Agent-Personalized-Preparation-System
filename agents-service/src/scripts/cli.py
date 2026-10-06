@@ -4,15 +4,15 @@ PrepAmigo CLI Runner
 Two modes for local development and testing:
 
   Default mode (no args):
-    uv run python src/cli.py [--user USER_ID] [--stream | --no-stream]
+    uv run python src/scripts/cli.py [--user USER_ID] [--stream | --no-stream]
     -> Full multi-agent REPL: the supervisor routes your message to chat,
        research or company_research. Streams the reply as it is generated
        (STREAM_RESPONSES in .env sets the default; --user keys long-term
        memory, default "demo-user").
 
   Company Research mode:
-    uv run python src/cli.py --company "Datadog"
-    uv run python src/cli.py --company "Stripe" --role "Backend Engineer"
+    uv run python src/scripts/cli.py --company "Datadog"
+    uv run python src/scripts/cli.py --company "Stripe" --role "Backend Engineer"
     -> Directly invokes the Company Research Agent in isolation, bypassing
        the supervisor. Useful for R&D on that agent without the full
        orchestrator stack.
@@ -489,7 +489,7 @@ async def run_full_prep(company: str, role: str, location: str, resume_text: str
 
         coverage = output.get("coverage", {})
         if coverage.get("unresearched"):
-            print(f"\n    {YELLOW}○{RESET} No research for: {', '.join(coverage['unresearched'])} (planned, no references)")
+            print(f"\n    {YELLOW}○{RESET} No research for: {', '.join(coverage['unresearched'])} (planned with borrowed references or search links)")
         if coverage.get("not_scheduled"):
             print(f"    {YELLOW}○{RESET} Not scheduled (plan too short): {', '.join(coverage['not_scheduled'])}")
         pack_counts = ", ".join(f"{k}: {len(v)}" for k, v in (output.get("resource_pack") or {}).items())
@@ -581,15 +581,15 @@ def main():
         epilog="""
 Examples:
   # Full multi-agent REPL (supervisor routes to the right agent)
-  uv run python src/cli.py --user subhaan
+  uv run python src/scripts/cli.py --user subhaan
 
   # Standalone Company Research Agent (bypasses supervisor)
-  uv run python src/cli.py --company "Datadog"
-  uv run python src/cli.py --company "Stripe" --role "Backend Engineer"
+  uv run python src/scripts/cli.py --company "Datadog"
+  uv run python src/scripts/cli.py --company "Stripe" --role "Backend Engineer"
 
   # Full pipeline test: company+job → skill gap → research → evaluate
-  uv run python src/cli.py --prep --company "Stripe" --role "Backend Engineer" --location "San Francisco"
-  uv run python src/cli.py --prep --company "Anthropic" --role "ML Engineer" --location "Remote" --resume-file resume.txt
+  uv run python src/scripts/cli.py --prep --company "Stripe" --role "Backend Engineer" --location "San Francisco"
+  uv run python src/scripts/cli.py --prep --company "Anthropic" --role "ML Engineer" --location "Remote" --resume-file resume.txt
         """,
     )
     parser.add_argument("--user", default="demo-user", help="user id that keys long-term memory (REPL mode)")

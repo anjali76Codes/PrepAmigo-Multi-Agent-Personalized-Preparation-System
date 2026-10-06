@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional
 
 from core.config import settings
 from observability.metrics import collect_metrics
+from tools.plan_db_sync import backend_auth
 
 from .models import EventType
 from .publisher import EventPublisher, get_event_publisher
@@ -137,6 +138,7 @@ async def execute_agent_stream(
     workflow_text_input: Optional[str] = None,
     resume_input: Optional[Dict[str, Any]] = None,
     plan_days: Optional[int] = None,
+    auth_token: Optional[str] = None,
 ) -> None:
     """Execute the agent workflow, streaming events via Redis pub/sub.
 
@@ -228,7 +230,9 @@ async def execute_agent_stream(
     )
 
     try:
-        with collect_metrics() as run_metrics:
+        # auth_token: the requesting user's token, for saving their plan
+        # through the backend (tools/plan_db_sync.py)
+        with collect_metrics() as run_metrics, backend_auth(auth_token):
             try:
                 async for event_type, payload in bridge_graph_turn(graph, inputs, config):
                     await pub.emit_event(run_id=run_id, event_type=event_type, payload=payload)
