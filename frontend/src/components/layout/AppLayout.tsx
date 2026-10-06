@@ -28,10 +28,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKe
       return (
         <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-6 overflow-y-auto">
           <Mascot size="lg" variant="sad.png" />
-          <ErrorState 
-            title="Oops! Something went wrong." 
-            description={this.state.error?.message || "An unexpected error occurred."} 
-            onRetry={() => this.setState({ hasError: false, error: null })} 
+          <ErrorState
+            title="Oops! Something went wrong."
+            description={this.state.error?.message || "An unexpected error occurred."}
+            onRetry={() => this.setState({ hasError: false, error: null })}
           />
         </div>
       );
@@ -122,10 +122,10 @@ export function AppLayout() {
         className="hidden md:flex flex-col bg-carbon-900 text-on-chrome relative overflow-hidden z-10"
       >
         <div
-          className={`h-16 flex items-center shrink-0 transition-all ${isSidebarOpen ? "px-6 justify-between" : "justify-center"}`}
+          className={`h-16 flex items-center shrink-0 transition-all ${isSidebarOpen ? "px-6 justify-between gap-2" : "justify-center"}`}
         >
           {isSidebarOpen && (
-            <div className="overflow-hidden transition-opacity">
+            <div className=" transition-opacity text-sm">
               <Logo tone="inverse" />
             </div>
           )}
@@ -245,7 +245,7 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative md:pl-0">
         <SearchBar />
-        <div className="flex-1 flex flex-col bg-bg md:rounded-t-[2rem] overflow-hidden relative shadow-2xl border border-black/5">
+        <div className="flex-1 flex flex-col bg-bg md:rounded-tl-[2rem] overflow-hidden relative shadow-2xl border border-black/5">
           <PageBackground />
 
           <header className="md:hidden h-16 border-b border-white/5 bg-carbon-900 text-on-chrome flex items-center justify-between px-4 z-10 relative">

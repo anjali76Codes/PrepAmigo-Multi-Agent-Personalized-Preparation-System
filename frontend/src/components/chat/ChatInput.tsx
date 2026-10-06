@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "../../utils/utils";
+import { AnimatePresence } from "framer-motion";
+import { Icon } from "../ui/Icon";
+import { SLASH_TEMPLATES, TemplatePicker, MUTED_BTN, type SlashTemplate } from "./TemplatePicker";
 
 // ─── Native SVG Icons (reliable, zero flicker, consistent fill/stroke) ────────
 
@@ -103,29 +106,6 @@ function CloseIcon({ className = "w-3 h-3" }: { className?: string }) {
   );
 }
 
-
-
-// ─── Slash Templates ─────────────────────────────────────────────────────────
-
-const SLASH_TEMPLATES = [
-  {
-    id: "role-only",
-    label: "Know the role, not the company",
-    template: "I am preparing for a [Role] position in [Timeline] days.",
-  },
-  {
-    id: "company-only",
-    label: "Know the company, not the role",
-    template:
-      "I have an interview at [Company] in [Timeline] days, help me figure out what to prep.",
-  },
-  {
-    id: "both",
-    label: "Know both the role and company",
-    template:
-      "I am preparing for a [Role] at [Company] in [Timeline] days.",
-  },
-] as const;
 
 // ─── Placeholder Helpers ──────────────────────────────────────────────────────
 
@@ -449,7 +429,7 @@ export function ChatInput({
   // ── Template insertion ────────────────────────────────────────────────────
 
   const applyTemplate = useCallback(
-    (tpl: (typeof SLASH_TEMPLATES)[number]) => {
+    (tpl: SlashTemplate) => {
       setShowTemplates(false);
       setText(tpl.template);
       requestAnimationFrame(() => {
@@ -539,65 +519,15 @@ export function ChatInput({
   return (
     <div className={cn("relative flex flex-col w-full", className)}>
       {/* ── Slash-template picker ── */}
-      {showTemplates && (
-        <div className="absolute bottom-full mb-2 left-0 right-0 z-50 bg-white border border-border rounded-2xl shadow-[0_12px_40px_rgba(24,18,43,0.12)] overflow-hidden">
-          <div className="px-4 py-2 bg-navy-50/60 border-b border-border/40 flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-navy-500">
-              Prompt Templates
-            </span>
-            <span className="text-[10px] text-carbon-400">
-              ↑↓ or Tab to navigate
-            </span>
-          </div>
-          {SLASH_TEMPLATES.map((tpl, i) => (
-            <button
-              key={tpl.id}
-              type="button"
-              onMouseEnter={() => setActiveTemplateIndex(i)}
-              onMouseDown={(e) => {
-                // Prevent textarea blur before we can apply the template
-                e.preventDefault();
-                applyTemplate(tpl);
-              }}
-              className={cn(
-                "w-full text-left px-4 py-3 transition-colors cursor-pointer",
-                i !== SLASH_TEMPLATES.length - 1 && "border-b border-border/40",
-                i === activeTemplateIndex
-                  ? "bg-navy-100/70 border-l-4 border-navy-900 pl-3"
-                  : "hover:bg-surface-muted/40 text-carbon-700 pl-4 border-l-4 border-transparent"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <p
-                  className={cn(
-                    "text-sm font-semibold",
-                    i === activeTemplateIndex ? "text-navy-900" : "text-carbon-800"
-                  )}
-                >
-                  {tpl.label}
-                </p>
-                {i === activeTemplateIndex && (
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-navy-900 text-white">
-                    Enter ↵
-                  </span>
-                )}
-              </div>
-              <p
-                className={cn(
-                  "text-xs mt-1 font-mono tracking-tight",
-                  i === activeTemplateIndex ? "text-navy-700" : "text-carbon-400"
-                )}
-              >
-                {tpl.template}
-              </p>
-            </button>
-          ))}
-          <div className="px-4 py-2 text-[10px] text-carbon-400 bg-surface/50 border-t border-border/50 flex items-center justify-between select-none">
-            <span>↑↓ / Tab navigate · Enter select · Esc dismiss</span>
-            <span>Tab jumps placeholders</span>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showTemplates && (
+          <TemplatePicker
+            activeIndex={activeTemplateIndex}
+            onHover={setActiveTemplateIndex}
+            onPick={applyTemplate}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Main input box ── */}
       <div
@@ -697,17 +627,15 @@ export function ChatInput({
                 textareaRef.current?.focus();
               }}
               className={cn(
-                "flex items-center gap-1.5 text-xs text-carbon-500 hover:text-carbon-900 transition-colors select-none py-1 px-1.5 -ml-1 rounded-lg hover:bg-carbon-100/70 cursor-pointer",
+                "flex items-center gap-2 text-sm font-medium py-2 px-4 rounded-full transition-all duration-150 select-none cursor-pointer active:scale-95",
+                MUTED_BTN,
                 !text ? "opacity-100" : "opacity-0 pointer-events-none"
               )}
               title="Click or type / for templates"
             >
-              <span className="inline-flex items-center justify-center font-mono text-[11px] font-bold w-4 h-4 rounded bg-surface border border-border text-carbon-700 leading-none shadow-2xs">
-                /
-              </span>
-              <span className="font-medium text-xs sm:text-sm text-carbon-600 hover:text-carbon-900">
-                Type <span className="font-semibold text-carbon-800">/</span> for templates
-              </span>
+              <Icon name="flash-outline" className="text-base" />
+              Templates
+              <span className="font-mono text-[11px] font-medium w-4 h-4 rounded bg-white border border-border flex items-center justify-center">/</span>
             </button>
           )}
 
