@@ -1,0 +1,22 @@
+# PrepAmigo robots.txt
+# https://prepamigo.com/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /style-guide
+
+# Disallow private/authenticated dashboard and app areas
+Disallow: /dashboard/
+Disallow: /resource-pack/
+Disallow: /roadmap
+Disallow: /calendar
+Disallow: /assessment
+Disallow: /progress
+Disallow: /profile
+Disallow: /login
+Disallow: /signup
+Disallow: /api/
+
+Sitemap: https://prepamigo.com/sitemap.xml

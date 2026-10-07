@@ -26,6 +26,7 @@ import { NotesDirectory } from "./pages/NotesDirectory";
 import { ResourceChat } from "./pages/ResourceChat";
 import { ResourceChatHistory } from "./pages/ResourceChatHistory";
 import { LevelDetail } from "./pages/LevelDetail";
+import { NotFound } from "./pages/NotFound";
 import { AnimatePresence, motion } from "framer-motion";
 
 
@@ -102,6 +103,9 @@ function AnimatedRoutes() {
             <Route path="chat/:chatId" element={<ResourceChat />} />
           </Route>
         </Route>
+
+        {/* 404 Catch-All */}
+        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   );
