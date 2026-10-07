@@ -73,14 +73,11 @@ export function ResourcePackHome() {
             )}
           </section>
 
-          {/* Ask */}
-          <section className="space-y-5 pt-4">
+          {/* Ask header & suggestions */}
+          <section className="space-y-4 pt-2">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-extrabold text-carbon-900">Ask your Resources</h2>
               <p className="text-sm font-medium text-carbon-500">Ask anything about your sprints, notes, and references.</p>
-            </div>
-            <div className="max-w-2xl mx-auto w-full">
-              <ChatInput onSend={handleSend} placeholder="Search topics, explain concepts, or find links..." />
             </div>
             <div className="flex flex-wrap gap-2 justify-center max-w-3xl mx-auto">
               {SUGGESTED_QUESTIONS.map((s) => (
@@ -91,6 +88,13 @@ export function ResourcePackHome() {
               ))}
             </div>
           </section>
+        </div>
+      </div>
+
+      {/* Floating Chat Input at the bottom */}
+      <div className="pointer-events-none sticky bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-5 pt-2 bg-gradient-to-t from-bg via-bg/90 to-transparent">
+        <div className="max-w-2xl mx-auto w-full pointer-events-auto shadow-xl rounded-3xl">
+          <ChatInput onSend={handleSend} placeholder="Search topics, explain concepts, or find links..." />
         </div>
       </div>
     </div>

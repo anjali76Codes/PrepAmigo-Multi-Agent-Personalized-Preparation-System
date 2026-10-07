@@ -267,19 +267,25 @@ export function Assessment() {
                                                 items={quizzes!.reduce((n, q) => n + q.questions.length, 0)}
                                             />
                                             {[...sprintGroups.entries()].map(([sprintLabel, levels]) => (
-                                                <section key={sprintLabel} className="mt-8 space-y-4">
-                                                    <h2 className="text-lg font-extrabold text-carbon-900">{sprintLabel}</h2>
+                                                <section key={sprintLabel} className="mt-8 space-y-5">
+                                                    <div className="flex items-center gap-2.5 border-b border-border/60 pb-2">
+                                                        <Icon name="ribbon-outline" className="text-chrome text-lg" />
+                                                        <h2 className="text-base sm:text-lg font-extrabold text-carbon-900 tracking-tight">{sprintLabel}</h2>
+                                                    </div>
                                                     {[...levels.entries()].map(([levelLabel, items]) => (
-                                                        <div key={levelLabel} className="space-y-3">
-                                                            <h3 className="text-sm font-bold uppercase tracking-wide text-carbon-500">{levelLabel}</h3>
-                                                            <div className="grid sm:grid-cols-2 gap-6">
+                                                        <div key={levelLabel} className="space-y-2.5">
+                                                            <div className="flex items-center justify-between">
+                                                                <h3 className="text-xs font-bold uppercase tracking-wider text-carbon-500">{levelLabel}</h3>
+                                                                <span className="text-[11px] font-semibold text-carbon-400">{items.length} {items.length === 1 ? 'assessment' : 'assessments'}</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                                 {items.map(({ assessment: a, locked }, i) => (
                                                                     <div key={a._id} className="relative">
                                                                         <SetCard
                                                                             index={i}
                                                                             icon={locked ? "lock-closed-outline" : "help-circle"}
                                                                             title={levelLabel}
-                                                                            meta={locked ? "Complete earlier levels first" : `${a.questions.length} questions`}
+                                                                            meta={locked ? "Complete earlier levels first" : `${a.questions.length} questions · ~${Math.max(3, Math.round(a.questions.length * 1.5))} mins`}
                                                                             badge={a.is_completed ? "Completed" : locked ? "Locked" : "Not started"}
                                                                             onClick={locked ? undefined : () => {
                                                                                 setActiveQuiz(a);
@@ -287,8 +293,10 @@ export function Assessment() {
                                                                             }}
                                                                         />
                                                                         {locked && (
-                                                                            <div className="absolute inset-0 rounded-2xl bg-bg/50 flex items-center justify-center cursor-not-allowed">
-                                                                                <Icon name="lock-closed-outline" className="text-2xl text-carbon-400" />
+                                                                            <div className="absolute inset-0 rounded-2xl bg-bg/40 backdrop-blur-[1px] flex items-center justify-center cursor-not-allowed">
+                                                                                <div className="w-8 h-8 rounded-full bg-white/90 shadow-xs flex items-center justify-center text-carbon-400">
+                                                                                    <Icon name="lock-closed-outline" className="text-base" />
+                                                                                </div>
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -312,7 +320,7 @@ export function Assessment() {
                                                 completed={decks!.filter((d) => d.is_completed).length}
                                                 items={decks!.reduce((n, d) => n + d.cards.length, 0)}
                                             />
-                                            <div className="grid sm:grid-cols-2 gap-6 mt-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                                                 {decks!.map((d, i) => (
                                                     <SetCard
                                                         key={d._id}

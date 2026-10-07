@@ -13,7 +13,8 @@ import type { ISprintDay } from '../mocks/interviewPlan.mock';
 
 type Tab = 'today' | 'backlog' | 'upcoming';
 
-const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const dateKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const startOfToday = () => {
   const d = new Date();
@@ -582,11 +583,17 @@ export function Calendar() {
                 <Card variant="default" className="p-5 space-y-3">
                   <div>
                     <h3 className="font-bold text-carbon-900">
-                      {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(undefined, {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {(() => {
+                        const parts = selectedCalendarDate.split('-').map(Number);
+                        const d = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(selectedCalendarDate);
+                        return isNaN(d.getTime())
+                          ? selectedCalendarDate
+                          : d.toLocaleDateString(undefined, {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric',
+                            });
+                      })()}
                     </h3>
                     <p className="text-xs font-semibold text-carbon-500">
                       {selectedDateTasks.length} {selectedDateTasks.length === 1 ? 'task' : 'tasks'} scheduled
