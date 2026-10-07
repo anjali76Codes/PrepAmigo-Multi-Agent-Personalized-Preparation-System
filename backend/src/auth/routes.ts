@@ -7,6 +7,13 @@ import { User } from "../models/User.js";
 const router = Router();
 const SESSION_TTL = "30d";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+const isProduction = process.env.NODE_ENV === "production";
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" as const : "lax" as const,
+  path: "/",
+};
 
 function setSessionCookie(res: import("express").Response, user: { _id: unknown; email: string; name: string }) {
   const sessionToken = jwt.sign(
@@ -16,11 +23,13 @@ function setSessionCookie(res: import("express").Response, user: { _id: unknown;
   );
 
   res.cookie("session", sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    ...sessionCookieOptions,
     maxAge: SESSION_MAX_AGE,
   });
+}
+
+function clearSessionCookie(res: import("express").Response) {
+  res.clearCookie("session", sessionCookieOptions);
 }
 
 // Manual Signup
@@ -162,7 +171,7 @@ router.get("/api/auth/me", async (req, res) => {
 
     const user = await User.findById(userId).select("-password");
     if (!user) {
-      res.clearCookie("session");
+      clearSessionCookie(res);
       return res.status(200).json({ user: null });
     }
 
@@ -176,7 +185,7 @@ router.get("/api/auth/me", async (req, res) => {
       },
     });
   } catch {
-    res.clearCookie("session");
+    clearSessionCookie(res);
     res.status(200).json({ user: null });
   }
 });
@@ -243,7 +252,7 @@ router.put("/api/auth/profile", async (req, res) => {
 });
 
 router.post("/api/auth/logout", (_req, res) => {
-  res.clearCookie("session");
+  clearSessionCookie(res);
   res.json({ success: true });
 });
 

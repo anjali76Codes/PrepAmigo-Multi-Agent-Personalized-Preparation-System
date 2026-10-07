@@ -56,7 +56,7 @@ The template is `backend/.env.example`.
 - `REDIS_URL` must point to the Redis instance shared with the Python event publisher.
 - `AGENTS_SERVICE_URL` must point to the Python service, normally `http://localhost:8000` in local development.
 - `PORT` controls the Express server port; the frontend's default API URL expects port `3000`.
-- `FRONTEND_URL` controls the CORS origin.
+- `FRONTEND_URL` must exactly match the deployed frontend origin (for example, `https://prep-amigo.vercel.app`). The backend allows credentialed CORS requests from this origin. Production session cookies use `SameSite=None; Secure` so browsers can send them from the separately hosted Vercel frontend to the Render API; local development uses `SameSite=Lax`.
 - `JWT_SECRET` must be private and consistent with the secret used to sign backend sessions. In production, Node auth requires a valid token. The local development middleware accepts requests without a token only when `NODE_ENV` is not `production`.
 - `GOOGLE_CLIENT_ID` is needed for Google sign-in. Leave optional provider keys blank when not using those providers.
 - `SERPAPI_API_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_BASE_URL` control the Node-side Job Intelligence/LLM providers.
@@ -80,6 +80,10 @@ The backend waits for `connectDB()` to complete before opening its HTTP listener
 - `VITE_GOOGLE_CLIENT_ID`: Google OAuth client ID used by the frontend sign-in flow.
 
 Vite exposes `VITE_*` variables to browser code. Never put private API keys or JWT signing secrets in frontend variables.
+
+### Render backend build
+
+Set the Render backend service root directory to `backend`, its build command to `npm run render:build`, and its start command to `npm start`. The Render-specific build command uses `npm ci --include=dev` so TypeScript and the Express ecosystem declaration packages are installed for compilation even when `NODE_ENV=production`; runtime start continues to use the compiled output.
 
 ## Local Service Checklist
 
