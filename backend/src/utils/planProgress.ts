@@ -41,13 +41,30 @@ export async function syncSprintAndPlan(sprintId: Types.ObjectId, planId: Types.
     { $set: { sprints: sprintIds, completion_percent: planPercent, status: planStatus } },
   );
 
+  const completedSprints = await Sprint.countDocuments({ plan_id: planId, status: "completed" });
+  const totalSprints = sprints.length;
+
+  const progressDoc = await PlanProgress.findOne({ plan_id: planId });
+  if (progressDoc) {
+    if (completedSprints >= 1) await awardTrophy(progressDoc._id as Types.ObjectId, "first_sprint");
+    if (completedSprints >= 2) await awardTrophy(progressDoc._id as Types.ObjectId, "second_sprint");
+    if (completedSprints >= 3) await awardTrophy(progressDoc._id as Types.ObjectId, "third_sprint");
+    if (completedSprints >= 4) await awardTrophy(progressDoc._id as Types.ObjectId, "fourth_sprint");
+    if (totalSprints > 0 && completedSprints >= Math.ceil(totalSprints / 2)) {
+      await awardTrophy(progressDoc._id as Types.ObjectId, "half_sprints");
+    }
+    if (planStatus === "completed") {
+      await awardTrophy(progressDoc._id as Types.ObjectId, "plan_complete");
+    }
+  }
+
   return {
     sprintStatus,
     planStatus,
     sprintPercent,
     planPercent,
-    completedSprints: await Sprint.countDocuments({ plan_id: planId, status: "completed" }),
-    totalSprints: sprints.length,
+    completedSprints,
+    totalSprints,
   };
 }
 
@@ -174,10 +191,40 @@ export async function claimDayCompletion(
 
 export async function awardTrophy(
   progressId: Types.ObjectId,
-  key: "first_sprint" | "half_sprints" | "plan_75_percent" | "plan_complete",
+  key: string,
 ): Promise<void> {
   await PlanProgress.updateOne(
     { _id: progressId, "trophies.key": { $ne: key } },
     { $push: { trophies: { key, awarded_at: new Date() } } },
   );
+}
+
+export async function claimAssessmentCompletion(
+  userId: Types.ObjectId,
+  planId: Types.ObjectId,
+  completedDate: string = utcDateKey(),
+): Promise<IPlanProgress | null> {
+  const progress = await PlanProgress.findOneAndUpdate(
+    { user_id: userId, plan_id: planId },
+    {
+      $addToSet: { completed_day_dates: completedDate },
+      $inc: { xp_points: 30 },
+    },
+    { returnDocument: "after", upsert: true, setDefaultsOnInsert: true, runValidators: true }
+  );
+  if (progress) {
+    const streak = calculateStreakSummary(progress.completed_day_dates, completedDate);
+    await PlanProgress.updateOne(
+      { _id: progress._id },
+      {
+        $set: {
+          streak_count: streak.current_streak,
+          longest_streak: Math.max(progress.longest_streak, streak.longest_streak),
+          last_completed_date: streak.last_completed_date,
+        },
+      }
+    );
+    return await PlanProgress.findById(progress._id);
+  }
+  return progress;
 }

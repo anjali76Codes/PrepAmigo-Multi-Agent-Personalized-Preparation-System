@@ -51,14 +51,41 @@ async def load_memory(state: dict) -> dict:
     turn_reset: dict[str, Any] = {"execution_events": None, "researched_materials": None, "handoffs": None}
     user_id = state.get("user_id")
     query, _ = _latest_exchange(state)
-    if not user_id or not query:
-        return {**turn_reset, "memory_context": []}
+    website_context = str(
+        (state.get("workflow_input") or {}).get("website_context") or ""
+    ).strip()
+    website_context_entry = (
+        [f"Relevant content from this user's PrepAmigo profile, plan, sprints, and resources:\n{website_context}"]
+        if website_context
+        else []
+    )
+    if not user_id:
+        return {**turn_reset, "memory_context": website_context_entry}
+    if state.get("workflow_mode") == "interview_prep":
+        # Website workflow requests often put the target in structured
+        # fields while the chat message is only a generic "make a plan".
+        # Include those fields in the existing memory search so its recalled
+        # context is relevant to preparation, without searching resume text.
+        from agents import interview_prep_fields
+
+        values = interview_prep_fields.normalize_workflow_fields(
+            state.get("interview_prep_input") or state.get("workflow_input") or {}
+        )
+        target = " ".join(f"{name}: {value}" for name, value in values.items() if value)
+        if target:
+            query = "\n".join(part for part in (
+                query,
+                f"Interview preparation target: {target}",
+            ) if part)
+    if not query:
+        return {**turn_reset, "memory_context": website_context_entry}
     try:
         memories = await get_memory_provider().search(query, user_id, limit=MEMORY_RECALL_LIMIT)
     except Exception:
         logger.warning("Memory recall failed for user %s; continuing without it", user_id, exc_info=True)
-        return {**turn_reset, "memory_context": []}
-    return {**turn_reset, "memory_context": [m["memory"] for m in memories if m["memory"]]}
+        return {**turn_reset, "memory_context": website_context_entry}
+    recalled = [m["memory"] for m in memories if m["memory"]]
+    return {**turn_reset, "memory_context": [*website_context_entry, *recalled]}
 
 
 async def save_memory(state: dict) -> dict:

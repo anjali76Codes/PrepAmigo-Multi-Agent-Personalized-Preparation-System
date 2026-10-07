@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { AppLayout } from "./components/layout/AppLayout";
+import { PlanSetupLayout } from "./components/layout/PlanSetupLayout";
 import { Home } from "./pages/Home";
 import { Auth } from "./pages/Auth";
 import { AppProvider } from "./context/AppContext";
@@ -16,6 +17,7 @@ import { Assessment } from "./pages/Assessment";
 import { Progress } from "./pages/Progress";
 import { Notifications } from "./pages/Notifications";
 import { Settings } from "./pages/Settings";
+import { Profile } from "./pages/Profile";
 import { InterviewPrep } from "./pages/InterviewPrep";
 import { ResourcePackHome } from "./pages/ResourcePackHome";
 import { NotesDirectory } from "./pages/NotesDirectory";
@@ -39,7 +41,7 @@ function PageTransition({ children }: { children: React.ReactNode }) {
   );
 }
 
-const APP_LAYOUT_ROOTS = ["dashboard", "resource-pack", "roadmap", "calendar", "assessment"];
+const APP_LAYOUT_ROOTS = ["dashboard", "resource-pack", "roadmap", "calendar", "assessment", "notes", "profile"];
 
 function getRouteKey(pathname: string) {
   const first = pathname.split("/")[1] || "root";
@@ -63,15 +65,19 @@ function AnimatedRoutes() {
           <Route path="/signup" element={<PageTransition><Auth /></PageTransition>} />
         </Route>
 
+        <Route element={<PlanSetupLayout />}>
+          <Route path="/dashboard/chat" element={<PageTransition><Chat /></PageTransition>} />
+        </Route>
+
         <Route element={<AppLayout />}>
           <Route path="/dashboard">
             <Route index element={<AppHome />} />
-            <Route path="chat" element={<Chat />} />
             <Route path="interview-prep" element={<InterviewPrep />} />
             <Route path="practice" element={<Roadmap />} />
             <Route path="progress" element={<Progress />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="profile" element={<Profile />} />
             {/* <Route path="roadmap" element={<Navigate to="/roadmap" replace />} />
             <Route path="calendar" element={<Navigate to="/calendar" replace />} /> */}
             <Route path="assessment" element={<Assessment />} />
@@ -81,6 +87,8 @@ function AnimatedRoutes() {
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/assessment" element={<Assessment />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/profile" element={<Profile />} />
 
           <Route path="/resource-pack">
             <Route index element={<ResourcePackHome />} />

@@ -54,11 +54,18 @@ export interface ApiPlan {
 }
 
 export function apiPlanToPrep(plan: ApiPlan): Prep {
-  const sprints: Sprint[] = (plan.sprints || []).map((s) => ({
+  const planStart = new Date(plan.start_date);
+  const sprints: Sprint[] = (plan.sprints || []).map((s, sprintIndex) => ({
     id: s._id || `sprint-${s.sprint_number}`,
     title: s.sprint_name,
     focus: s.sprint_name,
-    days: (s.sprint_days || []).map((d) => ({
+    days: (s.sprint_days || []).map((d) => {
+      const sprintStart = s.start_date ? new Date(s.start_date) : new Date(planStart);
+      if (!s.start_date) sprintStart.setDate(sprintStart.getDate() + sprintIndex * 7);
+      const scheduledDate = d.scheduled_date
+        ? new Date(d.scheduled_date)
+        : new Date(sprintStart.getTime() + Math.max(0, d.day_number - 1) * 86400000);
+      return ({
       id: d._id,
       dayNumber: d.day_number,
       topic: d.topic_title,
@@ -76,8 +83,9 @@ export function apiPlanToPrep(plan: ApiPlan): Prep {
           }
         : null,
       status: d.status === "completed" ? "done" : d.status === "in_progress" ? "today" : "upcoming",
-      date: d.scheduled_date || new Date().toISOString(),
-    })),
+      date: scheduledDate.toISOString(),
+    });
+    }),
   }));
 
   const allDays = sprints.flatMap((s) => s.days);

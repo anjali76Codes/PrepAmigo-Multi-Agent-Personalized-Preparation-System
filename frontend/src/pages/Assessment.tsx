@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../components/ui/Icon";
 import { Mascot } from "../components/ui/Mascot";
 import { cn } from "../utils/utils";
 import {
-    getAssessments, getFlashcardDecks,
+    getAssessments, getFlashcardDecks, openSprintDayAssessment,
     type Assessment as AssessmentSet, type FlashcardDeck,
 } from "../mocks/assessment.mock";
 import { fade } from "../components/assessment/shared";
@@ -13,27 +13,106 @@ import { Hero } from "../components/assessment/Hero";
 import { SetCard } from "../components/assessment/SetCard";
 import { QuizRunner } from "../components/assessment/QuizRunner";
 import { DeckRunner } from "../components/assessment/DeckRunner";
+import { CombinedRunner } from "../components/assessment/CombinedRunner";
+import { useAppContext } from "../context/AppContext";
 
 type Tab = "quizzes" | "flashcards";
+type RunMode = "standalone-quiz" | "standalone-deck" | "combined";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "quizzes", label: "Quizzes", icon: "help-circle" },
     { id: "flashcards", label: "Flashcards", icon: "albums" },
 ];
 
+/** Find the flashcard deck that covers the same sprint days as a given assessment. */
+function findMatchingDeck(assessment: AssessmentSet, decks: FlashcardDeck[]): FlashcardDeck | null {
+    if (!assessment.covered_sprint_days?.length) return null;
+    const assessmentDaySet = new Set(assessment.covered_sprint_days.map(String));
+    return (
+        decks.find((d) => d.covered_sprint_days?.some((id) => assessmentDaySet.has(String(id)))) ?? null
+    );
+}
+
 export function Assessment() {
     const [params, setParams] = useSearchParams();
+    const location = useLocation();
     const tab: Tab = params.get("tab") === "flashcards" ? "flashcards" : "quizzes";
+    const requestedAssessmentId = params.get("assessmentId");
+    const requestedDayId = params.get("sprintDayId");
+    const fromLevel = Boolean(params.get("sprintId")) || Boolean(requestedDayId);
+    const navigate = useNavigate();
 
     const [quizzes, setQuizzes] = useState<AssessmentSet[] | null>(null);
     const [decks, setDecks] = useState<FlashcardDeck[] | null>(null);
     const [activeQuiz, setActiveQuiz] = useState<AssessmentSet | null>(null);
     const [activeDeck, setActiveDeck] = useState<FlashcardDeck | null>(null);
+    const [runMode, setRunMode] = useState<RunMode>("standalone-quiz");
+    const [generating, setGenerating] = useState<boolean>(false);
+    const [generationError, setGenerationError] = useState<string | null>(null);
 
-    useEffect(() => {
+    const { refreshPreps } = useAppContext();
+
+    const handleExit = useCallback(() => {
+        if (fromLevel) {
+            navigate("/dashboard");
+        } else {
+            setActiveQuiz(null);
+            setActiveDeck(null);
+        }
+    }, [fromLevel, navigate]);
+
+    const handleLevelComplete = useCallback(async () => {
+        try {
+            await refreshPreps();
+        } catch (e) {
+            console.error(e);
+        }
+        navigate("/dashboard");
+    }, [navigate, refreshPreps]);
+
+    const refresh = () => {
         getAssessments().then(setQuizzes);
         getFlashcardDecks().then(setDecks);
-    }, []);
+    };
+
+    useEffect(refresh, []);
+
+    // If navigated with a sprintDayId, lazily load/generate the assessment with Mascot loader
+    useEffect(() => {
+        if (!requestedDayId || activeQuiz) return;
+        setGenerating(true);
+        setGenerationError(null);
+        openSprintDayAssessment(requestedDayId)
+            .then((assessment: AssessmentSet) => {
+                setActiveQuiz(assessment);
+                setRunMode(fromLevel ? "combined" : "standalone-quiz");
+                refresh();
+            })
+            .catch((err: unknown) => {
+                setGenerationError(err instanceof Error ? err.message : "Failed to load assessment.");
+            })
+            .finally(() => {
+                setGenerating(false);
+            });
+    }, [requestedDayId]);
+
+    // When coming via dashboard level flow with existing state, open in combined mode
+    useEffect(() => {
+        const stateAssessment = (location.state as { assessment?: AssessmentSet } | null)?.assessment;
+        if (stateAssessment && !activeQuiz) {
+            setActiveQuiz(stateAssessment);
+            setRunMode(fromLevel ? "combined" : "standalone-quiz");
+        }
+    }, [location.state, fromLevel]);
+
+    useEffect(() => {
+        if (!requestedAssessmentId || !quizzes || activeQuiz) return;
+        const selected = quizzes.find((quiz) => quiz._id === requestedAssessmentId);
+        if (selected) {
+            setActiveQuiz(selected);
+            setRunMode(fromLevel ? "combined" : "standalone-quiz");
+        }
+    }, [quizzes, requestedAssessmentId, fromLevel]);
 
     const switchTab = (t: Tab) => {
         setActiveQuiz(null);
@@ -41,44 +120,144 @@ export function Assessment() {
         setParams(t === "quizzes" ? {} : { tab: t });
     };
 
-    const loading = tab === "quizzes" ? !quizzes : !decks;
+    const loading = generating || (tab === "quizzes" ? !quizzes : !decks);
+
+    // Build sprint → level → assessments grouping
+    const sprintGroups = new Map<string, Map<string, { assessment: AssessmentSet; locked: boolean }[]>>();
+    // Build a map from sprint label to ordered assessments (for locking logic)
+    const sprintAssessmentOrder = new Map<string, AssessmentSet[]>();
+
+    (quizzes || []).forEach((quiz, index) => {
+        const context = quiz.sprint_context;
+        const sprintNumber = context?.sprint_number || quiz.sprint_number;
+        const sprintName = context?.sprint_name || quiz.sprint_name;
+        const sprintLabel = sprintName
+            ? `Sprint ${sprintNumber || "—"} · ${sprintName}`
+            : sprintNumber ? `Sprint ${sprintNumber}` : "Your assessments";
+        const levelLabel = context?.level || quiz.level || (quiz.level_number ? `Level ${quiz.level_number}` : `Assessment ${index + 1}`);
+        const levels = sprintGroups.get(sprintLabel) || new Map<string, { assessment: AssessmentSet; locked: boolean }[]>();
+        const sprintOrder = sprintAssessmentOrder.get(sprintLabel) || [];
+        sprintOrder.push(quiz);
+        sprintAssessmentOrder.set(sprintLabel, sprintOrder);
+        levels.set(levelLabel, [...(levels.get(levelLabel) || []), { assessment: quiz, locked: false }]);
+        sprintGroups.set(sprintLabel, levels);
+    });
+
+    // Apply locking: Q2 is locked if Q1 in the same sprint is not completed
+    for (const [sprintLabel, levels] of sprintGroups) {
+        const levelEntries = [...levels.entries()];
+        let prevCompleted = true;
+        for (const [levelLabel, items] of levelEntries) {
+            const allCompleted = items.every((it) => it.assessment.is_completed);
+            if (!prevCompleted) {
+                // Lock all assessments in this level
+                items.forEach((it) => { it.locked = true; });
+            }
+            prevCompleted = allCompleted;
+            levels.set(levelLabel, items);
+        }
+        sprintGroups.set(sprintLabel, levels);
+    }
+
+    const matchedDeck = activeQuiz && decks ? findMatchingDeck(activeQuiz, decks) : null;
+    const showCombined = runMode === "combined" && activeQuiz !== null;
 
     return (
         <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-            <header className="bg-white border-b border-border px-4 md:px-8 pt-5 shrink-0">
-                <h1 className="text-xl md:text-2xl font-extrabold text-carbon-900 tracking-tight mb-4">Assessment</h1>
-                <div className="flex gap-6">
-                    {TABS.map((t) => (
-                        <button
-                            key={t.id}
-                            onClick={() => switchTab(t.id)}
-                            className={cn(
-                                "relative pb-3 flex items-center gap-2 text-sm font-bold transition-colors",
-                                tab === t.id ? "text-chrome" : "text-navy-300 hover:text-carbon-900"
-                            )}
-                        >
-                            <Icon name={t.icon} /> {t.label}
-                            {tab === t.id && (
-                                <motion.div layoutId="assessment-tab" className="absolute left-0 right-0 -bottom-px h-0.5 bg-chrome rounded-full" />
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </header>
+            <div className="flex-1 overflow-y-auto safe-area-bottom">
+                <div className="w-full px-6 md:px-12 py-6 md:py-8 pb-16 space-y-8">
+                    {/* ── Header ── */}
+                    <div className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between shadow-pop border border-chrome-accent/50 relative overflow-hidden gap-6">
+                        <div className="relative z-10">
+                            <h1 className="text-2xl md:text-3xl font-extrabold text-navy-900 mb-2 tracking-tight">Assessment</h1>
+                            <p className="text-base md:text-lg text-navy-800/80 font-medium">Test your knowledge with quizzes and flashcards.</p>
+                        </div>
+                        {/* Only show tabs when not in level flow */}
+                        {!showCombined && (
+                            <div className="relative z-10 flex gap-4 md:gap-6 bg-white/60 p-2 rounded-2xl border border-white">
+                                {TABS.map((t) => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => switchTab(t.id)}
+                                        className={cn(
+                                            "relative px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-colors",
+                                            tab === t.id ? "bg-chrome text-on-chrome shadow-sm" : "text-navy-400 hover:text-carbon-900 hover:bg-white/50"
+                                        )}
+                                    >
+                                        <Icon name={t.icon} /> {t.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 safe-area-bottom">
-                <div className="max-w-6xl mx-auto pb-16">
-                    {loading ? (
-                        <div className="flex flex-col items-center py-20 gap-3">
-                            <Mascot variant="working.gif" size="lg" />
-                            <p className="text-sm font-semibold text-navy-300">Loading…</p>
+                    {generationError ? (
+                        <div className="flex flex-col items-center py-16 text-center max-w-md mx-auto space-y-4">
+                            <Mascot variant="dissapointed.png" size="lg" />
+                            <h3 className="text-xl font-bold text-carbon-900">Could not generate assessment</h3>
+                            <p className="text-sm text-carbon-500">{generationError}</p>
+                            <button
+                                onClick={handleExit}
+                                className="px-6 py-2.5 rounded-xl bg-chrome text-white font-bold text-sm"
+                            >
+                                Back to Dashboard
+                            </button>
+                        </div>
+                    ) : loading ? (
+                        <div className="flex flex-col items-center py-20 gap-4 text-center max-w-sm mx-auto">
+                            <Mascot variant="working.gif" size="xl" style={{ width: 140, height: 140 }} />
+                            <div>
+                                <h3 className="text-lg font-extrabold text-carbon-900">
+                                    {generating ? "Generating your assessment..." : "Loading assessment..."}
+                                </h3>
+                                <p className="text-xs text-carbon-500 mt-1">
+                                    {generating
+                                        ? "Creating tailored multiple-choice questions & flashcard review cards for this sprint level."
+                                        : "Preparing your study material..."}
+                                </p>
+                            </div>
                         </div>
                     ) : (
                         <AnimatePresence mode="wait">
-                            <motion.div key={tab + (activeQuiz?._id ?? activeDeck?._id ?? "")} {...fade}>
-                                {tab === "quizzes" ? (
+                            <motion.div key={tab + (activeQuiz?._id ?? activeDeck?._id ?? "") + runMode} {...fade}>
+
+                                {/* ── Combined (level flow) runner ── */}
+                                {showCombined ? (
+                                    <>
+                                        <div className="mb-4 rounded-2xl border border-border bg-lavender-100 px-4 py-3">
+                                            <p className="text-xs font-bold uppercase tracking-wide text-carbon-500">
+                                                {activeQuiz.sprint_context?.sprint_name
+                                                    ? `Sprint ${activeQuiz.sprint_context.sprint_number || "—"} · ${activeQuiz.sprint_context.sprint_name}`
+                                                    : "Sprint assessment"}
+                                            </p>
+                                            <p className="mt-1 text-sm font-extrabold text-carbon-900">
+                                                {activeQuiz.sprint_context?.level || activeQuiz.level || "Assessment"}{" "}
+                                                <span className="text-carbon-400 font-semibold text-xs ml-1">Quiz + Flashcards</span>
+                                            </p>
+                                        </div>
+                                        <CombinedRunner
+                                            quiz={activeQuiz}
+                                            deck={matchedDeck}
+                                            onExit={handleExit}
+                                            onLevelComplete={handleLevelComplete}
+                                        />
+                                    </>
+                                ) : tab === "quizzes" ? (
+                                    /* ── Standalone quiz tab ── */
                                     activeQuiz ? (
-                                        <QuizRunner quiz={activeQuiz} onExit={() => setActiveQuiz(null)} />
+                                        <>
+                                            <div className="mb-4 rounded-2xl border border-border bg-lavender-100 px-4 py-3">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-carbon-500">
+                                                    {activeQuiz.sprint_context?.sprint_name
+                                                        ? `Sprint ${activeQuiz.sprint_context.sprint_number || "—"} · ${activeQuiz.sprint_context.sprint_name}`
+                                                        : params.get("sprintId") ? `Sprint ${params.get("sprintId")}` : "Sprint assessment"}
+                                                </p>
+                                                <p className="mt-1 text-sm font-extrabold text-carbon-900">
+                                                    {activeQuiz.sprint_context?.level || activeQuiz.level || params.get("level") || "Assessment"}
+                                                </p>
+                                            </div>
+                                            <QuizRunner quiz={activeQuiz} onExit={handleExit} />
+                                        </>
                                     ) : (
                                         <>
                                             <Hero
@@ -87,44 +266,70 @@ export function Assessment() {
                                                 completed={quizzes!.filter((q) => q.is_completed).length}
                                                 items={quizzes!.reduce((n, q) => n + q.questions.length, 0)}
                                             />
-                                            <div className="grid sm:grid-cols-2 gap-6">
-                                                {quizzes!.map((a, i) => (
+                                            {[...sprintGroups.entries()].map(([sprintLabel, levels]) => (
+                                                <section key={sprintLabel} className="mt-8 space-y-4">
+                                                    <h2 className="text-lg font-extrabold text-carbon-900">{sprintLabel}</h2>
+                                                    {[...levels.entries()].map(([levelLabel, items]) => (
+                                                        <div key={levelLabel} className="space-y-3">
+                                                            <h3 className="text-sm font-bold uppercase tracking-wide text-carbon-500">{levelLabel}</h3>
+                                                            <div className="grid sm:grid-cols-2 gap-6">
+                                                                {items.map(({ assessment: a, locked }, i) => (
+                                                                    <div key={a._id} className="relative">
+                                                                        <SetCard
+                                                                            index={i}
+                                                                            icon={locked ? "lock-closed-outline" : "help-circle"}
+                                                                            title={levelLabel}
+                                                                            meta={locked ? "Complete earlier levels first" : `${a.questions.length} questions`}
+                                                                            badge={a.is_completed ? "Completed" : locked ? "Locked" : "Not started"}
+                                                                            onClick={locked ? undefined : () => {
+                                                                                setActiveQuiz(a);
+                                                                                setRunMode("standalone-quiz");
+                                                                            }}
+                                                                        />
+                                                                        {locked && (
+                                                                            <div className="absolute inset-0 rounded-2xl bg-bg/50 flex items-center justify-center cursor-not-allowed">
+                                                                                <Icon name="lock-closed-outline" className="text-2xl text-carbon-400" />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </section>
+                                            ))}
+                                        </>
+                                    )
+                                ) : (
+                                    /* ── Standalone flashcard tab ── */
+                                    activeDeck ? (
+                                        <DeckRunner deck={activeDeck} onExit={handleExit} />
+                                    ) : (
+                                        <>
+                                            <Hero
+                                                tab="flashcards"
+                                                total={decks!.length}
+                                                completed={decks!.filter((d) => d.is_completed).length}
+                                                items={decks!.reduce((n, d) => n + d.cards.length, 0)}
+                                            />
+                                            <div className="grid sm:grid-cols-2 gap-6 mt-4">
+                                                {decks!.map((d, i) => (
                                                     <SetCard
-                                                        key={a._id}
+                                                        key={d._id}
                                                         index={i}
-                                                        icon="help-circle"
-                                                        title={`Quiz Set ${i + 1}`}
-                                                        meta={`${a.questions.length} questions`}
-                                                        badge={a.is_completed ? "Completed" : "Not started"}
-                                                        onClick={() => setActiveQuiz(a)}
+                                                        icon="albums"
+                                                        title={`Flashcard Deck ${i + 1}`}
+                                                        meta={`${d.cards.length} cards · ${d.reviewed_count} reviewed`}
+                                                        badge={d.is_completed ? "Completed" : "New"}
+                                                        onClick={() => {
+                                                            setActiveDeck(d);
+                                                            setRunMode("standalone-deck");
+                                                        }}
                                                     />
                                                 ))}
                                             </div>
                                         </>
                                     )
-                                ) : activeDeck ? (
-                                    <DeckRunner deck={activeDeck} onExit={() => setActiveDeck(null)} />
-                                ) : (
-                                    <>
-                                        <Hero
-                                            tab="flashcards"
-                                            total={decks!.length}
-                                            completed={decks!.filter((d) => d.is_completed).length}
-                                            items={decks!.reduce((n, d) => n + d.cards.length, 0)}
-                                        />                                        <div className="grid sm:grid-cols-2 gap-6">
-                                            {decks!.map((d, i) => (
-                                                <SetCard
-                                                    key={d._id}
-                                                    index={i}
-                                                    icon="albums"
-                                                    title={`Flashcard Deck ${i + 1}`}
-                                                    meta={`${d.cards.length} cards · ${d.reviewed_count} reviewed`}
-                                                    badge={d.is_completed ? "Completed" : "New"}
-                                                    onClick={() => setActiveDeck(d)}
-                                                />
-                                            ))}
-                                        </div>
-                                    </>
                                 )}
                             </motion.div>
                         </AnimatePresence>

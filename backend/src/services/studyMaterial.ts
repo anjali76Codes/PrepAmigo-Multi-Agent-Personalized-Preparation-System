@@ -20,7 +20,7 @@ import jwt from "jsonwebtoken";
 import { Types } from "mongoose";
 
 import { config } from "../config/env.js";
-import { Assessment } from "../models/Assessment.js";
+import { Assessment, IAssessment } from "../models/Assessment.js";
 import { Flashcard } from "../models/Flashcard.js";
 import { Plan } from "../models/Plan.js";
 import { Sprint } from "../models/Sprint.js";
@@ -48,6 +48,7 @@ type Chunk = { day_numbers: number[]; status: "ok" | "partial" | "failed"; quest
 export type EnsureResult = { generated: number; failed: number; skipped: boolean };
 
 const inFlight = new Map<string, Promise<EnsureResult>>();
+const assessmentInFlight = new Map<string, Promise<IAssessment | null>>();
 
 /** Headers for a backend -> agents-service call on behalf of `userId`. */
 export function agentsAuthHeaders(userId: string): Record<string, string> {
@@ -81,6 +82,205 @@ export function ensureStudyMaterialInBackground(sprintId: Types.ObjectId | strin
   ensureStudyMaterial(sprintId).catch((error) => {
     logger.warn(`[Study material] Sprint ${String(sprintId)} not generated: ${error instanceof Error ? error.message : error}`);
   });
+}
+
+/**
+ * Ensure the sprint's exact Q1 (days 1–3) or Q2 (days 4–7) assessment.
+ * Group identity is unique per user and sprint, and generation runs only for
+ * that group's days so assessments cannot accidentally span the Q1/Q2 split.
+ */
+export function ensureSprintAssessment(
+  sprintId: Types.ObjectId | string,
+  assessmentNumber: 1 | 2,
+): Promise<IAssessment | null> {
+  const key = `${String(sprintId)}:${assessmentNumber}`;
+  const running = assessmentInFlight.get(key);
+  if (running) return running;
+  const work = generateSprintAssessment(new Types.ObjectId(String(sprintId)), assessmentNumber)
+    .finally(() => assessmentInFlight.delete(key));
+  assessmentInFlight.set(key, work);
+  return work;
+}
+
+async function generateSprintAssessment(sprintId: Types.ObjectId, assessmentNumber: 1 | 2) {
+  const userId = await sprintOwner(sprintId);
+  if (!userId) return null;
+  const userObjectId = new Types.ObjectId(userId);
+  const sprintDays = await SprintDay.find({ sprint_id: sprintId })
+    .sort({ day_number: 1, _id: 1 })
+    .lean();
+
+  if (sprintDays.length === 0) return null;
+
+  const days = assessmentNumber === 1
+    ? sprintDays.slice(0, Math.min(3, sprintDays.length))
+    : sprintDays.slice(3);
+
+  const finalDays = days.length > 0 ? days : sprintDays;
+  const dayIds = finalDays.map((day) => day._id as Types.ObjectId);
+
+  let assessment = await Assessment.findOne({
+    user_id: userObjectId,
+    sprint_id: sprintId,
+    assessment_number: assessmentNumber,
+  });
+  if (!assessment) {
+    const legacyOrExact = await Assessment.findOne({
+      user_id: userObjectId,
+      sprint_id: sprintId,
+      covered_sprint_days: { $all: dayIds, $size: dayIds.length },
+    });
+    if (legacyOrExact) {
+      await Assessment.updateOne(
+        { _id: legacyOrExact._id, assessment_number: { $exists: false } },
+        { $set: { assessment_number: assessmentNumber } },
+      );
+      assessment = await Assessment.findOne({
+        user_id: userObjectId,
+        sprint_id: sprintId,
+        assessment_number: assessmentNumber,
+      });
+    }
+  }
+
+  if (!assessment) {
+    let questions: any[] = [];
+    let cards: any[] = [];
+
+    try {
+      const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/study-material`, {
+        method: "POST",
+        headers: agentsAuthHeaders(userId),
+        signal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
+        body: JSON.stringify({
+          user_id: userId,
+          days: finalDays.map((day, index) => ({
+            day_number: day.day_number || index + 1,
+            topic_title: day.topic_title,
+            topic_description: day.topic_description || null,
+            objectives: day.objectives || [],
+            references: (day.references || []).map((ref) => ({ title: ref.title, url: ref.url })),
+            concepts: day.concepts || [],
+          })),
+        }),
+      });
+
+      if (response.ok) {
+        const body = (await response.json()) as { data?: { chunks?: Chunk[] } };
+        questions = (body.data?.chunks || []).flatMap((chunk) => chunk.questions || []);
+        cards = (body.data?.chunks || []).flatMap((chunk) => chunk.cards || []);
+      }
+    } catch (err) {
+      logger.warn(`[Study material] Agent service generation warning for sprint ${sprintId} Q${assessmentNumber}: ${err}`);
+    }
+
+    if (questions.length === 0) {
+      for (const d of finalDays) {
+        questions.push({
+          question: `Which architectural pattern or technique is most critical when implementing ${d.topic_title}?`,
+          options: [
+            `Apply modular encapsulation with clear boundaries and robust error handling`,
+            `Directly mutate global state without synchronization mechanisms`,
+            `Disable all caching layers and bypass input validation checks`,
+            `Enforce strictly synchronous single-threaded blocking execution`,
+          ],
+          answer: "A",
+          explanation: `In ${d.topic_title}, structuring components with modularity and robust error handling ensures scalability and reliability.`,
+          difficulty: "medium",
+          concept: d.topic_title,
+        });
+        if (d.objectives?.[0]) {
+          questions.push({
+            question: `What is the primary technical objective for: "${d.objectives[0]}"?`,
+            options: [
+              `Achieve high availability, optimal throughput, and strict correctness`,
+              `Ignore performance bottlenecks in production deployments`,
+              `Maximize database connection counts indefinitely`,
+              `Store sensitive credentials in unencrypted client assets`,
+            ],
+            answer: "A",
+            explanation: `Focusing on "${d.objectives[0]}" ensures correct system performance and system guarantees.`,
+            difficulty: "medium",
+            concept: d.topic_title,
+          });
+        }
+      }
+    }
+
+    assessment = await Assessment.findOneAndUpdate(
+      { user_id: userObjectId, sprint_id: sprintId, assessment_number: assessmentNumber },
+      {
+        $setOnInsert: {
+          user_id: userObjectId,
+          sprint_id: sprintId,
+          assessment_number: assessmentNumber,
+          covered_sprint_days: dayIds,
+          questions: questions.map((question) => ({
+            question: question.question,
+            options: question.options,
+            correct_answer: question.answer || question.correct_answer || "A",
+            explanation: question.explanation || "",
+            difficulty: difficulty(question.difficulty),
+            type: "mcq",
+            concept: question.concept || undefined,
+          })),
+        },
+      },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+    );
+
+    // Also ensure corresponding flashcard deck
+    const existingDeck = await Flashcard.findOne({
+      sprint_id: sprintId,
+      covered_sprint_days: { $all: dayIds, $size: dayIds.length },
+    });
+
+    if (!existingDeck) {
+      const finalCards = cards.length > 0
+        ? cards.map((c) => ({
+            front: c.front,
+            back: c.back,
+            difficulty: c.difficulty || "medium",
+            concept: c.concept || undefined,
+            tags: c.tags || [],
+            is_reviewed: false,
+          }))
+        : finalDays.flatMap((d) => [
+            {
+              front: `What is the core principle behind ${d.topic_title}?`,
+              back: d.objectives?.[0] || d.topic_description || `Core implementation patterns, design trade-offs, and architecture of ${d.topic_title}.`,
+              difficulty: "medium",
+              concept: d.topic_title,
+              tags: ["core", "interview"],
+              is_reviewed: false,
+            },
+            {
+              front: `What common trade-offs should be evaluated when working with ${d.topic_title}?`,
+              back: `Balancing latency vs consistency, complexity vs maintainability, and resource utilization.`,
+              difficulty: "medium",
+              concept: d.topic_title,
+              tags: ["tradeoffs", "design"],
+              is_reviewed: false,
+            },
+          ]);
+
+      await Flashcard.create({
+        sprint_id: sprintId,
+        covered_sprint_days: dayIds,
+        cards: finalCards,
+        reviewed_count: 0,
+        total_attempts: 0,
+        is_completed: false,
+      });
+    }
+  }
+
+  if (!assessment) return null;
+  await SprintDay.updateMany(
+    { _id: { $in: dayIds }, sprint_id: sprintId },
+    { $set: { assessment_id: assessment._id } },
+  );
+  return assessment;
 }
 
 async function generate(sprintId: Types.ObjectId): Promise<EnsureResult> {
@@ -123,6 +323,7 @@ async function generate(sprintId: Types.ObjectId): Promise<EnsureResult> {
     const link: Record<string, Types.ObjectId> = {};
     if (chunk.questions.length) {
       const assessment = await Assessment.create({
+        user_id: new Types.ObjectId(userId),
         sprint_id: sprintId,
         covered_sprint_days: dayIds,
         questions: chunk.questions.map((q) => ({

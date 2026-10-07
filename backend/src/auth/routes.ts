@@ -5,6 +5,23 @@ import { verifyGoogleToken } from "./google.js";
 import { User } from "../models/User.js";
 
 const router = Router();
+const SESSION_TTL = "30d";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+
+function setSessionCookie(res: import("express").Response, user: { _id: unknown; email: string; name: string }) {
+  const sessionToken = jwt.sign(
+    { sub: user._id, email: user.email, name: user.name },
+    process.env.JWT_SECRET!,
+    { expiresIn: SESSION_TTL }
+  );
+
+  res.cookie("session", sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_MAX_AGE,
+  });
+}
 
 // Manual Signup
 router.post("/api/auth/signup", async (req, res) => {
@@ -31,18 +48,7 @@ router.post("/api/auth/signup", async (req, res) => {
       password: hashedPassword,
     });
 
-    const sessionToken = jwt.sign(
-      { sub: user._id, email: user.email, name: user.name },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setSessionCookie(res, user);
 
     res.json({
       user: {
@@ -81,18 +87,7 @@ router.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const sessionToken = jwt.sign(
-      { sub: user._id, email: user.email, name: user.name },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setSessionCookie(res, user);
 
     res.json({
       user: {
@@ -135,18 +130,7 @@ router.post("/api/auth/google", async (req, res) => {
       await user.save();
     }
 
-    const sessionToken = jwt.sign(
-      { sub: user._id, email: user.email, name: user.name },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setSessionCookie(res, user);
 
     res.json({
       user: {

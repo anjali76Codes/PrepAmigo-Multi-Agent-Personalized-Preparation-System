@@ -1,0 +1,26 @@
+info:
+  name: pipeline-trigger-prod
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: https://prep-amigo-agent-service.onrender.com/api/chat
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "message": "research Datadog for a Site Reliability Engineer role",
+        "user_id": "test-user"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

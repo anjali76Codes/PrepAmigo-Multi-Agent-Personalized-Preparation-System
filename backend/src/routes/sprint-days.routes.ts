@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { requireAuth } from "../middlewares/auth.middleware.js";
+import { getSprintDayAssessment } from "../controllers/assessments.controller.js";
 import {
   completeSprintDayHandler,
   createSprintDayHandler,
@@ -15,6 +16,7 @@ router.post("/sprints/:sprintId/days", requireAuth, createSprintDayHandler);
 router.get("/sprints/:sprintId/days", requireAuth, listSprintDaysHandler);
 router.post("/sprint-days", requireAuth, createSprintDayHandler);
 router.get("/sprint-days/:dayId", requireAuth, getSprintDayHandler);
+router.get("/sprint-days/:dayId/assessment", requireAuth, getSprintDayAssessment);
 router.post("/sprint-days/:dayId/start", requireAuth, startSprintDayHandler);
 router.post("/sprint-days/:dayId/complete", requireAuth, completeSprintDayHandler);
 // PATCH too: earlier frontend builds sent PATCH, which matched no route (404,

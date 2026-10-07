@@ -25,6 +25,80 @@ def test_prepare_requests_only_missing_fields_without_running_agents():
     assert route_after_prepare(result) == "pause"
 
 
+def test_prep_field_extraction_uses_retrieved_memory_context(monkeypatch):
+    seen = {}
+
+    class FakeLLM:
+        async def ainvoke(self, prompt, config=None):
+            seen["prompt"] = prompt
+            return type("Response", (), {"content": '{"company":"Acme","role":"","location":""}'})()
+
+    monkeypatch.setattr(orchestrator_module, "get_llm", lambda **_kwargs: FakeLLM())
+    node = InterviewPrepOrchestrator(company_graph=object(), job_agent=object())
+
+    fields = asyncio.run(node._extract_fields({
+        "messages": [],
+        "memory_context": ["The candidate is targeting Acme for a platform role."],
+    }))
+
+    assert fields["company"] == "Acme"
+    assert "The candidate is targeting Acme for a platform role." in seen["prompt"]
+
+
+def test_incomplete_clarification_answer_is_reasked_before_pipeline_runs(monkeypatch):
+    async def run():
+        node = InterviewPrepOrchestrator(company_graph=object(), job_agent=object())
+
+        async def extract(_state, text=None):
+            return {"role": "Platform Engineer"} if text == "Platform Engineer" else {"location": "Remote"}
+
+        monkeypatch.setattr(node, "_extract_fields", extract)
+        graph = StateGraph(AgentState)
+        pipeline_runs = []
+
+        async def pipeline(_state):
+            pipeline_runs.append(True)
+            return {"workflow_status": "ready"}
+
+        graph.add_node("prepare", node.prepare)
+        graph.add_node("pause", node.pause_for_input)
+        graph.add_node("pipeline", pipeline)
+        graph.add_edge(START, "prepare")
+        graph.add_conditional_edges("prepare", route_after_prepare, {
+            "pause": "pause",
+            "run": "pipeline",
+            "stop": END,
+        })
+        graph.add_edge("pause", "prepare")
+        graph.add_edge("pipeline", END)
+        compiled = graph.compile(checkpointer=MemorySaver())
+        config = {"configurable": {"thread_id": "incomplete-clarification-test"}}
+
+        paused = await compiled.ainvoke(
+            {"workflow_input": {"company": "Acme"}},
+            config=config,
+        )
+        still_paused = await compiled.ainvoke(
+            Command(resume={"answer": "Platform Engineer"}),
+            config=config,
+        )
+        runs_after_incomplete = len(pipeline_runs)
+        completed = await compiled.ainvoke(
+            Command(resume={"answer": "Remote"}),
+            config=config,
+        )
+        return paused, still_paused, completed, runs_after_incomplete, pipeline_runs
+
+    paused, still_paused, completed, runs_after_incomplete, pipeline_runs = asyncio.run(run())
+
+    assert paused["workflow_status"] == "awaiting_input"
+    assert still_paused["workflow_status"] == "awaiting_input"
+    assert still_paused["workflow_question"]["missing_fields"] == ["location"]
+    assert runs_after_incomplete == 0
+    assert completed["workflow_status"] == "ready"
+    assert pipeline_runs == [True]
+
+
 def test_parallel_branches_start_together_and_merge_to_distinct_results(monkeypatch):
     """A cloud provider (e.g. openai) genuinely serves concurrent requests,
     so run_parallel should actually gather the two branches there."""
@@ -366,6 +440,28 @@ def test_react_can_pause_for_result_ambiguity(monkeypatch):
 
     assert result["workflow_status"] == "awaiting_input"
     assert result["workflow_question"]["reason"] == "result_clarification"
+    assert route_after_prepare(result) == "pause"
+
+
+def test_blank_result_clarification_answer_is_reasked_without_rerunning_pipeline():
+    node = InterviewPrepOrchestrator(company_graph=object(), job_agent=object())
+    question = {
+        "question": "Is this role remote or hybrid?",
+        "missing_fields": [],
+        "reason": "result_clarification",
+    }
+
+    result = asyncio.run(node.prepare({
+        "interview_prep_input": {"company": "Acme", "role": "Engineer", "location": "Remote"},
+        "workflow_question": question,
+        "workflow_clarification_rounds": 1,
+        "workflow_resume_input": {"answer": "  "},
+    }))
+
+    assert result["workflow_status"] == "awaiting_input"
+    assert result["workflow_question"] == question
+    assert result["workflow_clarification_rounds"] == 2
+    assert result["messages"][0].content == question["question"]
     assert route_after_prepare(result) == "pause"
 
 

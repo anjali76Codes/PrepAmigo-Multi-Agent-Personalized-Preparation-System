@@ -16,6 +16,10 @@ export async function createPlanHandler(req: AuthenticatedRequest, res: Response
   if (!parsed.success) return invalidBody(res, parsed.error);
 
   try {
+    if (await Plan.exists({ user_id: userId })) {
+      res.status(409).json({ success: false, error: "You can create only one preparation plan." });
+      return;
+    }
     const plan = await Plan.create({ ...parsed.data, user_id: userId, sprints: [] });
     res.status(201).json({
       success: true,

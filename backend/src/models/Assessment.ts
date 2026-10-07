@@ -16,7 +16,9 @@ export interface IAssessmentQuestion {
 }
 
 export interface IAssessment extends Document {
+  user_id: Types.ObjectId;
   sprint_id: Types.ObjectId;
+  assessment_number?: 1 | 2;
   covered_sprint_days: Types.ObjectId[];
   questions: IAssessmentQuestion[];
   // Overall tracking fields
@@ -52,12 +54,19 @@ const assessmentQuestionSchema = new Schema<IAssessmentQuestion>(
 
 const assessmentSchema = new Schema<IAssessment>(
   {
+    user_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
     sprint_id: {
       type: Schema.Types.ObjectId,
       ref: "Sprint",
       required: true,
       index: true,
     },
+    assessment_number: { type: Number, enum: [1, 2], min: 1, max: 2 },
     covered_sprint_days: [{ type: Schema.Types.ObjectId, ref: "SprintDay" }],
     questions: { type: [assessmentQuestionSchema], default: [] },
     score: { type: Number, default: 0 },
@@ -68,6 +77,11 @@ const assessmentSchema = new Schema<IAssessment>(
     is_completed: { type: Boolean, default: false },
   },
   { timestamps: true, collection: "assessments" },
+);
+
+assessmentSchema.index(
+  { user_id: 1, sprint_id: 1, assessment_number: 1 },
+  { unique: true, partialFilterExpression: { assessment_number: { $exists: true } } },
 );
 
 export const Assessment =

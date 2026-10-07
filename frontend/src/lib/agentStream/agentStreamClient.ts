@@ -139,9 +139,10 @@ export class AgentStreamClient {
           this.lastEventId = parsed.id;
         }
 
-        // Heartbeat ping — reset retry counter & ignore for domain callbacks
+        // Surface heartbeats for UI feedback without treating them as workflow progress.
         if (parsed.type === "ping") {
           this.retryCount = 0;
+          callbacks.onEvent?.(parsed);
           return;
         }
 

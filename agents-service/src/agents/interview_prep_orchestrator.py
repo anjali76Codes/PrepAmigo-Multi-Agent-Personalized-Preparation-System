@@ -245,6 +245,38 @@ class InterviewPrepOrchestrator:
         extracted_from_text = False
 
         resume = state.get("workflow_resume_input")
+        pending_question = state.get("workflow_question") or {}
+        if pending_question.get("reason") == "result_clarification":
+            answer = resume if isinstance(resume, str) else (
+                resume.get("answer") if isinstance(resume, dict) else None
+            )
+            structured_answer = isinstance(resume, dict) and any(
+                isinstance(resume.get(field.name), str) and resume[field.name].strip()
+                for field in workflow_fields.WORKFLOW_FIELDS
+            )
+            if not (isinstance(answer, str) and answer.strip()) and not structured_answer:
+                rounds = int(state.get("workflow_clarification_rounds") or 0) + 1
+                if rounds > MAX_CLARIFICATION_ROUNDS:
+                    message = (
+                        "I could not resolve the remaining ambiguity within the clarification limit. "
+                        "Please start a new request with more specific details."
+                    )
+                    return {
+                        "workflow_status": "needs_restart",
+                        "workflow_question": None,
+                        "workflow_clarification_rounds": rounds,
+                        "workflow_resume_input": {},
+                        "messages": [AIMessage(content=message)],
+                    }
+                question = pending_question.get("question") or "Please provide the missing details."
+                return {
+                    "workflow_status": "awaiting_input",
+                    "workflow_question": pending_question,
+                    "workflow_clarification_rounds": rounds,
+                    "workflow_resume_input": {},
+                    "messages": [AIMessage(content=question)],
+                }
+
         if resume:
             if isinstance(resume, dict):
                 normalized = _merge_input(normalized, resume)

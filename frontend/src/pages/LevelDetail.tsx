@@ -1,5 +1,5 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
+import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Icon } from "../components/ui/Icon";
 import { Mascot } from "../components/ui/Mascot";
@@ -12,6 +12,7 @@ import { useAppContext } from "../context/AppContext";
 import { plansApi } from "../lib/api/plans";
 import { levelStates } from "../lib/levels";
 import { cn } from "../utils/utils";
+import { buildSprintLevelNodes } from "../lib/sprintLevels";
 
 function formatReferenceType(type?: string): string {
   if (!type) return "Article";
@@ -29,7 +30,7 @@ type Pop = null | { kind: "locked" } | { kind: "task" } | { kind: "level" };
 export function LevelDetail() {
   const { sprintId, levelId } = useParams();
   const navigate = useNavigate();
-  const { activePrep } = useAppContext();
+  const { activePrep, refreshPreps } = useAppContext();
 
   const sprintList = activePrep?.roadmap?.sprints || [];
   const parsedSprintNum = sprintId?.replace("sprint-", "");
@@ -57,21 +58,18 @@ export function LevelDetail() {
     status: d.status === "done" ? "completed" : "pending",
   }));
 
-  const daysPerLevel = 3;
   const allLevels = useMemo(() => {
     if (!sprint) return [];
-    const lvlCount = Math.ceil(allDays.length / daysPerLevel);
-    return Array.from({ length: lvlCount }).map((_, i) => ({
-      id: `level-${i + 1}`,
-      title: `Level ${i + 1}`,
-      days: allDays.slice(i * daysPerLevel, (i + 1) * daysPerLevel),
-    }));
+    return buildSprintLevelNodes(allDays)
+      .filter((node) => !node.isAssessment)
+      .map(({ id, title, days }) => ({ id, title, days }));
   }, [allDays, sprint]);
 
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(
     new Set(allDays.filter((d: any) => d.status === "completed").map((d: any) => d._id))
   );
   const [pop, setPop] = useState<Pop>(null);
+  const completionSaveRef = useRef<Promise<void> | null>(null);
 
   // small "task done" popup closes itself
   useEffect(() => {
@@ -100,7 +98,7 @@ export function LevelDetail() {
     setCompletedTaskIds(next);
 
     if (taskId && !taskId.includes("day-")) {
-      void plansApi.completeDay(taskId).catch((err) => {
+      completionSaveRef.current = plansApi.completeDay(taskId).then(() => refreshPreps()).catch((err) => {
         console.warn("[LevelDetail] Could not complete day on backend:", err);
       });
     }
@@ -122,6 +120,12 @@ export function LevelDetail() {
   }
 
   const sprintNumber = (sprint as any).sprint_number || sprintList.indexOf(sprint) + 1;
+  const priorSprint = sprintList[sprintList.indexOf(sprint) - 1];
+  if (priorSprint && (priorSprint.days || []).some((day: any) => day.status !== "done")) {
+    const priorLevels = buildSprintLevelNodes(priorSprint.days || []).filter((node) => !node.isAssessment);
+    const firstIncomplete = priorLevels.find((node) => node.days.some((day: any) => day.status !== "done"));
+    return <Navigate to={`/dashboard/${priorSprint.id}/${firstIncomplete?.id || "level-1"}`} replace />;
+  }
   const levelDoneCount = level.days.filter((d: any) => completedTaskIds.has(d._id)).length;
   const levelPct = Math.round((levelDoneCount / Math.max(1, level.days.length)) * 100);
   const sprintPct = Math.round((completedTaskIds.size / Math.max(1, allDays.length)) * 100);
@@ -334,16 +338,17 @@ export function LevelDetail() {
         onClose={() => setPop(null)}
         mascot="Celebration.png"
         title="Level complete!"
-        description={nextLevel ? `${level.title} is done. ${nextLevel.title} is now unlocked.` : "You finished every level in this sprint. Great job!"}
+        description={`${level.title} is complete. Your progress is saved.`}
       >
-        <Button variant="outline" className="border" onClick={() => setPop(null)}>Stay here</Button>
         <Button
-          onClick={() => {
+          onClick={async () => {
             setPop(null);
-            navigate(nextLevel ? `/dashboard/${sprintId}/${nextLevel.id}` : "/dashboard");
+            await completionSaveRef.current;
+            await refreshPreps();
+            navigate("/dashboard");
           }}
         >
-          {nextLevel ? `Start ${nextLevel.title}` : "Back to dashboard"}
+          Okay
         </Button>
       </Modal>
     </div>

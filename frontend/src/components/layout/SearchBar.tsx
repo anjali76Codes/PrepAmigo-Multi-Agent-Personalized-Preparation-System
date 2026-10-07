@@ -18,7 +18,7 @@ export function SearchBar() {
     { label: 'Go to Calendar', type: 'page', path: '/calendar' },
     { label: 'Go to Roadmap', type: 'page', path: '/roadmap' },
     { label: 'Go to Progress', type: 'page', path: '/dashboard/progress' },
-    { label: 'Message PrepAmigo', type: 'action', path: '/dashboard/chat' },
+    ...(preps.length === 0 ? [{ label: 'Message PrepAmigo', type: 'action', path: '/dashboard/chat' }] : []),
     { label: 'System Design Quiz', type: 'task', path: '/roadmap' },
     { label: 'DSA Flashcards', type: 'task', path: '/roadmap' },
   ].filter(s => s.label.toLowerCase().includes(query.toLowerCase()));
@@ -105,9 +105,14 @@ export function SearchBar() {
         <div className="flex items-center gap-1.5 bg-sunny-100 text-bg px-3 py-1.5 rounded-xl font-semibold text-sm">
           <Icon name="flame" /> {streak}
         </div>
-        <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-800 flex items-center justify-center cursor-pointer hover:bg-navy-200 transition-colors">
+        <button
+          type="button"
+          aria-label="Open profile and settings"
+          onClick={() => navigate('/profile')}
+          className="w-10 h-10 rounded-full bg-navy-100 text-navy-800 flex items-center justify-center cursor-pointer hover:bg-navy-200 transition-colors"
+        >
           <Icon name="person" className="text-xl" />
-        </div>
+        </button>
       </div>
     </div>
   );

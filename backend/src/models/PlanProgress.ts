@@ -2,12 +2,16 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 
 export type TrophyKey =
   | "first_sprint"
+  | "second_sprint"
+  | "third_sprint"
+  | "fourth_sprint"
   | "half_sprints"
   | "plan_75_percent"
-  | "plan_complete";
+  | "plan_complete"
+  | string;
 
 export interface IProgressTrophy {
-  key: TrophyKey;
+  key: string;
   awarded_at: Date;
 }
 
@@ -31,7 +35,6 @@ const trophySchema = new Schema<IProgressTrophy>(
   {
     key: {
       type: String,
-      enum: ["first_sprint", "half_sprints", "plan_75_percent", "plan_complete"],
       required: true,
     },
     awarded_at: { type: Date, default: Date.now },

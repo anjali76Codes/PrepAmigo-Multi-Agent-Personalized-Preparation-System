@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Mascot } from '../components/ui/Mascot';
 import { cn } from '../utils/utils';
+import { getAppPreferences } from '../lib/preferences';
 import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
 import type { ISprintDay } from '../mocks/interviewPlan.mock';
 
@@ -119,18 +120,20 @@ export function Calendar() {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [monthOffset, setMonthOffset] = useState(0);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const [preferences] = useState(getAppPreferences);
 
   const selectedPrep = preps.find((p) => p.id === selectedPrepId) || preps[0];
 
   const mappedPrepTasks: ISprintDay[] = useMemo(() => {
     if (!selectedPrep?.roadmap?.sprints) return [];
-    return selectedPrep.roadmap.sprints.flatMap((s) =>
+    return selectedPrep.roadmap.sprints.flatMap((s, sprintIndex) =>
       (s.days || []).map((d: any) => ({
         _id: d.id || `${s.id}-day-${d.dayNumber}`,
         sprint_id: s.id,
         day_number: d.dayNumber,
         scheduled_date: d.date,
-        topic_title: d.topic,
+        topic_title: `Sprint ${sprintIndex + 1} · ${d.dayNumber <= 1 ? "L1" : d.dayNumber <= 3 ? "L2" : d.dayNumber <= 5 ? "L3" : "L4"} · ${d.topic}`,
         topic_description: d.objective || '',
         objectives: d.objectives && d.objectives.length > 0 ? d.objectives : [d.objective].filter(Boolean),
         estimated_minutes: d.estimatedMinutes || 60,
@@ -157,8 +160,9 @@ export function Calendar() {
     const done = new Set<string>();
     const backlog = new Set<string>();
     mappedPrepTasks.forEach((t) => {
-      if (t.status === 'in_progress') today.add(t._id);
-      else if (t.status === 'completed') done.add(t._id);
+      if (t.status === 'completed') done.add(t._id);
+      else if (dateKey(new Date(t.scheduled_date)) === dateKey(new Date())) today.add(t._id);
+      else if (t.status === 'in_progress') today.add(t._id);
       else if (isBeforeToday(t.scheduled_date)) backlog.add(t._id);
     });
     setTasks(mappedPrepTasks);
@@ -172,6 +176,9 @@ export function Calendar() {
   const backlogTasks = tasks.filter((t) => backlogIds.has(t._id));
   const upcomingTasks = tasks.filter((t) => !todayIds.has(t._id) && !backlogIds.has(t._id) && !doneIds.has(t._id));
   const currentList = activeTab === 'today' ? todayTasks : activeTab === 'backlog' ? backlogTasks : upcomingTasks;
+  const selectedDateTasks = selectedCalendarDate
+    ? tasks.filter((task) => dateKey(new Date(task.scheduled_date)) === selectedCalendarDate)
+    : [];
 
   const missedCount = backlogTasks.filter((t) => t.status !== 'completed').length;
 
@@ -236,7 +243,12 @@ export function Calendar() {
   }, [tasks]);
 
   const daysInMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
-  const leadingBlanks = (view.getDay() + 6) % 7; // Monday first
+  const leadingBlanks = preferences.calendarWeekStart === 'monday'
+    ? (view.getDay() + 6) % 7
+    : view.getDay();
+  const weekdayLabels = preferences.calendarWeekStart === 'monday'
+    ? ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+    : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   const todayKey = dateKey(new Date());
   const todayStart = startOfToday();
 
@@ -482,7 +494,7 @@ export function Calendar() {
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-carbon-500">
-                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <div key={i}>{d}</div>)}
+                  {weekdayLabels.map((d, i) => <div key={i}>{d}</div>)}
                 </div>
 
                 <div className="grid grid-cols-7 gap-1.5 text-center text-xs">
@@ -492,15 +504,21 @@ export function Calendar() {
                     const k = dateKey(date);
                     const info = byDay.get(k);
                     const isToday = k === todayKey;
+                    const isSelected = k === selectedCalendarDate;
                     const allDone = !!info && info.done === info.total;
                     const missed = !!info && !allDone && date < todayStart;
 
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={i}
+                        aria-label={`${date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${info ? `, ${info.total} tasks` : ', no tasks'}`}
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedCalendarDate(k)}
                         className={cn(
                           "relative h-11 rounded-xl flex flex-col items-center justify-center transition-all",
                           "font-semibold border",
+                          isSelected && "ring-2 ring-navy-700 ring-offset-1",
                           isToday
                             ? "bg-chrome text-on-chrome border-chrome shadow-sm"
                             : missed
@@ -516,7 +534,7 @@ export function Calendar() {
                           {i + 1}
                         </span>
 
-                        {info && (
+                        {info && preferences.showCalendarTaskCounts && (
                           <span
                             className={cn(
                               "text-[9px] leading-none mt-0.5 font-bold",
@@ -532,7 +550,7 @@ export function Calendar() {
                             {info.done}/{info.total}
                           </span>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -559,6 +577,41 @@ export function Calendar() {
                   </span>
                 </div>
               </Card>
+
+              {selectedCalendarDate && (
+                <Card variant="default" className="p-5 space-y-3">
+                  <div>
+                    <h3 className="font-bold text-carbon-900">
+                      {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </h3>
+                    <p className="text-xs font-semibold text-carbon-500">
+                      {selectedDateTasks.length} {selectedDateTasks.length === 1 ? 'task' : 'tasks'} scheduled
+                    </p>
+                  </div>
+                  {selectedDateTasks.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedDateTasks.map((task) => (
+                        <DayTaskCard
+                          key={task._id}
+                          variant="compact"
+                          title={task.day_number === 999 ? task.topic_title : `Day ${task.day_number}: ${task.topic_title}`}
+                          completed={task.status === 'completed'}
+                          resources={buildResources(task)}
+                          onToggleComplete={() => toggleTask(task._id)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl bg-bg px-3 py-4 text-center text-sm text-carbon-500">
+                      No tasks scheduled for this day.
+                    </p>
+                  )}
+                </Card>
+              )}
 
               {/* Progress */}
               <Card variant="chrome" className="p-5 space-y-4">
