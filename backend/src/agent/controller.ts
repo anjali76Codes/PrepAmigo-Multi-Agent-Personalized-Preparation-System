@@ -10,7 +10,8 @@ import { User } from "../models/User.js";
 import { Plan } from "../models/Plan.js";
 import { Sprint } from "../models/Sprint.js";
 import { SprintDay, ReferenceType } from "../models/SprintDay.js";
-import { ensureStudyMaterialInBackground } from "../services/studyMaterial.js";
+
+
 import { PlanProgress } from "../models/PlanProgress.js";
 import { AgentStreamEvent, InterviewPrepField, InterviewPrepRequestBody, RunAgentRequestBody } from "./types.js";
 
@@ -41,6 +42,83 @@ function normalizeReferenceType(type: unknown): ReferenceType {
 const savedRunPlanMap = new Map<string, string>(); // runId -> mongoPlanId
 const savingRunPlanMap = new Map<string, Promise<string | null>>(); // runId -> in-flight save promise
 const runUserMap = new Map<string, string>(); // runId -> userId
+
+const WEBSITE_CONTEXT_LIMIT = 18000;
+
+function scoreWebsiteDocument(document: string, queryTerms: string[]): number {
+  const normalized = document.toLowerCase();
+  return queryTerms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0);
+}
+
+async function retrieveWebsiteContext(userId: string, query: string): Promise<string> {
+  if (!Types.ObjectId.isValid(userId)) return "";
+  const ownerId = new Types.ObjectId(userId);
+  const [user, plans] = await Promise.all([
+    User.findById(ownerId)
+      .select("name profile.target_role profile.experience_level profile.skills profile.github_url")
+      .lean(),
+    Plan.find({ user_id: ownerId })
+      .select("plan_name company role total_days start_date end_date sprints")
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
+
+  const planIds = plans.map((plan) => plan._id);
+  const sprints = planIds.length
+    ? await Sprint.find({ plan_id: { $in: planIds } })
+        .select("plan_id sprint_number sprint_name start_date end_date")
+        .sort({ sprint_number: 1 })
+        .lean()
+    : [];
+  const sprintIds = sprints.map((sprint) => sprint._id);
+  const days = sprintIds.length
+    ? await SprintDay.find({ sprint_id: { $in: sprintIds } })
+        .select("sprint_id day_number topic_title topic_description objectives references")
+        .sort({ day_number: 1 })
+        .lean()
+    : [];
+
+  const sections: string[] = [];
+  if (user?.profile) {
+    const skills = Array.isArray(user.profile.skills) ? user.profile.skills.join(", ") : "";
+    sections.push([
+      "Signed-in user's profile:",
+      user.profile.target_role ? `Target role: ${user.profile.target_role}` : "",
+      user.profile.experience_level ? `Experience: ${user.profile.experience_level}` : "",
+      skills ? `Skills: ${skills}` : "",
+      user.profile.github_url ? `GitHub: ${user.profile.github_url}` : "",
+    ].filter(Boolean).join("\n"));
+  }
+
+  const queryTerms = [...new Set((query.toLowerCase().match(/[a-z0-9]{3,}/g) || []))];
+  const sprintById = new Map(sprints.map((sprint) => [String(sprint._id), sprint]));
+  const planById = new Map(plans.map((plan) => [String(plan._id), plan]));
+  const documents = days.map((day) => {
+    const sprint = sprintById.get(String(day.sprint_id));
+    const plan = sprint ? planById.get(String(sprint.plan_id)) : undefined;
+    const references = (day.references || [])
+      .map((reference) => `${reference.title}${reference.url ? ` (${reference.url})` : ""}`)
+      .join("; ");
+    const content = [
+      `Plan: ${plan?.plan_name || "Preparation plan"}; company: ${plan?.company || ""}; role: ${plan?.role || ""}`,
+      `Sprint ${sprint?.sprint_number || ""}: ${sprint?.sprint_name || ""}`,
+      `Day ${day.day_number}: ${day.topic_title}`,
+      day.topic_description || "",
+      ...(day.objectives || []),
+      references ? `Resources: ${references}` : "",
+    ].filter(Boolean).join("\n");
+    return { content, score: scoreWebsiteDocument(content, queryTerms), dayNumber: day.day_number };
+  });
+
+  documents.sort((left, right) => right.score - left.score || left.dayNumber - right.dayNumber);
+  if (documents.length > 0) {
+    const matching = documents.filter((document) => document.score > 0);
+    const selected = (matching.length > 0 ? matching : documents).slice(0, matching.length > 0 ? 10 : 5);
+    sections.push(`Relevant plan, sprint, and resource content:\n${selected.map((item) => item.content).join("\n\n")}`);
+  }
+
+  return sections.join("\n\n").slice(0, WEBSITE_CONTEXT_LIMIT);
+}
 
 export async function persistGeneratedPlan(
   rawStudyPlan: any,
@@ -197,9 +275,8 @@ export async function persistGeneratedPlan(
 
       const mongoPlanId = plan._id.toString();
       savedRunPlanMap.set(runId, mongoPlanId);
-      // the first sprint's quiz and flashcards, ready by the time it's opened;
-      // later sprints are generated as earlier ones are completed
-      if (createdSprintIds.length > 0) ensureStudyMaterialInBackground(createdSprintIds[0]);
+      // Study material (assessments + flashcards) is generated lazily when the user
+      // reaches each assessment level, NOT eagerly at plan creation time.
       logger.info(`[Agent Gateway] Persisted study plan ${mongoPlanId} for runId ${runId} with ${createdSprintIds.length} sprints`);
       return mongoPlanId;
     } catch (err) {
@@ -403,6 +480,7 @@ export async function runAgentHandler(
         logger.warn(`[Agent Gateway] Could not load user profile resume:`, err);
       }
     }
+    const websiteContext = userId ? await retrieveWebsiteContext(userId, query.trim()) : "";
 
     // Start background listener to persist plan when completed
     if (userId) runUserMap.set(runId, userId);
@@ -421,7 +499,10 @@ export async function runAgentHandler(
         thread_id: threadId || null,
         user_id: userId,
         plan_days: planDays,
-        workflow_input: effectiveResumeText ? { resume_text: String(effectiveResumeText).slice(0, 50000) } : {},
+        workflow_input: {
+          ...(effectiveResumeText ? { resume_text: String(effectiveResumeText).slice(0, 50000) } : {}),
+          ...(websiteContext ? { website_context: websiteContext } : {}),
+        },
       }),
     })
       .then(async (response) => {

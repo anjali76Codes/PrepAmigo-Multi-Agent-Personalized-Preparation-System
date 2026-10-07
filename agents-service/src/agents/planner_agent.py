@@ -57,7 +57,7 @@ from pydantic import BaseModel, ValidationError, field_validator
 
 from agents.research_agent import NOT_LEARNING_TERMS
 from core.config import get_llm, llm_concurrency, settings
-from graph.events import INTERNAL_LLM_CONFIG, invoke_tool_with_events
+from graph.events import INTERNAL_LLM_CONFIG, dispatch_event, invoke_tool_with_events, make_event
 from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from tools.plan_builder import (  # noqa: F401  (allocate_days etc. re-exported for callers/tests)
@@ -196,11 +196,23 @@ class PlannerAgent:
             used: set[str] = set()  # references this topic's days already picked
             for start in range(0, topic["days"], settings.planner_days_per_call):
                 count = min(settings.planner_days_per_call, topic["days"] - start)
+                await dispatch_event(
+                    make_event("planner", "planner_chunk", "running", {
+                        "message": f"Planning {topic['name']}, days {start + 1}-{start + count} of {topic['days']}...",
+                    }),
+                    None,
+                )
                 async with semaphore:
                     chunk = await self._chunk(topic, start, count, [d["title"] for d in days], role, company,
                                               focus, others)
                 chunk_results.append(chunk is not None)
                 days.extend(chunk or fallback[start:start + count])
+                await dispatch_event(
+                    make_event("planner", "planner_chunk", "completed", {
+                        "message": f"Finished planning {topic['name']}, days {start + 1}-{start + count}.",
+                    }),
+                    None,
+                )
                 for day in chunk or []:
                     check_picks(topic, day, used)
                 for offset, day in enumerate(chunk or []):

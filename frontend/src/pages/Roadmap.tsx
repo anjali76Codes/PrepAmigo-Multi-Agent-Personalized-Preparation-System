@@ -11,8 +11,8 @@ import { Mascot } from '../components/ui/Mascot';
 import { DayTaskCard } from '../components/ui/DayTaskCard';
 import type { ResourceItem } from '../components/ui/DayTaskCard';
 import { cn } from '../utils/utils';
+import { buildSprintLevelNodes } from '../lib/sprintLevels';
 
-const DAYS_PER_LEVEL = 3;
 type StatusFilter = 'All' | 'Pending' | 'Done';
 
 function formatReferenceType(type?: string): string {
@@ -134,6 +134,7 @@ export function Roadmap() {
   const [openLevels, setOpenLevels] = useState<Record<string, boolean>>({}); // key: `${sprintId}:${levelId}`
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (sprints.length > 0 && Object.keys(openSprints).length === 0) {
@@ -142,6 +143,30 @@ export function Roadmap() {
   }, [sprints]);
 
   const toggleProblemSolved = (dayId: string) => {
+    const targetDay = localSprintDays.find((day) => day._id === dayId);
+    if (targetDay && targetDay.status !== 'completed') {
+      const sprintIndex = sprints.findIndex((sprint) => sprint._id === targetDay.sprint_id);
+      const earlierSprintIncomplete = sprints.slice(0, sprintIndex).some((sprint) =>
+        localSprintDays.some((day) => day.sprint_id === sprint._id && day.status !== 'completed')
+      );
+      const daysInSprint = localSprintDays.filter((day) => day.sprint_id === targetDay.sprint_id);
+      const nodes = buildSprintLevelNodes(daysInSprint);
+      const targetLevelIndex = nodes.findIndex((node) => node.days.some((day: any) => day._id === dayId));
+      const earlierLevelIncomplete = nodes
+        .slice(0, targetLevelIndex)
+        .filter((node) => !node.isAssessment)
+        .some((node) => node.days.some((day: any) => day.status !== 'completed'));
+      if (earlierSprintIncomplete || earlierLevelIncomplete) {
+        setAssessmentError(
+          earlierSprintIncomplete
+            ? 'Complete every level in the previous sprint before starting this one.'
+            : 'Complete the earlier level topics in this sprint first.',
+        );
+        return;
+      }
+      setAssessmentError(null);
+    }
+
     setLocalSprintDays((prev) =>
       prev.map((d) => (d._id === dayId ? { ...d, status: d.status === 'completed' ? 'pending' : 'completed' } : d))
     );
@@ -157,72 +182,14 @@ export function Roadmap() {
     return sprints
       .map((sprint) => {
         const days = sprintDays.filter((d) => d.sprint_id === sprint._id);
-        const allLevels: any[] = [];
-        let levelIdx = 1;
-        let assessIdx = 1;
-        for (let i = 0; i < days.length; i += 7) {
-          const chunk = days.slice(i, i + 7);
-          if (chunk.length > 0) {
-            allLevels.push({
-              id: `level-${levelIdx}`,
-              number: levelIdx,
-              title: `Level ${levelIdx}`,
-              isAssessment: false,
-              allDays: chunk.slice(0, 1),
-            });
-            levelIdx++;
-          }
-          if (chunk.length > 1) {
-            allLevels.push({
-              id: `level-${levelIdx}`,
-              number: levelIdx,
-              title: `Level ${levelIdx}`,
-              isAssessment: false,
-              allDays: chunk.slice(1, 3),
-            });
-            levelIdx++;
-          }
-          if (chunk.length > 0) {
-            allLevels.push({
-              id: `assessment-${assessIdx}`,
-              number: assessIdx,
-              title: `Assessment ${assessIdx}`,
-              isAssessment: true,
-              allDays: [],
-            });
-            assessIdx++;
-          }
-          if (chunk.length > 3) {
-            allLevels.push({
-              id: `level-${levelIdx}`,
-              number: levelIdx,
-              title: `Level ${levelIdx}`,
-              isAssessment: false,
-              allDays: chunk.slice(3, 5),
-            });
-            levelIdx++;
-          }
-          if (chunk.length > 5) {
-            allLevels.push({
-              id: `level-${levelIdx}`,
-              number: levelIdx,
-              title: `Level ${levelIdx}`,
-              isAssessment: false,
-              allDays: chunk.slice(5, 7),
-            });
-            levelIdx++;
-          }
-          if (chunk.length > 3) {
-            allLevels.push({
-              id: `assessment-${assessIdx}`,
-              number: assessIdx,
-              title: `Assessment ${assessIdx}`,
-              isAssessment: true,
-              allDays: [],
-            });
-            assessIdx++;
-          }
-        }
+        const allLevels = buildSprintLevelNodes(days).map((node) => ({
+          ...node,
+          number: node.assessmentNumber ?? Number(node.id.replace('level-', '')),
+          allDays: node.days,
+          id: node.id,
+          isAssessment: node.isAssessment,
+          title: node.title,
+        }));
         const firstOpenId = allLevels.find((l) => l.allDays.some((d: any) => d.status !== 'completed'))?.id;
 
         const levels = allLevels
@@ -269,12 +236,34 @@ export function Roadmap() {
   const goToNext = () => {
     if (!nextUnsolved) return;
     const inSprint = sprintDays.filter((d) => d.sprint_id === nextUnsolved.sprint_id);
-    const levelId = `level-${Math.floor(inSprint.findIndex((d) => d._id === nextUnsolved._id) / DAYS_PER_LEVEL) + 1}`;
+    const level = buildSprintLevelNodes(inSprint).find((node) => node.days.some((d: any) => d._id === nextUnsolved._id));
+    const levelId = level?.id || 'level-1';
     setOpenSprints((p) => ({ ...p, [nextUnsolved.sprint_id]: true }));
     setOpenLevels((p) => ({ ...p, [`${nextUnsolved.sprint_id}:${levelId}`]: true }));
     setTimeout(() => {
       document.getElementById(`prob-${nextUnsolved._id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 350);
+  };
+
+  const handleAssessmentOpen = async (sprint: any, level: any, levelIndex: number) => {
+    const previousLevels = sprint.levels
+      .slice(0, levelIndex)
+      .filter((node: any) => !node.isAssessment);
+    if (previousLevels.some((node: any) => node.allDays.some((day: any) => day.status !== 'completed'))) {
+      setAssessmentError(`Complete the earlier levels in ${sprint.sprint_name} before starting ${level.title}.`);
+      return;
+    }
+
+    const dayId = level.assessmentDay?.id || level.assessmentDay?._id;
+    if (!dayId) {
+      setAssessmentError('This sprint does not have enough scheduled days to create that assessment.');
+      return;
+    }
+
+    setAssessmentError(null);
+    navigate(
+      `/assessment?sprintDayId=${encodeURIComponent(dayId)}&sprintId=${encodeURIComponent(sprint._id)}&level=${encodeURIComponent(level.title)}`
+    );
   };
 
   if (loadingPreps) {
@@ -418,6 +407,7 @@ export function Roadmap() {
 
             {/* Sprints */}
             <div className="space-y-4">
+              {assessmentError && <p role="alert" className="rounded-xl border border-danger-600/20 bg-danger-100 px-4 py-3 text-sm font-medium text-danger-600">{assessmentError}</p>}
               {filteredRoadmap.map((sprint) => {
                 const isOpen = openSprints[sprint._id] ?? false;
                 const sprintDone = sprint.total > 0 && sprint.done === sprint.total;
@@ -470,14 +460,20 @@ export function Roadmap() {
                             {sprint.levels.map((level, li) => {
                               const open = isLevelOpen(sprint._id, level.id, sprint.firstOpenId);
                               const doneCount = level.allDays.filter((d: any) => d.status === 'completed').length;
-                              const levelComplete = doneCount === level.allDays.length;
+                              const levelComplete = !level.isAssessment && doneCount === level.allDays.length;
 
                               return (
                                 <TreeItem key={level.id} top={20} done={levelComplete} last={li === sprint.levels.length - 1} delay={li * 0.08}>
                                   <button
                                     type="button"
                                     aria-expanded={open}
-                                    onClick={() => toggleLevel(sprint._id, level.id, sprint.firstOpenId)}
+                                    onClick={() => {
+                                      if (level.isAssessment) {
+                                        void handleAssessmentOpen(sprint, level, li);
+                                      } else {
+                                        toggleLevel(sprint._id, level.id, sprint.firstOpenId);
+                                      }
+                                    }}
                                     className="w-full h-10 flex items-center gap-3 rounded-xl px-2 -mx-2 text-left hover:bg-lavender-100 transition-colors"
                                   >
                                     <span
@@ -486,17 +482,23 @@ export function Roadmap() {
                                         levelComplete ? 'bg-chrome text-on-chrome' : 'bg-surface border border-border text-chrome'
                                       )}
                                     >
-                                      {levelComplete ? <Icon name="checkmark" className="text-xs" /> : level.number}
+                                      {levelComplete ? <Icon name="checkmark" className="text-xs" /> : level.isAssessment ? <Icon name="help-circle" className="text-xs" /> : level.number}
                                     </span>
                                     <span className="font-bold text-sm text-carbon-900">{level.title}</span>
-                                    <span className="text-xs font-semibold text-carbon-500">{doneCount} / {level.allDays.length}</span>
-                                    <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="ml-auto text-lg text-carbon-500 flex">
-                                      <Icon name="chevron-down" />
-                                    </motion.span>
+                                    {level.isAssessment ? (
+                                      <span className="ml-auto text-xs font-semibold text-chrome">Start assessment <Icon name="arrow-forward" /></span>
+                                    ) : (
+                                      <>
+                                        <span className="text-xs font-semibold text-carbon-500">{doneCount} / {level.allDays.length}</span>
+                                        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="ml-auto text-lg text-carbon-500 flex">
+                                          <Icon name="chevron-down" />
+                                        </motion.span>
+                                      </>
+                                    )}
                                   </button>
 
                                   {/* level → days */}
-                                  <AnimatePresence initial={false}>
+                                  {!level.isAssessment && <AnimatePresence initial={false}>
                                     {open && (
                                       <motion.div
                                         key="level-body"
@@ -523,7 +525,7 @@ export function Roadmap() {
                                         </ul>
                                       </motion.div>
                                     )}
-                                  </AnimatePresence>
+                                  </AnimatePresence>}
                                 </TreeItem>
                               );
                             })}

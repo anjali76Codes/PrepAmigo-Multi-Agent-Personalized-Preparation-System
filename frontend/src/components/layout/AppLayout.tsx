@@ -43,7 +43,6 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKe
 
 import { useAuth } from "../../hooks/useAuth";
 import { featureFlags } from "../../config/featureFlags";
-import { OnboardingDialog } from "../auth/OnboardingDialog";
 
 export function AppLayout() {
   const { user, loading, logout } = useAuth();
@@ -51,27 +50,6 @@ export function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  React.useEffect(() => {
-    if (!user) {
-      setShowOnboarding(false);
-      return;
-    }
-
-    // Purge legacy unscoped flag that could block new signups in the same browser session
-    sessionStorage.removeItem("prepamigo_onboarding_skipped");
-
-    const userKey = user.id || user.sub;
-    const isSkipped = sessionStorage.getItem(`prepamigo_onboarding_skipped_${userKey}`) === "true";
-    const hasTargetRole = Boolean(user.profile?.target_role && user.profile.target_role.trim());
-
-    if (!hasTargetRole && !isSkipped) {
-      setShowOnboarding(true);
-    } else {
-      setShowOnboarding(false);
-    }
-  }, [user]);
 
   // Authentication guard controlled via featureFlags (VITE_ENABLE_AUTH)
   if (featureFlags.enableAuth) {
@@ -101,19 +79,15 @@ export function AppLayout() {
 
   const navItems = [
     { to: "/dashboard", icon: "home-outline", label: "Dashboard", exact: true },
-    { to: "/dashboard/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
     { to: "/roadmap", icon: "git-network-outline", label: "Roadmap" },
     { to: "/resource-pack", icon: "folder-open-outline", label: "Resource Pack" },
     { to: "/calendar", icon: "calendar-outline", label: "Calendar" },
     { to: "/assessment", icon: "clipboard-outline", label: "Assessment" },
+    { to: "/dashboard/progress", icon: "bar-chart-outline", label: "Progress" },
   ];
 
   return (
     <div className="flex h-screen bg-carbon-900 text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
-      <OnboardingDialog
-        isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
       {/* Desktop Sidebar */}
       <motion.aside
         initial={{ width: 256 }}
@@ -297,20 +271,21 @@ export function AppLayout() {
       </div>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-white/5 bg-carbon-900 flex items-center justify-around px-2 z-50 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-white/5 bg-carbon-900 flex items-center justify-start gap-1 px-2 z-50 safe-area-bottom overflow-x-auto">
         {[
           { to: "/dashboard", icon: "home-outline", label: "Dashboard", exact: true },
-          { to: "/dashboard/chat", icon: "chatbubbles-outline", label: "PrepAmigo" },
           { to: "/roadmap", icon: "git-network-outline", label: "Roadmap" },
           { to: "/resource-pack", icon: "folder-open-outline", label: "Resources" },
           { to: "/calendar", icon: "calendar-outline", label: "Calendar" },
+          { to: "/assessment", icon: "clipboard-outline", label: "Assessment" },
+          { to: "/dashboard/progress", icon: "bar-chart-outline", label: "Progress" },
         ].map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.exact}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 p-2 rounded-control transition-colors min-w-[64px] focus-visible:outline-chrome-accent ${isActive ? "text-on-chrome" : "text-on-chrome-muted"
+              `flex flex-col items-center justify-center gap-1 p-2 rounded-control transition-colors min-w-[60px] shrink-0 focus-visible:outline-chrome-accent ${isActive ? "text-on-chrome" : "text-on-chrome-muted"
               }`
             }
           >

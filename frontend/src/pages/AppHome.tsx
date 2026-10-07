@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Icon } from '../components/ui/Icon';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -8,9 +9,11 @@ import { RevealStagger, RevealStaggerItem } from '../components/ui/Reveal';
 import { SprintMap } from '../components/chat/AgentJourney';
 import { useAppContext } from '../context/AppContext';
 import { levelStates } from '../lib/levels';
+import { buildSprintLevelNodes } from '../lib/sprintLevels';
+import { getAssessments, type Assessment } from '../mocks/assessment.mock';
+import { computeGamification } from '../lib/gamification';
 
 const QUICK_LINKS = [
-  { to: '/dashboard/interview-prep', icon: 'briefcase-outline', title: 'Interview Prep', sub: 'Practice mocks and questions', dark: true },
   { to: '/roadmap', icon: 'git-network-outline', title: 'Roadmap & Sprints', sub: 'View your active preparation sprints' },
   // { to: '/assessment', icon: 'help-circle', title: 'Quizzes & Flashcards', sub: 'Test what you have learned' },
   { to: '/dashboard/progress', icon: 'bar-chart-outline', title: 'Progress', sub: 'View your stats and XP' },
@@ -27,72 +30,71 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 export function AppHome() {
   const navigate = useNavigate();
-  const { activePrep } = useAppContext();
+  const { activePrep, refreshPreps } = useAppContext();
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+
+  useEffect(() => {
+    getAssessments().then(setAssessments);
+    refreshPreps().catch(console.error);
+  }, [refreshPreps]);
+
+  const handleNodeClick = async (sprint: any, node: any, index: number, nodeStates: string[]) => {
+    if (nodeStates[index] === 'locked') return;
+    if (!node?.isAssessment) {
+      navigate(`/dashboard/${sprint.id}/${node.id}`);
+      return;
+    }
+    const previousLevels = (sprint.levels || [])
+      .slice(0, index)
+      .filter((n: any) => !n.isAssessment);
+    if (previousLevels.some((n: any) => (n.days || []).some((day: any) => day.status !== 'done'))) {
+      setAssessmentError(`Complete the earlier levels in ${sprint.title} before starting ${node.title}.`);
+      return;
+    }
+
+    const dayId = node.assessmentDay?.id || node.assessmentDay?._id;
+    if (!dayId) {
+      setAssessmentError('This sprint does not have enough scheduled days to create that assessment.');
+      return;
+    }
+    setAssessmentError(null);
+    navigate(
+      `/assessment?sprintDayId=${encodeURIComponent(dayId)}&sprintId=${encodeURIComponent(sprint.id)}&level=${encodeURIComponent(node.title)}`
+    );
+  };
+
+  const gamification = computeGamification(activePrep, activePrep?.learningContext?.progress, assessments);
 
   const allDays = (activePrep?.roadmap?.sprints || []).flatMap((s: any) => s.days || []);
   const totalDays = allDays.length || activePrep?.durationDays || 30;
   const completedCount = allDays.filter((d: any) => d.status === 'done').length;
   const progressPct = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
-  const xp = (activePrep?.learningContext?.progress?.xp || 0) + completedCount * 50;
   const daysLeft = Math.max(0, totalDays - completedCount);
   const missedTasks = 0;
 
   const sprints = (activePrep?.roadmap?.sprints || []).map((s: any, idx: number) => {
     const days = s.days || [];
-    const levels: any[] = [];
-    let levelIdx = 1;
-    let assessIdx = 1;
-    for (let i = 0; i < days.length; i += 7) {
-      const chunk = days.slice(i, i + 7);
-      if (chunk.length > 0) {
-        levels.push({
-          id: `level-${levelIdx}`,
-          title: `Level ${levelIdx}`,
-          status: chunk.slice(0, 1).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
-        });
-        levelIdx++;
-      }
-      if (chunk.length > 1) {
-        levels.push({
-          id: `level-${levelIdx}`,
-          title: `Level ${levelIdx}`,
-          status: chunk.slice(1, 3).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
-        });
-        levelIdx++;
-      }
-      if (chunk.length > 0) {
-        levels.push({
-          id: `assessment-${assessIdx}`,
-          title: `Assessment ${assessIdx}`,
-          status: chunk.slice(0, 3).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
-        });
-        assessIdx++;
-      }
-      if (chunk.length > 3) {
-        levels.push({
-          id: `level-${levelIdx}`,
-          title: `Level ${levelIdx}`,
-          status: chunk.slice(3, 5).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
-        });
-        levelIdx++;
-      }
-      if (chunk.length > 5) {
-        levels.push({
-          id: `level-${levelIdx}`,
-          title: `Level ${levelIdx}`,
-          status: chunk.slice(5, 7).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
-        });
-        levelIdx++;
-      }
-      if (chunk.length > 3) {
-        levels.push({
-          id: `assessment-${assessIdx}`,
-          title: `Assessment ${assessIdx}`,
-          status: chunk.slice(3, 7).every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
-        });
-        assessIdx++;
-      }
-    }
+    const levels = buildSprintLevelNodes(days).map((node) => {
+      const dayId = (node.assessmentDay as any)?.id || (node.assessmentDay as any)?._id;
+      const assessment = node.isAssessment
+        ? assessments.find((item: any) => {
+            const matchesSprint = String(item.sprint_id) === String(s.id);
+            const matchesNum = node.assessmentNumber && item.assessment_number === node.assessmentNumber;
+            if (matchesSprint && matchesNum) return true;
+            if (dayId && item.covered_sprint_days) {
+              return item.covered_sprint_days.some((cd: any) => String(cd) === String(dayId) || String(cd?._id) === String(dayId));
+            }
+            return false;
+          })
+        : undefined;
+      return {
+        ...node,
+        status: node.isAssessment
+          ? assessment?.is_completed ? 'completed' : 'unlocked'
+          : node.days.every((d: any) => d.status === 'done') ? 'completed' : 'unlocked',
+      };
+    });
     return {
       id: s.id || `sprint-${idx + 1}`,
       title: s.title || `Sprint ${idx + 1}`,
@@ -101,12 +103,21 @@ export function AppHome() {
       days,
     };
   });
+  let globalNodeIndex = 0;
+  const globalNodeStates = levelStates(sprints.flatMap((sprint: any) =>
+    sprint.levels.map((level: any) => level.status === 'completed')
+  ));
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
       {/* One scroll container: the welcome card is inside it, so it scrolls with the page */}
       <div className="flex-1 overflow-y-auto safe-area-bottom">
         <RevealStagger className="w-full px-6 md:px-12 py-6 md:py-8 space-y-8 pb-12">
+          {assessmentError && (
+            <Alert variant="warning" icon="warning">
+              {assessmentError}
+            </Alert>
+          )}
 
           {/* Welcome */}
           <RevealStaggerItem>
@@ -123,7 +134,8 @@ export function AppHome() {
               <div className="shrink-0 flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                   <Stat label="Progress" value={`${progressPct}%`} />
-                  <Stat label="Total XP" value={xp.toLocaleString()} />
+                  <Stat label="Total XP" value={gamification.xp.toLocaleString()} />
+                  <Stat label="AI Credits" value={gamification.aiCredits.toLocaleString()} />
                 </div>
                 <div className="bg-surface border border-border rounded-2xl px-4 py-3 flex items-center gap-2">
                   <Icon name="calendar" className="text-chrome" />
@@ -160,7 +172,8 @@ export function AppHome() {
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {sprints.map((sprint: any) => {
-                    const nodeStates = levelStates(sprint.levels.map((l: any) => l.status === 'completed'));
+                    const nodeStates = globalNodeStates.slice(globalNodeIndex, globalNodeIndex + sprint.levels.length);
+                    globalNodeIndex += sprint.levels.length;
                     return (
                       <Card key={sprint.id} variant="default" className="p-5 flex flex-col gap-4">
                         <div className="flex justify-between items-start gap-3">
@@ -178,7 +191,8 @@ export function AppHome() {
                             sprintId={sprint.id}
                             nodeStates={nodeStates}
                             levelIds={sprint.levels.map((l: any) => l.id)}
-                            onNodeClick={(levelId) => navigate(`/dashboard/${sprint.id}/${levelId}`)}
+                            levelTitles={sprint.levels.map((l: any) => l.title)}
+                            onNodeClick={(_levelId, index) => void handleNodeClick(sprint, sprint.levels[index], index, nodeStates)}
                             className="border-none shadow-none bg-transparent"
                           />
                         </div>
@@ -210,21 +224,21 @@ export function AppHome() {
               {QUICK_LINKS.map((l) => (
                 <Link key={l.to} to={l.to} className="block">
                   <Card
-                    variant={l.dark ? 'chrome' : 'default'}
+                    variant="default"
                     className="rounded-3xl p-5 flex flex-row gap-4 hover:scale-[1.02] transition-transform"
                   >
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${l.dark ? 'bg-chrome-hover text-on-chrome' : 'bg-lavender-100 text-chrome'}`}>
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-lavender-100 text-chrome">
                       <Icon name={l.icon} className="text-2xl" />
                     </div>
                     <div>
-                      <h4 className={`font-bold text-lg ${l.dark ? 'text-white' : 'text-carbon-900'}`}>{l.title}</h4>
-                      <p className={`text-sm ${l.dark ? 'text-on-chrome-muted' : 'text-carbon-500'}`}>{l.sub}</p>
+                      <h4 className="font-bold text-lg text-carbon-900">{l.title}</h4>
+                      <p className="text-sm text-carbon-500">{l.sub}</p>
                     </div>
                   </Card>
                 </Link>
               ))}
 
-              <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 mt-4 flex flex-col">
+              {!activePrep && <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 mt-4 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-xl text-carbon-900">Ask PrepAmigo</h3>
                   <Mascot size="md" variant="nosy.png" className="bg-chrome border border-border rounded-full" />
@@ -236,7 +250,7 @@ export function AppHome() {
                     <Icon name="arrow-up" />
                   </div>
                 </Link>
-              </Card>
+              </Card>}
             </RevealStaggerItem>
           </div>
         </RevealStagger>

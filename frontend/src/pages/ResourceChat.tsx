@@ -5,6 +5,7 @@ import { Icon } from "../components/ui/Icon";
 import { ChatInput } from "../components/chat/ChatInput";
 import { Mascot } from "../components/ui/Mascot";
 import { SUGGESTED_QUESTIONS } from "../data/mockNotes";
+import { AgentStreamClient } from "../lib/agentStream/agentStreamClient";
 
 interface Message {
   id: string;
@@ -12,10 +13,6 @@ interface Message {
   content: string;
   thinking?: boolean;
 }
-
-const MOCK_ANSWER =
-  "Based on your resources, you have notes on Java exception handling and AWS deployment. " +
-  "Want me to go deeper on either topic?";
 
 const STEPS = [
   "Scanning your sprint notes",
@@ -97,23 +94,54 @@ export function ResourceChat() {
   const endRef = useRef<HTMLDivElement>(null);
   const consumed = useRef(false);
   const counter = useRef(0);
-  const timers = useRef<number[]>([]);
+  const clientRef = useRef<AgentStreamClient | null>(null);
+  const threadId = useRef(`resources-${crypto.randomUUID()}`);
   const nextId = () => `m-${++counter.current}`;
 
-  const handleSend = (text: string) => {
+  useEffect(() => {
+    clientRef.current = new AgentStreamClient();
+    return () => clientRef.current?.close();
+  }, []);
+
+  const handleSend = async (text: string) => {
+    const question = text.trim();
+    if (!question || busy) return;
     const aId = nextId();
     setMessages((p) => [
       ...p,
-      { id: nextId(), role: "user", content: text },
+      { id: nextId(), role: "user", content: question },
       { id: aId, role: "assistant", content: "", thinking: true },
     ]);
     setBusy(true);
-    timers.current.push(
-      window.setTimeout(() => {
-        setMessages((p) => p.map((m) => (m.id === aId ? { ...m, thinking: false, content: MOCK_ANSWER } : m)));
-        setBusy(false);
-      }, STEPS.length * STEP_MS + 400)
-    );
+    const finishWith = (content: string) => {
+      setMessages((p) => p.map((m) => (m.id === aId ? { ...m, thinking: false, content } : m)));
+      setBusy(false);
+    };
+
+    try {
+      const client = clientRef.current || new AgentStreamClient();
+      clientRef.current = client;
+      await client.startAgentRun(question, {
+        onCompleted: (payload) => {
+          const result = payload?.result;
+          const answer = payload?.message || result?.summary || result?.answer;
+          finishWith(typeof answer === "string" && answer.trim()
+            ? answer
+            : "I couldn't find an answer in your saved PrepAmigo content.");
+        },
+        onWaiting: (payload) => {
+          const clarification = typeof payload?.question === "string"
+            ? payload.question
+            : payload?.question?.question || payload?.message;
+          finishWith(clarification || "Could you clarify what you would like to know?");
+        },
+        onError: (error) => {
+          finishWith(error instanceof Error ? error.message : error?.detail || error?.error || "The resource assistant could not answer. Please try again.");
+        },
+      }, threadId.current);
+    } catch (error) {
+      finishWith(error instanceof Error ? error.message : "The resource assistant could not start. Please try again.");
+    }
   };
 
   // Send the message passed from the home page exactly once.

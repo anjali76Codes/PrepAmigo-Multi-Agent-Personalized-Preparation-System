@@ -30,6 +30,7 @@ export function Chat() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const initialFiredRef = useRef(false);
+  const processingRef = useRef(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -88,7 +89,7 @@ export function Chat() {
 
   const handleSend = async (text: string, attachedFile?: AttachedFile | null) => {
     const trimmed = text.trim();
-    if (!trimmed || isProcessing) return;
+    if (!trimmed || processingRef.current) return;
 
     // ── AUTH CHECK ────────────────────────────────────────────────────────
     // If auth is enabled AND user is unauthenticated, DO NOT CALL API!
@@ -105,6 +106,7 @@ export function Chat() {
       : trimmed;
 
     setMessages((prev) => [...prev, { id: uid(), sender: 'user', content: displayContent }]);
+    processingRef.current = true;
     setIsProcessing(true);
 
     const journeyId = uid();
@@ -119,7 +121,7 @@ export function Chat() {
       },
     ]);
 
-    const updateJourneyIndex = (index: number) => {
+    const updateJourneyIndex = (index: number, statusText?: string) => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === journeyId
@@ -128,6 +130,11 @@ export function Chat() {
                 data: {
                   ...m.data,
                   activeIndex: Math.min(index, PIPELINE_STEPS.length - 1),
+                  steps: statusText
+                    ? m.data.steps.map((step: JourneyStep, stepIndex: number) =>
+                        stepIndex === index ? { ...step, text: statusText } : step
+                      )
+                    : m.data.steps,
                 },
               }
             : m
@@ -144,8 +151,34 @@ export function Chat() {
         trimmed,
         {
           onEvent: (event) => {
+            if (event.type === 'ping') {
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.id !== journeyId || m.scenario !== 'agent-journey') return m;
+                  const activeIndex = Math.min(
+                    Number(m.data?.activeIndex) || 0,
+                    PIPELINE_STEPS.length - 1,
+                  );
+                  return {
+                    ...m,
+                    data: {
+                      ...m.data,
+                      steps: m.data.steps.map((step: JourneyStep, stepIndex: number) =>
+                        stepIndex === activeIndex
+                          ? { ...step, text: `${step.agent} is still working on this step…` }
+                          : step
+                      ),
+                    },
+                  };
+                })
+              );
+              return;
+            }
             const stepIdx = mapEventToStepIndex(event);
-            updateJourneyIndex(stepIdx);
+            const statusText = typeof event.payload?.message === 'string'
+              ? event.payload.message
+              : undefined;
+            updateJourneyIndex(stepIdx, statusText);
           },
           onWaiting: (payload) => {
             // ReAct evaluator paused for clarification
@@ -160,6 +193,7 @@ export function Chat() {
               content: questionText,
             });
             setIsProcessing(false);
+            processingRef.current = false;
           },
           onCompleted: (payload) => {
             setMessages((prev) => prev.filter((m) => m.id !== journeyId));
@@ -191,6 +225,7 @@ export function Chat() {
             // User requested: No autoredirect. The user gets a button to go to the roadmap.
 
             setIsProcessing(false);
+            processingRef.current = false;
           },
           onError: (err) => {
             setMessages((prev) => prev.filter((m) => m.id !== journeyId));
@@ -204,6 +239,7 @@ export function Chat() {
               content: `Error: ${errorMsg}`,
             });
             setIsProcessing(false);
+            processingRef.current = false;
           },
         },
         threadId,
@@ -215,6 +251,7 @@ export function Chat() {
         content: `Could not start the workflow: ${err?.message || 'Agent service is unreachable.'}`,
       });
       setIsProcessing(false);
+      processingRef.current = false;
     }
   };
 

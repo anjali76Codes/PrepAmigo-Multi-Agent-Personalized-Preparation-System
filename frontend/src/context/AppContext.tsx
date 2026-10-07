@@ -38,9 +38,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setLoadingPreps(true);
     try {
-      const res = await plansApi.list();
+      const [res, progressRes] = await Promise.all([
+        plansApi.list(),
+        plansApi.getUserProgress().catch(() => null)
+      ]);
       if (res.data) {
-        const mapped = res.data.map(apiPlanToPrep);
+        const globalProgress = progressRes?.data || null;
+        const mapped = res.data.map((plan) => {
+          const prep = apiPlanToPrep(plan);
+          if (globalProgress) {
+            prep.learningContext.progress = {
+              xp: globalProgress.xp_points || 0,
+              streak: globalProgress.current_streak || globalProgress.streak_count || 0,
+              level: Math.floor((globalProgress.xp_points || 0) / 1000) + 1,
+              badges: (globalProgress.trophies || []).map((t: any) => ({
+                id: t.key, name: t.key.replace(/_/g, ' '), description: 'Earned trophy', date: t.awarded_at
+              })),
+              titles: [{ id: "t-1", name: "Candidate" }],
+              milestones: [],
+              skillLevels: [],
+              learningVelocity: "1.0x",
+            };
+          }
+          return prep;
+        });
         setPreps(mapped);
         if (mapped.length > 0) {
           setActivePrepId((prev) => (prev && mapped.some((p) => p.id === prev) ? prev : mapped[0].id));

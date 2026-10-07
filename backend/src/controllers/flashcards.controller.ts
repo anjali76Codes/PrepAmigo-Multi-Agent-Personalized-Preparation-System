@@ -5,7 +5,8 @@ import { Flashcard } from "../models/Flashcard.js";
 import { sendKnowledgeResults } from "../services/studyMaterial.js";
 import { AuthenticatedRequest } from "../types/authenticated-request.js";
 import { badId, findOwnedSprint, getUserId, handleFailure, routeParam } from "../utils/planApi.js";
-import { ownedSprintIds, startMissingMaterial } from "./assessments.controller.js";
+import { ownedSprintIds } from "./assessments.controller.js";
+
 
 // the deck's rating buttons (Hard 1, Okay 3, Easy 5) -> stored confidence, and
 // what each says about the concept for the knowledge graph
@@ -20,12 +21,14 @@ export const getFlashcards = async (req: AuthenticatedRequest, res: Response) =>
     const sprintIds = await ownedSprintIds(userId, sprintId);
     if (!sprintIds) return void res.status(404).json({ success: false, error: "Sprint not found." });
     const flashcards = await Flashcard.find({ sprint_id: { $in: sprintIds } }).sort({ createdAt: 1 });
-    const generating = await startMissingMaterial(sprintIds, Boolean(sprintId));
-    res.json({ success: true, count: flashcards.length, generating, data: flashcards });
+    // Do NOT generate study material here: flashcards are created lazily when the
+    // user reaches an assessment level (GET /api/sprint-days/:dayId/assessment).
+    res.json({ success: true, count: flashcards.length, generating: false, data: flashcards });
   } catch (error) {
     handleFailure(res, "List flashcards", error);
   }
 };
+
 
 /**
  * POST /api/flashcards/:flashcardId/review  { ratings: (1|3|5|null)[] }

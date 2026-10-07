@@ -2,6 +2,21 @@ import { MOCK_SPRINT_DAYS } from "./interviewPlan.mock";
 
 export type Assessment = {
     _id: string;
+    sprint_id?: string;
+    sprint_name?: string;
+    sprint_number?: number;
+    level?: string;
+    level_number?: number;
+    sprint_context?: {
+        sprint_id?: string;
+        sprint_name?: string;
+        sprint_number?: number;
+        level?: string;
+        plan_id?: string;
+        plan_name?: string;
+        company?: string;
+        role?: string;
+    };
     covered_sprint_days: string[];
     questions: any[];
     score: number;
@@ -35,6 +50,13 @@ export const getAssessments = async (): Promise<Assessment[]> => {
         console.error("Failed to fetch assessments", e);
         return [];
     }
+};
+
+export const openSprintDayAssessment = async (dayId: string): Promise<Assessment> => {
+    const response = await apiFetch<{ success: boolean; data: Assessment }>(
+        `/api/sprint-days/${encodeURIComponent(dayId)}/assessment`,
+    );
+    return response.data;
 };
 
 export const getFlashcardDecks = async (): Promise<FlashcardDeck[]> => {

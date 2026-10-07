@@ -13,10 +13,15 @@ class RecordingMemory(LocalMemoryProvider):
     def __init__(self):
         super().__init__()
         self.added = []
+        self.searches = []
 
     async def add(self, messages, user_id, metadata=None):
         self.added.append((messages, user_id, metadata))
         return await super().add(messages, user_id, metadata)
+
+    async def search(self, query, user_id, limit=5):
+        self.searches.append((query, user_id, limit))
+        return await super().search(query, user_id, limit)
 
 
 class BrokenMemory(LocalMemoryProvider):
@@ -51,6 +56,30 @@ def test_save_then_load_round_trip(memory):
     saved = asyncio.run(memory.get_all("subhaan"))
     assert [m["memory"] for m in saved] == ["remember subhaan is a cs student"]  # assistant text not stored locally
     assert saved[0]["metadata"] == {"source": "chat"}
+
+
+def test_interview_prep_memory_search_includes_structured_target_not_resume(memory):
+    state = {
+        "user_id": "u1",
+        "messages": [],
+        "workflow_mode": "interview_prep",
+        "workflow_input": {
+            "company": "Acme",
+            "role": "Platform Engineer",
+            "location": "Remote",
+            "resume_text": "private resume text",
+        },
+    }
+
+    asyncio.run(memory_nodes.load_memory(state))
+
+    query, user_id, limit = memory.searches[0]
+    assert user_id == "u1"
+    assert limit == memory_nodes.MEMORY_RECALL_LIMIT
+    assert "company: Acme" in query
+    assert "role: Platform Engineer" in query
+    assert "location: Remote" in query
+    assert "private resume text" not in query
 
 
 def test_save_sends_the_exchange_with_capped_assistant_context(memory):

@@ -1,13 +1,29 @@
 import { folders, files } from "../data/mockNotes";
 import type { Prep } from "../data/mockData";
+import { buildSprintLevelNodes } from "./sprintLevels";
+import { getCustomItems, type CustomResourceItem } from "./customResources";
 
 export type TreeNode = {
-    id: string; title: string; kind: "folder" | "file";
-    icon?: string; url?: string; children?: TreeNode[];
+    id: string;
+    title: string;
+    kind: "folder" | "file";
+    icon?: string;
+    url?: string;
+    content?: string;
+    isCustom?: boolean;
+    parentId?: string;
+    children?: TreeNode[];
 };
 
-const file = (id: string, title: string, icon = "document-text", url = "#"): TreeNode =>
-    ({ id, title, kind: "file", icon, url });
+const file = (
+    id: string,
+    title: string,
+    icon = "document-text",
+    url = "#",
+    content?: string,
+    isCustom = false,
+    parentId?: string
+): TreeNode => ({ id, title, kind: "file", icon, url, content, isCustom, parentId });
 
 const getResourceIcon = (type?: string) => {
     const lower = (type || "").toLowerCase();
@@ -18,46 +34,113 @@ const getResourceIcon = (type?: string) => {
     return "document-text";
 };
 
+function buildCustomTreeNodes(parentId: string, allCustom: CustomResourceItem[]): TreeNode[] {
+    const children = allCustom.filter((c) => c.parentId === parentId);
+    return children.map((c) => {
+        if (c.kind === "folder") {
+            return {
+                id: c.id,
+                title: c.title,
+                kind: "folder" as const,
+                isCustom: true,
+                parentId: c.parentId,
+                children: buildCustomTreeNodes(c.id, allCustom),
+            };
+        }
+        return file(c.id, c.title, c.icon || "document-text", c.url || "#", c.content, true, c.parentId);
+    });
+}
+
 export function buildTree(prep?: Prep | null): TreeNode[] {
+    const customItems = getCustomItems();
+
+    const prepNotesChildren = [
+        file("pn-1", "System Design Cheat Sheets", "journal"),
+        file("pn-2", "Behavioral Questions Bank", "journal"),
+        file("pn-3", "Offer Negotiation Guide.pdf", "document"),
+        ...buildCustomTreeNodes("prep-notes", customItems),
+    ];
+
     const prepNotes: TreeNode = {
-        id: "prep-notes", title: "Prep Notes", kind: "folder",
-        children: [
-            file("pn-1", "System Design Cheat Sheets", "journal"),
-            file("pn-2", "Behavioral Questions Bank", "journal"),
-            file("pn-3", "Offer Negotiation Guide.pdf", "document"),
-        ],
+        id: "prep-notes",
+        title: "Prep Notes",
+        kind: "folder",
+        children: prepNotesChildren,
     };
 
     const sprintsList = prep?.roadmap?.sprints || [];
     const sprints: TreeNode[] = sprintsList.map((s, sIdx) => {
         const days = s.days || [];
-        const levels: TreeNode[] = [];
-        for (let i = 0; i < days.length; i += 3) {
-            levels.push({
-                id: `lvl-${s.id}-${i}`, title: `Level ${i / 3 + 1}`, kind: "folder",
-                children: days.slice(i, i + 3).map((d: any) => ({
-                    id: `task-${d.id || d.dayNumber}`, title: `Day ${d.dayNumber}: ${d.topic}`, kind: "folder" as const,
+        const levels = buildSprintLevelNodes(days)
+            .filter((level) => !level.isAssessment)
+            .map((level) => {
+                const lvlId = `lvl-${s.id}-${level.id}`;
+                return {
+                    id: lvlId,
+                    title: level.title,
+                    kind: "folder" as const,
                     children: [
-                        file(`o-${d.id || d.dayNumber}-0`, d.objective, "journal"),
-                        ...(d.rawReferences || []).map((r: any, k: number) => 
-                            file(`r-${d.id || d.dayNumber}-${k}`, r.title || r.url, getResourceIcon(r.type), r.url)
-                        ),
+                        ...level.days.map((d: any) => {
+                            const dayId = d.id || d.dayNumber;
+                            const taskId = `task-${dayId}`;
+                            const objectives = d.objectives?.length ? d.objectives : [d.objective].filter(Boolean);
+                            return {
+                                id: taskId,
+                                title: `Day ${d.dayNumber}: ${d.topic}`,
+                                kind: "folder" as const,
+                                children: [
+                                    ...objectives.map((objective: string, index: number) =>
+                                        file(`o-${dayId}-${index}`, objective, "journal")
+                                    ),
+                                    ...(d.rawReferences || []).map((reference: any, index: number) =>
+                                        file(
+                                            `r-${dayId}-${index}`,
+                                            reference.title || reference.url,
+                                            getResourceIcon(reference.type),
+                                            reference.url,
+                                        )
+                                    ),
+                                    ...buildCustomTreeNodes(taskId, customItems),
+                                ],
+                            };
+                        }),
+                        ...buildCustomTreeNodes(lvlId, customItems),
                     ],
-                })),
+                };
             });
-        }
-        return { id: `sprint-${s.id}`, title: s.title || `Sprint ${sIdx + 1}`, kind: "folder" as const, children: levels };
+        const sprintFolderId = `sprint-${s.id}`;
+        return {
+            id: sprintFolderId,
+            title: s.title || `Sprint ${sIdx + 1}`,
+            kind: "folder" as const,
+            children: [
+                ...levels,
+                ...buildCustomTreeNodes(sprintFolderId, customItems),
+            ],
+        };
     });
 
+    const notesChildren = [
+        ...folders.map((f) => ({
+            id: `nf-${f.id}`,
+            title: f.name,
+            kind: "folder" as const,
+            children: buildCustomTreeNodes(`nf-${f.id}`, customItems),
+        })),
+        ...files.map((f) => file(`nfile-${f.id}`, f.name, f.type === "pdf" ? "document" : "document-text")),
+        ...buildCustomTreeNodes("notes", customItems),
+    ];
+
     const notes: TreeNode = {
-        id: "notes", title: "Notes", kind: "folder",
-        children: [
-            ...folders.map((f) => ({ id: `nf-${f.id}`, title: f.name, kind: "folder" as const, children: [] })),
-            ...files.map((f) => file(`nfile-${f.id}`, f.name, f.type === "pdf" ? "document" : "document-text")),
-        ],
+        id: "notes",
+        title: "Notes",
+        kind: "folder",
+        children: notesChildren,
     };
 
-    return [prepNotes, ...sprints, notes];
+    const rootCustom = buildCustomTreeNodes("root", customItems);
+
+    return [prepNotes, ...sprints, notes, ...rootCustom];
 }
 
 export const domainOf = (u?: string) => {
