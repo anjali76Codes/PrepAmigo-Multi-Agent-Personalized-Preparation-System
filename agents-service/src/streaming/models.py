@@ -12,6 +12,9 @@ class EventType(str, Enum):
     WAITING = "waiting"
     PROCESSING = "processing"
     STRUCTURING = "structuring"
+    # one tool invocation's lifecycle (payload.status running -> completed|failed,
+    # paired by payload.tool_call_id); progress only, never ends the stream
+    TOOL_CALL = "tool_call"
     COMPLETED = "completed"
     FAILED = "failed"
     PING = "ping"

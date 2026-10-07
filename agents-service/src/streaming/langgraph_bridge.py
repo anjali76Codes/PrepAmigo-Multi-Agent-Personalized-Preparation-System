@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 # Falls back to THINKING, which is the right default for a step that is
 # gathering context or deciding something rather than acting on the world.
 _STEP_KEYWORDS: tuple[tuple[str, EventType], ...] = (
-    ("tool_", EventType.RESEARCHING),
     ("search", EventType.RESEARCHING),
     ("research", EventType.RESEARCHING),
     ("fetch", EventType.RESEARCHING),
@@ -66,6 +65,10 @@ def _wire_result(result: Any) -> Any:
 
 def _event_type_for_step(step: str) -> EventType:
     lowered = step.lower()
+    # graph.events names every tool lifecycle step "tool_<tool name>"; a prefix
+    # check, since tool names themselves contain "search", "fetch", ...
+    if lowered.startswith("tool_"):
+        return EventType.TOOL_CALL
     for keyword, event_type in _STEP_KEYWORDS:
         if keyword in lowered:
             return event_type

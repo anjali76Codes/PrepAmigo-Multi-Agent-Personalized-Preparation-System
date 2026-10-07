@@ -337,6 +337,7 @@ const defaultSteps: Record<AgentStreamEvent["type"], string> = {
   waiting: "awaiting_input",
   processing: "processing",
   structuring: "structuring",
+  tool_call: "tool_call",
   completed: "final",
   failed: "failure",
   ping: "heartbeat",

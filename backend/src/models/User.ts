@@ -10,6 +10,9 @@ export interface IUserProfile {
   resume_url?: string;
   resume_filename?: string;
   resume_text?: string;
+  // IANA timezone (e.g. "Asia/Kolkata"); unset means the server's default timezone.
+  timezone?: string;
+  daily_digest_email?: boolean;
 }
 
 export interface IUser extends Document {
@@ -35,6 +38,8 @@ const profileSchema = new Schema<IUserProfile>(
     resume_url: { type: String, trim: true },
     resume_filename: { type: String, trim: true },
     resume_text: { type: String },
+    timezone: { type: String, trim: true },
+    daily_digest_email: { type: Boolean, default: true },
   },
   { _id: false },
 );
