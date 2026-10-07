@@ -4,6 +4,8 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { AppLayout } from "./components/layout/AppLayout";
 import { PlanSetupLayout } from "./components/layout/PlanSetupLayout";
 import { Home } from "./pages/Home";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { TermsOfService } from "./pages/TermsOfService";
 import { Auth } from "./pages/Auth";
 import { AppProvider } from "./context/AppContext";
 import { AuthProvider } from "./hooks/useAuth";
@@ -57,6 +59,8 @@ function AnimatedRoutes() {
       <Routes location={location} key={getRouteKey(location.pathname)}>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<PageTransition><Home /></PageTransition>} />
+          <Route path="/privacy-policy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+          <Route path="/terms-of-service" element={<PageTransition><TermsOfService /></PageTransition>} />
           <Route path="/style-guide" element={<PageTransition><StyleGuide /></PageTransition>} />
         </Route>
 

@@ -102,6 +102,14 @@ export function PublicLayout() {
           <p className="text-xs text-carbon-500">
             © {new Date().getFullYear()} PrepAmigo. All rights reserved.
           </p>
+          <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-carbon-500">
+            <Link to="/privacy-policy" className="transition-colors hover:text-carbon-900">
+              Privacy Policy
+            </Link>
+            <Link to="/terms-of-service" className="transition-colors hover:text-carbon-900">
+              Terms of Service
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>
