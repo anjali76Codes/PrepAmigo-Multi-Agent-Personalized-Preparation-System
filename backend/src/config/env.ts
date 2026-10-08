@@ -41,6 +41,10 @@ const envSchema = z.object({
     value === undefined ? true : ["true", "1", "yes", "on"].includes(value.trim().toLowerCase()),
   ),
   DAILY_DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
+  // POST /api/notifications/test-digest. Unset: on outside production, off in production.
+  ENABLE_TEST_NOTIFICATIONS: z.string().optional().transform((value) =>
+    value === undefined ? undefined : ["true", "1", "yes", "on"].includes(value.trim().toLowerCase()),
+  ),
 });
 
 const _env = envSchema.safeParse(process.env);

@@ -24,6 +24,14 @@ const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
 
 function renderEmail(name: string, tasks: ISprintDay[]): { subject: string; html: string; text: string } {
+  if (tasks.length === 0) {
+    const body = "Nothing is scheduled on your prep plan today. This is a test of PrepAmigo email notifications: if you can read it, email delivery works.";
+    return {
+      subject: "PrepAmigo test email: no tasks today",
+      text: `Hi ${name},\n\n${body}\n\n— PrepAmigo`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1a1a1a;"><h2>Hi ${escapeHtml(name)}!</h2><p style="color:#555;">${body}</p><p style="color:#999;font-size:12px;">— PrepAmigo</p></div>`,
+    };
+  }
   const subject = tasks.length === 1 ? "1 task on your prep plan today" : `${tasks.length} tasks on your prep plan today`;
   const rows = tasks
     .sort((a, b) => a.day_number - b.day_number)
@@ -56,22 +64,49 @@ async function todaysTasks(userId: Types.ObjectId, now: Date, timeZone?: string)
   return days.filter((d) => localDateKey(d.scheduled_date, timeZone) === todayKey);
 }
 
-async function sendDigestForUser(user: DigestUser, now: Date): Promise<boolean> {
+export interface DigestSendResult {
+  delivered: boolean;
+  to: string;
+  taskCount: number;
+  error?: string;
+  notificationId?: string;
+}
+
+interface SendOptions {
+  /** Recipient override (testing only); defaults to the user's email. */
+  to?: string;
+  /** Send even with no tasks today (a "no tasks" test email); the scheduled digest skips such users. */
+  allowEmpty?: boolean;
+  reason?: string;
+}
+
+/** Emails one user their tasks for today, then records the matching dashboard notification. */
+async function sendDigestForUser(user: DigestUser, now: Date, options: SendOptions = {}): Promise<DigestSendResult> {
+  const to = options.to || user.email;
   const tasks = await todaysTasks(user._id, now, user.profile?.timezone);
-  if (tasks.length === 0) return false;
+  if (tasks.length === 0 && !options.allowEmpty) return { delivered: false, to, taskCount: 0 };
   const { subject, html, text } = renderEmail(user.name, tasks);
-  const delivered = await sendMail({ to: user.email, subject, html, text });
-  if (!delivered) return false;
-  await createNotification(
-    user._id,
-    "daily-digest",
-    subject,
-    `We emailed you this morning's ${tasks.length === 1 ? "task" : "tasks"}: ${tasks
-      .slice(0, 3)
-      .map((t) => t.topic_title)
-      .join(", ")}${tasks.length > 3 ? ", …" : ""}.`,
-  );
-  return true;
+  const mail = await sendMail({ to, subject, html, text });
+  if (!mail.delivered) return { delivered: false, to, taskCount: tasks.length, error: mail.error };
+  const message = tasks.length === 0
+    ? `We emailed ${to} a test message: no tasks are scheduled for today.`
+    : `We emailed you this morning's ${tasks.length === 1 ? "task" : "tasks"}: ${tasks
+        .slice(0, 3)
+        .map((t) => t.topic_title)
+        .join(", ")}${tasks.length > 3 ? ", …" : ""}.`;
+  const notification = await createNotification(user._id, "daily-digest", subject, message, options.reason);
+  return { delivered: true, to, taskCount: tasks.length, notificationId: String(notification._id) };
+}
+
+/**
+ * Sends the digest to one user right now, ignoring DAILY_DIGEST_HOUR and the
+ * once-a-day guard; with no tasks today it sends a short test email instead.
+ * Backs POST /api/notifications/test-digest. Null: no such user.
+ */
+export async function sendDigestNow(userId: Types.ObjectId, to?: string): Promise<DigestSendResult | null> {
+  const user = await User.findById(userId).select("_id email name profile.timezone").lean<DigestUser | null>();
+  if (!user) return null;
+  return sendDigestForUser(user, new Date(), { to, allowEmpty: true, reason: "Sent on demand from the test endpoint." });
 }
 
 /**
@@ -92,7 +127,7 @@ export async function runDailyDigestForAllUsers(now: Date = new Date()): Promise
     checked++;
     if (await hasDigestSince(user._id, new Date(now.getTime() - DIGEST_DEDUP_WINDOW_MS))) continue;
     try {
-      if (await sendDigestForUser(user, now)) sent++;
+      if ((await sendDigestForUser(user, now)).delivered) sent++;
     } catch (error) {
       logger.error("Daily digest failed for user", { error, userId: String(user._id) });
     }
