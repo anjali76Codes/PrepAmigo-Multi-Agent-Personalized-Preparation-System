@@ -6,7 +6,7 @@ export function TermsOfService() {
   return (
     <article className="mx-auto w-full max-w-4xl px-5 pb-20 pt-32 sm:px-8">
       <header className="mb-10">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-navy-500">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-cocoa">
           PrepAmigo
         </p>
         <h1 className="text-4xl font-bold tracking-tight text-carbon-900 sm:text-5xl">
@@ -94,7 +94,7 @@ export function TermsOfService() {
             you request. Our handling of personal information is described in
             the{" "}
             <Link
-              className="font-medium text-navy-700 underline underline-offset-4"
+              className="font-medium text-expresso underline underline-offset-4"
               to="/privacy-policy"
             >
               Privacy Policy
@@ -138,7 +138,7 @@ export function TermsOfService() {
           <p className="mt-3 leading-7 text-carbon-700">
             Questions about these terms? Email{" "}
             <a
-              className="font-medium text-navy-700 underline underline-offset-4"
+              className="font-medium text-expresso underline underline-offset-4"
               href={`mailto:${contactEmail}`}
             >
               {contactEmail}
@@ -148,7 +148,7 @@ export function TermsOfService() {
         </section>
 
         <p className="border-t border-border pt-6 text-sm text-carbon-500">
-          Read our <Link className="font-medium text-navy-700 underline underline-offset-4" to="/privacy-policy">Privacy Policy</Link>.
+          Read our <Link className="font-medium text-expresso underline underline-offset-4" to="/privacy-policy">Privacy Policy</Link>.
         </p>
       </div>
     </article>

@@ -72,8 +72,8 @@ export function InterviewPrep() {
           eventType === "tool_call"
             ? toolCallText(parsed.payload)
             : parsed.payload?.message ||
-              parsed.payload?.step ||
-              eventType.replaceAll("_", " ");
+            parsed.payload?.step ||
+            eventType.replaceAll("_", " ");
         setEvents((previous) => [...previous.slice(-7), message]);
         setStatus("running");
       });
@@ -117,8 +117,8 @@ export function InterviewPrep() {
       setResult(parsed.payload?.result || null);
       setError(
         parsed.payload?.detail ||
-          parsed.payload?.error ||
-          "The workflow could not be completed.",
+        parsed.payload?.error ||
+        "The workflow could not be completed.",
       );
       setChatTurns((previous) => [
         ...previous,
@@ -221,7 +221,7 @@ export function InterviewPrep() {
       <div className="mx-auto max-w-6xl space-y-6 pb-24">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-navy-700">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-expresso">
               Your Personal Researcher
             </p>
             <h1 className="text-3xl font-extrabold text-carbon-900">
@@ -233,7 +233,7 @@ export function InterviewPrep() {
           </div>
           <div className="flex items-center gap-2 rounded-control border border-border bg-white px-3 py-2 text-sm font-semibold">
             <span
-              className={`h-2 w-2 rounded-full ${status === "failed" ? "bg-danger-600" : status === "complete" ? "bg-navy-700" : busy ? "bg-beige-500 animate-pulse" : status === "awaiting_input" ? "bg-coral-500" : "bg-carbon-500/40"}`}
+              className={`h-2 w-2 rounded-full ${status === "failed" ? "bg-danger-600" : status === "complete" ? "bg-expresso" : busy ? "bg-beige-500 animate-pulse" : status === "awaiting_input" ? "bg-coral-500" : "bg-carbon-500/40"}`}
             />
             {statusLabel}
           </div>
@@ -242,7 +242,7 @@ export function InterviewPrep() {
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]">
           <section className="rounded-card border border-border bg-white p-5 shadow-card md:p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender-100 text-navy-800">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lavender-100 text-forest-emerald">
                 <Icon name="chatbubbles-outline" className="text-xl" />
               </div>
               <div>
@@ -254,74 +254,74 @@ export function InterviewPrep() {
             </div>
 
             <div className="space-y-4">
-                <div
-                  className="max-h-72 space-y-3 overflow-y-auto rounded-control border border-border bg-bg p-3"
-                  aria-live="polite"
-                >
-                  {chatTurns.length === 0 ? (
-                    <p className="text-sm text-carbon-500">
-                      Tell me what you know so far. I’ll ask directly for any
-                      required details that are missing.
-                    </p>
-                  ) : (
-                    chatTurns.map((turn, index) => (
-                      <div
-                        key={`${turn.speaker}-${index}`}
-                        className={`max-w-[90%] rounded-control px-3 py-2 text-sm ${turn.speaker === "user" ? "ml-auto bg-navy-800 text-white" : "mr-auto border border-border bg-white text-carbon-900"}`}
-                      >
-                        {turn.text}
-                      </div>
-                    ))
-                  )}
-                  {busy && (
-                    <p className="text-xs text-carbon-500">
-                      Reading your message…
-                    </p>
-                  )}
-                </div>
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    sendChatMessage();
-                  }}
-                  className="flex items-end gap-2"
-                >
-                  <textarea
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    maxLength={4000}
-                    rows={2}
-                    placeholder="For example: I’m looking for an SDE role in Seattle"
-                    aria-label="Tell the orchestrator about your interview"
-                    className="min-w-0 flex-1 resize-y rounded-control border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-navy-700"
-                  />
-                  <button
-                    type="submit"
-                    disabled={busy || !chatInput.trim()}
-                    aria-label={
-                      status === "awaiting_input"
-                        ? "Answer question"
-                        : "Send message"
-                    }
-                    title={
-                      status === "awaiting_input"
-                        ? "Answer question"
-                        : "Send message"
-                    }
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-navy-800 text-white disabled:opacity-50"
-                  >
-                    <Icon name="send-outline" />
-                  </button>
-                </form>
-                {error && (
-                  <p
-                    className="mt-4 rounded-control bg-danger-100 px-3 py-2 text-sm text-danger-600"
-                    role="alert"
-                  >
-                    {error}
+              <div
+                className="max-h-72 space-y-3 overflow-y-auto rounded-control border border-border bg-bg p-3"
+                aria-live="polite"
+              >
+                {chatTurns.length === 0 ? (
+                  <p className="text-sm text-carbon-500">
+                    Tell me what you know so far. I’ll ask directly for any
+                    required details that are missing.
+                  </p>
+                ) : (
+                  chatTurns.map((turn, index) => (
+                    <div
+                      key={`${turn.speaker}-${index}`}
+                      className={`max-w-[90%] rounded-control px-3 py-2 text-sm ${turn.speaker === "user" ? "ml-auto bg-forest-emerald text-white" : "mr-auto border border-border bg-white text-carbon-900"}`}
+                    >
+                      {turn.text}
+                    </div>
+                  ))
+                )}
+                {busy && (
+                  <p className="text-xs text-carbon-500">
+                    Reading your message…
                   </p>
                 )}
               </div>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendChatMessage();
+                }}
+                className="flex items-end gap-2"
+              >
+                <textarea
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  maxLength={4000}
+                  rows={2}
+                  placeholder="For example: I’m looking for an SDE role in Seattle"
+                  aria-label="Tell the orchestrator about your interview"
+                  className="min-w-0 flex-1 resize-y rounded-control border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-expresso"
+                />
+                <button
+                  type="submit"
+                  disabled={busy || !chatInput.trim()}
+                  aria-label={
+                    status === "awaiting_input"
+                      ? "Answer question"
+                      : "Send message"
+                  }
+                  title={
+                    status === "awaiting_input"
+                      ? "Answer question"
+                      : "Send message"
+                  }
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-forest-emerald text-white disabled:opacity-50"
+                >
+                  <Icon name="send-outline" />
+                </button>
+              </form>
+              {error && (
+                <p
+                  className="mt-4 rounded-control bg-danger-100 px-3 py-2 text-sm text-danger-600"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              )}
+            </div>
           </section>
 
           <section
@@ -330,19 +330,19 @@ export function InterviewPrep() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-navy-500">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-cocoa">
                   Behind the scenes
                 </p>
                 <h2 className="mt-1 text-lg font-bold">Research Progress</h2>
               </div>
               <Icon
                 name={busy ? "sync-outline" : "git-compare-outline"}
-                className={`text-2xl text-navy-500 ${busy ? "animate-spin" : ""}`}
+                className={`text-2xl text-cocoa ${busy ? "animate-spin" : ""}`}
               />
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-control border border-border bg-lavender-100 p-3">
-                <p className="text-[11px] font-bold uppercase text-navy-700">
+                <p className="text-[11px] font-bold uppercase text-expresso">
                   Company Research
                 </p>
                 <p className="mt-1 text-sm font-medium">
@@ -351,7 +351,7 @@ export function InterviewPrep() {
                 </p>
               </div>
               <div className="rounded-control border border-border bg-chrome-accent p-3">
-                <p className="text-[11px] font-bold uppercase text-navy-900">
+                <p className="text-[11px] font-bold uppercase text-deep-emerald">
                   Job Intelligence
                 </p>
                 <p className="mt-1 text-sm font-medium">
@@ -367,7 +367,7 @@ export function InterviewPrep() {
               {events.length ? (
                 events.map((item, index) => (
                   <li key={`${item}-${index}`} className="flex gap-2">
-                    <span className="text-navy-500">•</span>
+                    <span className="text-cocoa">•</span>
                     <span>{item}</span>
                   </li>
                 ))
@@ -384,7 +384,7 @@ export function InterviewPrep() {
           <section className="space-y-4" aria-live="polite">
             <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-navy-700">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-expresso">
                   Combined result · {result.status || status}
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-carbon-900">
@@ -398,10 +398,10 @@ export function InterviewPrep() {
               )}
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <article className="min-w-0 rounded-card border-none bg-lavender-100 text-navy-900 p-5 shadow-pop">
-                <div className="flex items-center justify-between gap-2 border-b border-navy-900/10 pb-3">
+              <article className="min-w-0 rounded-card border-none bg-lavender-100 text-deep-emerald p-5 shadow-pop">
+                <div className="flex items-center justify-between gap-2 border-b border-deep-emerald/10 pb-3">
                   <h3 className="font-bold">What to know about them</h3>
-                  <span className="text-xs font-semibold text-navy-700">
+                  <span className="text-xs font-semibold text-expresso">
                     {result.company_research?.status || "unavailable"}
                   </span>
                 </div>
@@ -428,7 +428,7 @@ export function InterviewPrep() {
                     {typeof companyProfile.website === "string" &&
                       companyProfile.website && (
                         <a
-                          className="inline-block text-navy-900 font-bold underline"
+                          className="inline-block text-deep-emerald font-bold underline"
                           href={companyProfile.website}
                           target="_blank"
                           rel="noreferrer"
@@ -437,8 +437,8 @@ export function InterviewPrep() {
                         </a>
                       )}
                     {result.company_research?.data?.dossier && (
-                      <details className="border-t border-navy-900/10 pt-3">
-                        <summary className="cursor-pointer font-semibold text-navy-900">
+                      <details className="border-t border-deep-emerald/10 pt-3">
+                        <summary className="cursor-pointer font-semibold text-deep-emerald">
                           Dive into the full research
                         </summary>
                         <p className="mt-3 whitespace-pre-wrap leading-relaxed text-carbon-700">
@@ -455,18 +455,18 @@ export function InterviewPrep() {
                 )}
               </article>
 
-              <article className="min-w-0 rounded-card border-none bg-chrome-accent text-navy-900 p-5 shadow-pop">
-                <div className="flex items-center justify-between gap-2 border-b border-navy-900/10 pb-3">
+              <article className="min-w-0 rounded-card border-none bg-chrome-accent text-deep-emerald p-5 shadow-pop">
+                <div className="flex items-center justify-between gap-2 border-b border-deep-emerald/10 pb-3">
                   <h3 className="font-bold">
                     What they're looking for
                   </h3>
-                  <span className="text-xs font-semibold text-navy-700">
+                  <span className="text-xs font-semibold text-expresso">
                     {result.job_intelligence?.status || "unavailable"}
                   </span>
                 </div>
                 {jobProfile ? (
                   <div className="mt-4 space-y-4 text-sm">
-                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-navy-800/70 font-medium">
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-forest-emerald/70 font-medium">
                       <span>
                         {String(jobProfile.postingsCount ?? 0)} postings
                       </span>
@@ -480,23 +480,23 @@ export function InterviewPrep() {
                       )}
                     </div>
                     <div>
-                      <h4 className="mb-2 text-xs font-bold uppercase text-navy-900/60">
+                      <h4 className="mb-2 text-xs font-bold uppercase text-deep-emerald/60">
                         Top Skills
                       </h4>
                       {skills.length ? (
-                        <ul className="divide-y divide-navy-900/10">
+                        <ul className="divide-y divide-deep-emerald/10">
                           {skills.slice(0, 12).map((skill, index) => (
                             <li
                               key={`${skill.name}-${index}`}
                               className="flex items-center justify-between gap-3 py-2"
                             >
-                              <span className="font-semibold text-navy-900">
+                              <span className="font-semibold text-deep-emerald">
                                 {skill.name || "Skill"}
-                                <small className="ml-2 font-normal text-navy-900/60">
+                                <small className="ml-2 font-normal text-deep-emerald/60">
                                   {skill.category}
                                 </small>
                               </span>
-                              <span className="shrink-0 text-xs font-bold text-navy-900/60">
+                              <span className="shrink-0 text-xs font-bold text-deep-emerald/60">
                                 {skill.priority || ""}
                                 {typeof skill.percentage === "number"
                                   ? ` · ${skill.percentage}%`

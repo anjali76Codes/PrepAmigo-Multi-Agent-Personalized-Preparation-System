@@ -11,7 +11,7 @@ export function Tabs({ tabs, defaultTab, variant = "underline", onChange }: any)
   };
 
   const activeVariants = {
-    underline: "border-navy-700 text-carbon-900",
+    underline: "border-expresso text-carbon-900",
     pill: "bg-carbon-900 text-white hover:bg-carbon-700 hover:text-white",
     segmented: "bg-white shadow-card text-carbon-900",
   };

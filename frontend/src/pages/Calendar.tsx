@@ -523,10 +523,10 @@ export function Calendar() {
             <motion.div initial={{ opacity: 0, y: motionY }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-4 space-y-4">
 
               {/* Keep it up */}
-              <div className="bg-chrome-accent text-navy-900 rounded-card p-5 flex items-center gap-4">
+              <div className="bg-chrome-accent text-deep-emerald rounded-card p-5 flex items-center gap-4">
                 <div className="flex-1">
                   <h4 className="font-bold text-lg leading-tight mb-1">Keep it up!</h4>
-                  <p className="text-xs text-navy-900/70 font-medium leading-relaxed">
+                  <p className="text-xs text-deep-emerald/70 font-medium leading-relaxed">
                     {overallPct > 0
                       ? `You're ${overallPct}% through your plan. Your mascot is cheering for you!`
                       : 'Every plan starts with one tick. Your mascot is cheering for you!'}
@@ -578,13 +578,13 @@ export function Calendar() {
                         className={cn(
                           "relative h-11 rounded-xl flex flex-col items-center justify-center transition-all",
                           "font-semibold border",
-                          isSelected && "ring-2 ring-navy-700 ring-offset-1",
+                          isSelected && "ring-2 ring-expresso ring-offset-1",
                           isToday
                             ? "bg-chrome text-on-chrome border-chrome shadow-sm"
                             : missed
                               ? "bg-coral-500/10 text-coral-700 border-coral-500/30"
                               : allDone
-                                ? "bg-chrome-accent text-navy-900 border-chrome-accent"
+                                ? "bg-chrome-accent text-deep-emerald border-chrome-accent"
                                 : info
                                   ? "bg-lavender-50 text-carbon-900 border-chrome-accent/50"
                                   : "bg-surface text-carbon-500 border-transparent"
@@ -603,7 +603,7 @@ export function Calendar() {
                                 : missed
                                   ? "text-coral-700"
                                   : allDone
-                                    ? "text-navy-900/70"
+                                    ? "text-deep-emerald/70"
                                     : "text-carbon-500"
                             )}
                           >
@@ -648,10 +648,10 @@ export function Calendar() {
                         return isNaN(d.getTime())
                           ? selectedCalendarDate
                           : d.toLocaleDateString(undefined, {
-                              weekday: 'long',
-                              month: 'long',
-                              day: 'numeric',
-                            });
+                            weekday: 'long',
+                            month: 'long',
+                            day: 'numeric',
+                          });
                       })()}
                     </h3>
                     <p className="text-xs font-semibold text-carbon-500">

@@ -6,7 +6,7 @@ export function PrivacyPolicy() {
   return (
     <article className="mx-auto w-full max-w-4xl px-5 pb-20 pt-32 sm:px-8">
       <header className="mb-10">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-navy-500">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-cocoa">
           PrepAmigo
         </p>
         <h1 className="text-4xl font-bold tracking-tight text-carbon-900 sm:text-5xl">
@@ -96,7 +96,7 @@ export function PrivacyPolicy() {
             If you choose Google sign-in, Google processes your sign-in in
             accordance with{" "}
             <a
-              className="font-medium text-navy-700 underline underline-offset-4"
+              className="font-medium text-expresso underline underline-offset-4"
               href="https://policies.google.com/privacy"
               target="_blank"
               rel="noreferrer"
@@ -149,7 +149,7 @@ export function PrivacyPolicy() {
             correction of, or deletion of account information, or to ask a
             privacy question, email{" "}
             <a
-              className="font-medium text-navy-700 underline underline-offset-4"
+              className="font-medium text-expresso underline underline-offset-4"
               href={`mailto:${contactEmail}`}
             >
               {contactEmail}
@@ -168,7 +168,7 @@ export function PrivacyPolicy() {
             published. For questions about this policy or your information,
             contact{" "}
             <a
-              className="font-medium text-navy-700 underline underline-offset-4"
+              className="font-medium text-expresso underline underline-offset-4"
               href={`mailto:${contactEmail}`}
             >
               {contactEmail}
@@ -178,7 +178,7 @@ export function PrivacyPolicy() {
         </section>
 
         <p className="border-t border-border pt-6 text-sm text-carbon-500">
-          Read our <Link className="font-medium text-navy-700 underline underline-offset-4" to="/terms-of-service">Terms of Service</Link>.
+          Read our <Link className="font-medium text-expresso underline underline-offset-4" to="/terms-of-service">Terms of Service</Link>.
         </p>
       </div>
     </article>

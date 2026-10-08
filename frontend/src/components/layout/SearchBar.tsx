@@ -70,7 +70,7 @@ export function SearchBar() {
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder="Search tasks, topics, or ask PrepAmigo..."
-            className="w-full bg-lavender-100/90 rounded-full py-2.5 pl-11 pr-4 outline-none focus:border-navy-500 focus:bg-white transition-colors shadow-sm text-sm font-medium"
+            className="w-full bg-lavender-100/90 rounded-full py-2.5 pl-11 pr-4 outline-none focus:border-cocoa focus:bg-white transition-colors shadow-sm text-sm font-medium"
           />
         </div>
 
@@ -115,7 +115,7 @@ export function SearchBar() {
           type="button"
           aria-label="Open profile and settings"
           onClick={() => navigate('/profile')}
-          className="w-10 h-10 rounded-full bg-navy-100 text-navy-800 flex items-center justify-center cursor-pointer hover:bg-navy-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-soft-rose text-forest-emerald flex items-center justify-center cursor-pointer hover:bg-navy-200 transition-colors"
         >
           <Icon name="person" className="text-xl" />
         </button>

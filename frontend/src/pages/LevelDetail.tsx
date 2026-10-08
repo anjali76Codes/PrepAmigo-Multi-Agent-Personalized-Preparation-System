@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
 import { useState, useMemo, useEffect, useRef } from "react";
+import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import { Icon } from "../components/ui/Icon";
 import { Mascot } from "../components/ui/Mascot";
@@ -26,6 +27,93 @@ function formatReferenceType(type?: string): string {
 }
 
 type Pop = null | { kind: "locked" } | { kind: "task" } | { kind: "level" };
+
+const fireLevelCompleteConfetti = () => {
+  const colors = [
+    "#9bc9e1",
+    "#f17954",
+    "#f7b970",
+    "#173F35",
+    "#C3955B",
+  ];
+
+  let stopped = false;
+  let animationFrame: number | null = null;
+
+  // Bottom corner "school parade" cannons
+  const end = Date.now() + 2200;
+
+  const frame = () => {
+    if (stopped) return;
+
+    // Bottom-left cannon
+    confetti({
+      particleCount: 12,
+      angle: 65,
+      spread: 90,
+      startVelocity: 55,
+      origin: {
+        x: 0,
+        y: 1,
+      },
+      colors,
+      gravity: 0.7,
+      scalar: 1,
+      ticks: 220,
+    });
+
+    // Bottom-right cannon
+    confetti({
+      particleCount: 12,
+      angle: 115,
+      spread: 90,
+      startVelocity: 55,
+      origin: {
+        x: 1,
+        y: 1,
+      },
+      colors,
+      gravity: 0.7,
+      scalar: 1,
+      ticks: 220,
+    });
+
+    if (Date.now() < end && !stopped) {
+      animationFrame = requestAnimationFrame(frame);
+    }
+  };
+
+  // Original center burst, smaller
+  confetti({
+    particleCount: 110,
+    spread: 90,
+    startVelocity: 38,
+    origin: {
+      x: 0.5,
+      y: 0.55,
+    },
+    colors,
+    gravity: 0.5,
+    scalar: 0.9,
+    ticks: 190,
+    shapes: ["circle", "square", "star"],
+    drift: 0,
+  });
+
+  frame();
+
+  // Cleanup function
+  return () => {
+    stopped = true;
+
+    if (animationFrame !== null) {
+      cancelAnimationFrame(animationFrame);
+    }
+
+    // Immediately remove any confetti still falling
+    confetti.reset();
+  };
+};
 
 export function LevelDetail() {
   const { sprintId, levelId } = useParams();
@@ -76,6 +164,16 @@ export function LevelDetail() {
     if (pop?.kind !== "task") return;
     const t = setTimeout(() => setPop(null), 1600);
     return () => clearTimeout(t);
+  }, [pop]);
+
+  useEffect(() => {
+    if (pop?.kind !== "level") return;
+
+    const stopConfetti = fireLevelCompleteConfetti();
+
+    return () => {
+      stopConfetti();
+    };
   }, [pop]);
 
   const states = levelStates(allLevels.map((l) => l.days.every((d: any) => completedTaskIds.has(d._id))));
@@ -343,8 +441,18 @@ export function LevelDetail() {
         <Button
           onClick={async () => {
             setPop(null);
+
             await completionSaveRef.current;
             await refreshPreps();
+
+            sessionStorage.setItem(
+              "prep-amigo:xp-reward",
+              JSON.stringify({
+                sourceKey: `${sprintId}:${level.id}`,
+                xp: level.days.length * 20,
+              }),
+            );
+
             navigate("/dashboard");
           }}
         >

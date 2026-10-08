@@ -176,7 +176,7 @@ export function Auth() {
             className="rounded-[2.5rem] shadow-pop overflow-hidden flex flex-col md:flex-row md:min-h-[75vh] min-h-[75vh]"
           >
             {/* Brand Panel */}
-            <aside className="hidden md:flex w-1/2 bg-navy-900 text-on-chrome p-12 lg:p-14 flex-col items-center justify-center text-center">
+            <aside className="hidden md:flex w-1/2 bg-deep-emerald text-on-chrome p-12 lg:p-14 flex-col items-center justify-center text-center">
               <Link to="/" className="mb-8 hover:opacity-80 transition-opacity" aria-label="PrepAmigo home">
                 <Logo tone="inverse" />
               </Link>

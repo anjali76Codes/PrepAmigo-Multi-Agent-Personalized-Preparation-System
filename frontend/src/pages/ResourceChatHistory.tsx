@@ -16,7 +16,7 @@ export function ResourceChatHistory() {
 
       <div className="flex-1 overflow-y-auto p-6 md:p-12 safe-area-bottom">
         <div className="max-w-4xl mx-auto space-y-4">
-          
+
           {history.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Mascot variant="sad.png" size="xl" />
@@ -29,7 +29,7 @@ export function ResourceChatHistory() {
                   <h3 className="font-bold text-carbon-900 text-lg">{chat.title}</h3>
                   <p className="text-sm text-carbon-500 mt-1">{chat.time}</p>
                 </div>
-                <Link to={`/resource-pack/chat/${chat.id}`} className="px-4 py-2 bg-navy-100 text-navy-700 font-bold rounded-lg hover:bg-navy-200 transition-colors">
+                <Link to={`/resource-pack/chat/${chat.id}`} className="px-4 py-2 bg-soft-rose text-expresso font-bold rounded-lg hover:bg-navy-200 transition-colors">
                   Go to Chat
                 </Link>
               </div>

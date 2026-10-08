@@ -56,9 +56,9 @@ export function Chat() {
       setTimeout(() => {
         const lastMsg = messages[messages.length - 1];
         if (lastMsg?.scenario === 'agent-journey') {
-           document.getElementById(`msg-${lastMsg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          document.getElementById(`msg-${lastMsg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
-           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
     }
@@ -135,8 +135,8 @@ export function Chat() {
               activeIndex: index,
               steps: statusText
                 ? m.data.steps.map((step: JourneyStep, stepIndex: number) =>
-                    stepIndex === index ? { ...step, text: statusText } : step
-                  )
+                  stepIndex === index ? { ...step, text: statusText } : step
+                )
                 : m.data.steps,
             },
           };
@@ -219,10 +219,10 @@ export function Chat() {
               scenario: (payload?.result || planId) ? 'setup' : undefined,
               data: (payload?.result || planId)
                 ? {
-                    role,
-                    company,
-                    planId,
-                  }
+                  role,
+                  company,
+                  planId,
+                }
                 : undefined,
             });
 
@@ -238,8 +238,8 @@ export function Chat() {
               err instanceof Error
                 ? err.message
                 : err?.detail ||
-                  err?.error ||
-                  'The agent workflow encountered an error. Please try again.';
+                err?.error ||
+                'The agent workflow encountered an error. Please try again.';
             addAgentMessage({
               content: `Error: ${errorMsg}`,
             });
@@ -292,7 +292,7 @@ export function Chat() {
             <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-white/70 backdrop-blur-xs shrink-0 z-20">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-bold text-navy-900 uppercase tracking-wider">Preparation Agent</span>
+                <span className="text-xs font-bold text-deep-emerald uppercase tracking-wider">Preparation Agent</span>
               </div>
               <button
                 type="button"
@@ -302,7 +302,7 @@ export function Chat() {
                   clientRef.current = new AgentStreamClient();
                 }}
                 disabled={isProcessing}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-border bg-bg text-carbon-700 hover:bg-lavender-100 hover:text-navy-900 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-border bg-bg text-carbon-700 hover:bg-lavender-100 hover:text-deep-emerald transition-colors disabled:opacity-50"
               >
                 <Icon name="add-outline" className="text-sm" />
                 <span>New Plan</span>

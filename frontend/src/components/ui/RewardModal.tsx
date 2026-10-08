@@ -74,7 +74,7 @@ export function RewardModal({
                 <span className="text-[10px] font-black tracking-wider uppercase text-chrome">
                   Trophy Unlocked · {trophyUnlocked.tier}
                 </span>
-                <h4 className="text-base font-bold text-navy-900 mt-0.5">
+                <h4 className="text-base font-bold text-deep-emerald mt-0.5">
                   {trophyUnlocked.name}
                 </h4>
                 <p className="text-xs text-carbon-600 mt-1">

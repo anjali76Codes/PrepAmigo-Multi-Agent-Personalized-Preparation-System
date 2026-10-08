@@ -123,8 +123,8 @@ export function DayTaskCard({
           className={cn(
             "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors",
             completed
-              ? "bg-navy-700 border-navy-700 text-white"
-              : "border-chrome-accent hover:border-navy-700 bg-surface"
+              ? "bg-expresso border-expresso text-white"
+              : "border-chrome-accent hover:border-expresso bg-surface"
           )}
         >
           {completed && <Icon name="checkmark" className="text-xs font-bold" />}
@@ -193,7 +193,7 @@ export function DayTaskCard({
                             {external && (
                               <Icon
                                 name="arrow-forward"
-                                className="ml-auto shrink-0 text-navy-700 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0"
+                                className="ml-auto shrink-0 text-expresso opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0"
                               />
                             )}                          </>
                         );
@@ -205,7 +205,7 @@ export function DayTaskCard({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="group h-8 flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 hover:underline rounded-lg px-2 -mx-2 hover:bg-lavender-50 transition-colors"
+                                className="group h-8 flex items-center gap-2 text-sm text-expresso hover:text-deep-emerald hover:underline rounded-lg px-2 -mx-2 hover:bg-lavender-50 transition-colors"
                               >
                                 {inner}
                               </a>

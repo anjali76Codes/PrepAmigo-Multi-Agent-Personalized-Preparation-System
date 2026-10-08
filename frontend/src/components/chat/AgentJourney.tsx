@@ -19,6 +19,7 @@ export interface JourneyAction {
 }
 
 export interface AgentJourneyProps extends Partial<JourneyConfig> {
+    sprintId?: string;
     variant?: JourneyVariant;
     steps?: JourneyStep[];
     activeIndex?: number;
@@ -54,6 +55,7 @@ export function AgentJourney(props: AgentJourneyProps) {
     const variant = props.variant || 'chat';
     const config = { ...JOURNEY_PRESETS[variant], ...props };
     const {
+        sprintId,
         nodeSize,
         labelSize,
         showMascot,
@@ -236,7 +238,7 @@ export function AgentJourney(props: AgentJourneyProps) {
     const actionClasses = cn(
         'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-300',
         finished
-            ? 'bg-navy-700 text-white shadow-md hover:bg-navy-800 cursor-pointer'
+            ? 'bg-expresso text-white shadow-md hover:bg-forest-emerald cursor-pointer'
             : 'bg-muted text-muted-foreground border border-border pointer-events-none'
     );
 
@@ -293,7 +295,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                         fill="none"
                         strokeWidth={strokeWidth}
                         strokeLinecap="round"
-                        className="text-navy-700/20"
+                        className="text-expresso/20"
                         stroke={strokeTrackColor}
                         initial={{ pathLength: 0.5 }}
                     />
@@ -305,7 +307,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                             strokeWidth={strokeWidth}
                             strokeLinecap="round"
                             stroke={strokeColor}
-                            // className="text-navy-700"
+                            // className="text-expresso"
                             initial={{ pathLength: 0 }}
                             animate={{ pathLength: currentFraction }}
                             transition={{ duration: 0.8, ease: 'easeInOut' }}
@@ -389,6 +391,11 @@ export function AgentJourney(props: AgentJourneyProps) {
                     return (
                         <div
                             key={i}
+                            data-reward-node={
+                                sprintId && levelIds?.[i]
+                                    ? `${sprintId}:${levelIds[i]}`
+                                    : undefined
+                            }
                             className={cn(
                                 "absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 group",
                                 interactive && "cursor-pointer focus-visible:ring-2 focus-visible:outline-none ring-chrome ring-offset-4 rounded-full"
@@ -441,7 +448,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                                     </div>
                                 )}
                                 {isLocked && interactive && (
-                                    <div className="absolute top-[-30px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-navy-900 text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none z-20">
+                                    <div className="absolute top-[-30px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity bg-deep-emerald text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap pointer-events-none z-20">
                                         Complete the previous level first
                                     </div>
                                 )}
@@ -459,7 +466,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                                 className={cn(
                                     'absolute font-bold text-center leading-tight whitespace-nowrap transition-colors duration-300',
                                     'bg-surface border border-border rounded-full shadow-sm',
-                                    isActive ? 'text-foreground' : isDone ? 'text-navy-700' : 'text-muted-foreground'
+                                    isActive ? 'text-foreground' : isDone ? 'text-expresso' : 'text-muted-foreground'
                                 )}
                                 style={{ top: '100%', marginTop: 3, fontSize: labelSize, padding: '4px 10px' }}
                             >
@@ -527,7 +534,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
                                     transition={{ duration: 0.25, delay: 0.45 }}
-                                    className="absolute w-max max-w-[210px] bg-navy-700 text-white text-xs font-medium px-3 py-2 rounded-card shadow-sm top-0"
+                                    className="absolute w-max max-w-[210px] bg-expresso text-white text-xs font-medium px-3 py-2 rounded-card shadow-sm top-0"
                                     style={{
                                         ...(bubbleSide === 'right'
                                             ? { left: '100%', marginLeft: 10, transformOrigin: 'left center' }
@@ -536,7 +543,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                                 >
                                     <span
                                         className={cn(
-                                            'absolute top-4 w-2 h-2 rotate-45 bg-navy-700',
+                                            'absolute top-4 w-2 h-2 rotate-45 bg-expresso',
                                             bubbleSide === 'right' ? '-left-1 border-l border-b' : '-right-1 border-r border-t'
                                         )}
                                     />
@@ -562,7 +569,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                                 initial={{ opacity: 0, scale: 0.85 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.2 }}
-                                className="absolute top-0 w-max bg-navy-700 text-white text-xs font-bold px-3 py-2 rounded-card shadow-sm pointer-events-none"
+                                className="absolute top-0 w-max bg-expresso text-white text-xs font-bold px-3 py-2 rounded-card shadow-sm pointer-events-none"
                                 style={bubbleSide === 'right'
                                     ? { left: '100%', marginLeft: 10 }
                                     : { right: '100%', marginRight: 10 }}
@@ -581,10 +588,30 @@ export function ChatJourney(props: Omit<AgentJourneyProps, 'variant'>) {
     return <AgentJourney variant="chat" {...props} />;
 }
 
-export function SprintMap({ nodeStates, onNodeClick, levelIds, levelTitles, className }: {
-    sprintId?: string; nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[];
-    onNodeClick?: (levelId: string, index: number) => void; levelIds?: string[];
-    levelTitles?: string[]; className?: string;
+export function SprintMap({
+    sprintId,
+    nodeStates,
+    onNodeClick,
+    levelIds,
+    levelTitles,
+    className,
+}: {
+    sprintId?: string;
+    nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[];
+    onNodeClick?: (levelId: string, index: number) => void;
+    levelIds?: string[];
+    levelTitles?: string[];
+    className?: string;
 }) {
-    return <AgentJourney variant="sprint" nodeStates={nodeStates} onNodeClick={onNodeClick} levelIds={levelIds} levelTitles={levelTitles} className={className} />;
+    return (
+        <AgentJourney
+            variant="sprint"
+            sprintId={sprintId}
+            nodeStates={nodeStates}
+            onNodeClick={onNodeClick}
+            levelIds={levelIds}
+            levelTitles={levelTitles}
+            className={className}
+        />
+    );
 }

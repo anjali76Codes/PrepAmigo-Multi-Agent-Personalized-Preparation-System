@@ -16,7 +16,7 @@ export function Gamification() {
                         { title: '5 Day Streak!', icon: 'star', color: 'text-beige-500', bg: 'bg-beige-50' },
                         { title: '+250 XP', icon: 'flash', color: 'text-chrome-accent', bg: 'bg-chrome-accent/10' },
                         { title: 'Level Up: Architect', icon: 'trophy', color: 'text-coral-500', bg: 'bg-coral-50' },
-                        { title: 'Badge: DSA Master', icon: 'shield', color: 'text-navy-500', bg: 'bg-navy-50' }
+                        { title: 'Badge: DSA Master', icon: 'shield', color: 'text-cocoa', bg: 'bg-navy-50' }
                     ].map((badge, i) => (
                         <RevealStaggerItem key={i}>
                             <div className="group relative flex items-center gap-3 rounded-full border border-border bg-white px-8 py-4 shadow-card hover:shadow-pop transition-all hover:-translate-y-1">

@@ -20,7 +20,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             'flex h-10 w-full rounded-control py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             tone === 'inverse'
               ? 'bg-chrome-hover border border-chrome-border pl-10 pr-3 text-on-chrome placeholder:text-on-chrome-muted focus-visible:ring-chrome-accent'
-              : 'bg-surface border border-border pl-10 pr-3 text-carbon-900 placeholder:text-carbon-500 focus-visible:ring-navy-700',
+              : 'bg-surface border border-border pl-10 pr-3 text-carbon-900 placeholder:text-carbon-500 focus-visible:ring-expresso',
             className
           )}
           ref={ref}

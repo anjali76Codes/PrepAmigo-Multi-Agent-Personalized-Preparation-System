@@ -7,18 +7,18 @@ export function InterviewTrap() {
     return (
         <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
             <Reveal>
-                <h2 className="mb-4 text-center text-3xl font-bold text-navy-900">The Interview Prep Trap
+                <h2 className="mb-4 text-center text-3xl font-bold text-deep-emerald">The Interview Prep Trap
                     <Mascot variant='dissapointed.png' className='mx-auto' style={{ width: "100px", height: "auto" }} />
 
                 </h2>
-                <p className="mx-auto mb-14 max-w-xl text-center text-navy-500">
+                <p className="mx-auto mb-14 max-w-xl text-center text-cocoa">
                     Why the old way of preparing for interviews is broken.
                 </p>
             </Reveal>
 
             <div className="grid gap-6 md:grid-cols-3">
                 {/* Fragmented Research */}
-                <RevealCard from="bottom" className="bg-navy-900 text-white md:col-span-1">
+                <RevealCard from="bottom" className="bg-deep-emerald text-white md:col-span-1">
                     <CardText
                         title="Fragmented Research"
                         desc="Scouring Reddit, Blind, and Glassdoor for days just to find what a company actually asks."
@@ -30,11 +30,11 @@ export function InterviewTrap() {
                 </RevealCard>
 
                 {/* Unclear Priorities */}
-                <RevealCard from="center" className="bg-lavender-100 text-navy-900 md:col-span-1">
+                <RevealCard from="center" className="bg-lavender-100 text-deep-emerald md:col-span-1">
                     <CardText
                         title="Unclear Priorities"
                         desc="Not knowing if you should study System Design, LeetCode Hard, or behavioral questions today."
-                        muted="text-navy-500"
+                        muted="text-cocoa"
                     />
                     <div className="mt-auto pt-8 flex justify-end opacity-20">
                         <Icon name="help-circle" className="text-8xl" />
@@ -42,11 +42,11 @@ export function InterviewTrap() {
                 </RevealCard>
 
                 {/* Limited Time */}
-                <RevealCard from="bottom" className="bg-chrome-accent text-navy-900 md:col-span-1">
+                <RevealCard from="bottom" className="bg-chrome-accent text-deep-emerald md:col-span-1">
                     <CardText
                         title="Limited Time"
                         desc="Wasting precious hours planning when you only have 3 weeks until the onsite."
-                        muted="text-navy-500"
+                        muted="text-cocoa"
                     />
                     <div className="mt-auto pt-8 flex justify-end opacity-20">
                         <Icon name="time" className="text-8xl" />

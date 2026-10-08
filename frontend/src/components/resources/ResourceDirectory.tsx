@@ -50,7 +50,7 @@ function ListNode({
             onClick={() => onOpenNote(node)}
             className="flex items-center gap-2 flex-1 text-left truncate"
           >
-            <Icon name={node.icon ?? "document-text"} className="text-base text-navy-500" />
+            <Icon name={node.icon ?? "document-text"} className="text-base text-cocoa" />
             <span className="truncate">{node.title}</span>
             <span className="text-[10px] bg-lavender-200 text-chrome font-bold px-1.5 py-0.5 rounded">
               Note
@@ -75,7 +75,7 @@ function ListNode({
         rel="noopener noreferrer"
         className="flex items-center gap-2 py-1.5 px-3 rounded-xl text-carbon-700 hover:bg-lavender-100 transition-colors"
       >
-        <Icon name={node.icon ?? "link"} className="text-base text-navy-500" />
+        <Icon name={node.icon ?? "link"} className="text-base text-cocoa" />
         <span className="truncate">{node.title}</span>
       </a>
     );
@@ -135,7 +135,7 @@ function ListNode({
                   />
                 ))
               ) : (
-                <div className="py-1 px-3 text-xs italic text-navy-300">Empty</div>
+                <div className="py-1 px-3 text-xs italic text-rosewood">Empty</div>
               )}
             </div>
           </motion.div>
@@ -316,7 +316,7 @@ export function ResourceDirectory() {
           </button>
           {crumbs.map((c, i) => (
             <span key={c.id} className="flex items-center gap-2">
-              <span className="text-navy-300">/</span>
+              <span className="text-rosewood">/</span>
               <button
                 onClick={() => setPath(path.slice(0, i + 1))}
                 className={i === crumbs.length - 1 ? "text-carbon-900" : "text-chrome hover:underline"}
@@ -443,7 +443,7 @@ export function ResourceDirectory() {
                 >
                   <Icon
                     name={n.icon ?? "document-text"}
-                    className="text-6xl text-navy-500 hover:-translate-y-0.5 transition-transform"
+                    className="text-6xl text-cocoa hover:-translate-y-0.5 transition-transform"
                   />
                   <span className="text-xs font-semibold text-carbon-900 text-center line-clamp-2">
                     {n.title}
@@ -465,7 +465,7 @@ export function ResourceDirectory() {
       ) : (
         <div className="bg-white border border-border rounded-2xl p-3 md:p-5 shadow-xs text-sm">
           {items.length === 0 && (
-            <div className="text-center py-6 text-navy-300">
+            <div className="text-center py-6 text-rosewood">
               {q ? "No results found." : "This folder is empty."}
             </div>
           )}

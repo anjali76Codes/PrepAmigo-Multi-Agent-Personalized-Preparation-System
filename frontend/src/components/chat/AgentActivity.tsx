@@ -10,7 +10,7 @@ interface AgentActivityProps {
 }
 
 export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
-  
+
   const allAgents: AgentName[] = AGENTS.map(a => a.name);
 
   return (
@@ -19,15 +19,15 @@ export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
         {allAgents.map((agent, i) => {
           const isActive = activeAgent === agent;
           const isDone = activeAgent ? allAgents.indexOf(agent) < allAgents.indexOf(activeAgent) : false;
-          
+
           return (
             <div key={agent} className="flex items-center gap-2 shrink-0">
-              <Badge 
+              <Badge
                 variant={isActive ? 'navy' : isDone ? 'forest' : 'default'}
                 className="gap-1.5 px-3 py-1.5 transition-colors"
               >
                 {isActive && (
-                  <motion.div 
+                  <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                     className="w-3 h-3 border-2 border-current border-t-transparent rounded-full"
@@ -43,9 +43,9 @@ export function AgentActivity({ activeAgent, statusText }: AgentActivityProps) {
           );
         })}
       </div>
-      
+
       <div className="flex items-center gap-2 text-sm text-carbon-500 bg-bg p-3 rounded-control border border-border">
-        <Icon name="information-circle-outline" className="text-navy-700" />
+        <Icon name="information-circle-outline" className="text-expresso" />
         <span className="font-medium text-carbon-900">{activeAgent || 'Idle'}:</span> {statusText || 'Waiting for input...'}
       </div>
     </div>

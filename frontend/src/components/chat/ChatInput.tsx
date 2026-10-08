@@ -619,7 +619,7 @@ export function ChatInput({
               className={cn(
                 "w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer",
                 attachedFile
-                  ? "bg-navy-100 text-navy-900 border border-navy-300 shadow-2xs"
+                  ? "bg-soft-rose text-deep-emerald border border-rosewood shadow-2xs"
                   : "bg-surface-muted/90 text-carbon-700 hover:bg-surface-muted hover:text-carbon-900 border border-border/80 active:scale-95 shadow-2xs",
                 (disabled || isParsingFile) && "opacity-40 pointer-events-none cursor-not-allowed"
               )}
