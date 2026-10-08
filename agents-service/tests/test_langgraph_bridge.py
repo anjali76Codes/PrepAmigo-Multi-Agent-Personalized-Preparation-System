@@ -81,6 +81,75 @@ def test_step_event_type_is_chosen_from_the_step_name():
     assert step_events == [(EventType.RESEARCHING, {"agent": "research", "step": "execute_searches", "status": "completed"})]
 
 
+def _single_specialist_graph(specialist):
+    from langgraph.graph import END, START, StateGraph
+
+    from graph.state import AgentState
+
+    async def supervisor(state):
+        return {"next_agent": "chat"}
+
+    builder = StateGraph(AgentState)
+    builder.add_node("supervisor", supervisor)
+    builder.add_node("chat", specialist)
+    builder.add_edge(START, "supervisor")
+    builder.add_edge("supervisor", "chat")
+    builder.add_edge("chat", END)
+    return builder.compile()
+
+
+def test_tool_lifecycle_steps_become_tool_call_events():
+    """invoke_tool_with_events' running/completed pair arrives as two TOOL_CALL
+    events sharing a tool_call_id, even for a tool named like a research step."""
+    from langchain_core.messages import AIMessage
+
+    from graph.events import invoke_tool_with_events
+
+    def serpapi_search(query: str) -> dict:
+        return {"source": "serpapi", "organic_results": [{}, {}, {}]}
+
+    async def specialist(state):
+        await invoke_tool_with_events(serpapi_search, {"query": "acme interviews"}, agent="research")
+        return {"messages": [AIMessage(content="done")]}
+
+    events = collect(_single_specialist_graph(specialist))
+
+    tool_events = [payload for kind, payload in events if kind == EventType.TOOL_CALL]
+    assert [p["status"] for p in tool_events] == ["running", "completed"]
+    running, completed = tool_events
+    assert running["tool"] == completed["tool"] == "serpapi_search"
+    assert running["step"] == "tool_serpapi_search"
+    assert running["tool_call_id"] and running["tool_call_id"] == completed["tool_call_id"]
+    assert running["query"] == completed["query"] == "acme interviews"
+    assert running["message"] == "Tool serpapi_search running: acme interviews"
+    assert completed["result_count"] == 3
+    assert "duration_ms" in completed
+    # no tool event leaks out under the old coarse type
+    assert not any(kind == EventType.RESEARCHING and p.get("step", "").startswith("tool_") for kind, p in events)
+
+
+def test_a_failed_tool_is_a_failed_tool_call_not_a_failed_run():
+    from langchain_core.messages import AIMessage
+
+    from graph.events import invoke_tool_with_events
+
+    def flaky_fetch(query: str) -> dict:
+        raise RuntimeError("upstream 503")
+
+    async def specialist(state):
+        try:
+            await invoke_tool_with_events(flaky_fetch, {"query": "x"}, agent="research")
+        except RuntimeError:
+            pass
+        return {"messages": [AIMessage(content="done")]}
+
+    events = collect(_single_specialist_graph(specialist))
+
+    failed = [p for kind, p in events if kind == EventType.TOOL_CALL and p["status"] == "failed"]
+    assert len(failed) == 1 and failed[0]["error"] == "upstream 503"
+    assert events[-1][0] == EventType.COMPLETED
+
+
 def test_a_failed_step_is_progress_not_a_failed_run():
     """A failed step or tool (one of several parallel searches) is reported
     with status "failed" under its step's event type; only a failed run is

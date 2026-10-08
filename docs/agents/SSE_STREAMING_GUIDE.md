@@ -76,25 +76,34 @@ provided by the agent, including lifecycle values (`running`, `completed`,
 details (for example `message`, `tool_timings_ms`, or `result`) remain alongside
 those standard fields.
 
-Tool events use the runtime tool name for their step and payload fields, so
-instrumentation does not need a second list of tool names. For a web search,
-the same event shape reports the actual operation and bounded result metadata:
+Every tool invocation is its own `tool_call` event type (step `tool_<tool name>`),
+using the runtime tool name, so instrumentation does not need a second list of
+tool names. One call emits `status: "running"` then `"completed"` or `"failed"`;
+`payload.tool_call_id` pairs them, since parallel calls of the same tool
+interleave (calls made through the LLM's own tool-calling loop carry the
+model's tool-call id):
 
 ```json
-{"runId":"run-123","type":"researching","timestamp":1791112345678,"payload":{"agent":"research","step":"tool_search_technical_docs","status":"running","tool":"search_technical_docs","query":"dynamic programming","limit":12,"message":"Tool search_technical_docs running."}}
-{"runId":"run-123","type":"researching","timestamp":1791112348901,"payload":{"agent":"research","step":"tool_search_technical_docs","status":"completed","tool":"search_technical_docs","source":"serpapi","result_count":8,"duration_ms":742,"message":"Tool search_technical_docs returned 8 results."}}
+{"runId":"run-123","type":"tool_call","timestamp":1791112345678,"payload":{"agent":"research","step":"tool_search_technical_docs","status":"running","tool":"search_technical_docs","tool_call_id":"4ff48ae7f069","query":"dynamic programming","limit":12,"message":"Tool search_technical_docs running: dynamic programming"}}
+{"runId":"run-123","type":"tool_call","timestamp":1791112348901,"payload":{"agent":"research","step":"tool_search_technical_docs","status":"completed","tool":"search_technical_docs","tool_call_id":"4ff48ae7f069","query":"dynamic programming","limit":12,"source":"serpapi","result_count":8,"duration_ms":742,"message":"Tool search_technical_docs returned 8 results."}}
 ```
 
 Progress reports tool names, query context, counts, and timing. It does not
 stream hidden model reasoning or full raw search results. A failed tool is a
-non-terminal `researching`/`processing` event with `payload.status: "failed"`;
+non-terminal `tool_call` event with `payload.status: "failed"` and `error`;
 the SSE `failed` event type is reserved for a failed run.
+
+The backend relays each event as `event: <type>`, so an `EventSource` consumer
+must register a listener per type, `tool_call` included, or those frames are
+dropped silently. `frontend/src/lib/agentStream/toolCall.ts` (`toolCallText`)
+turns a `tool_call` payload into a one-line status for the UI.
 
 | Event Type      | Purpose                                                        |
 | :-------------- | :------------------------------------------------------------- |
 | `thinking`      | Supervisor / router evaluating intent and planning next steps. |
 | `calling_agent` | Handoff to a specialist agent (e.g., flight booking, hotels).  |
-| `researching`   | Tool execution (e.g. Google Flights, SerpApi, DB search).      |
+| `researching`   | Research-stage progress (searches running, results merged).    |
+| `tool_call`     | One tool invocation: running, then completed/failed (non-terminal). |
 | `processing`    | Safety checks, guardrails, policy validation.                  |
 | `structuring`   | Synthesizing results and structuring final response payload.   |
 | `completed`     | Terminal event containing final output data.                   |

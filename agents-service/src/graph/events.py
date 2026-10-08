@@ -16,6 +16,7 @@ import asyncio
 import inspect
 import json
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Literal
 
@@ -137,6 +138,9 @@ def _emit_tool_state(
     payload: dict[str, Any] | None = None,
 ) -> None:
     details = {"tool": tool_name, **(payload or {})}
+    subject = details.get("query") or details.get("topic") or details.get("company_name")
+    if status == "running" and isinstance(subject, str) and subject:
+        details.setdefault("message", f"Tool {tool_name} running: {subject[:120]}")
     details.setdefault("message", f"Tool {tool_name} {status}.")
     emit_to_graph_stream(make_event(agent, f"tool_{tool_name}", status, details))
 
@@ -163,7 +167,8 @@ async def invoke_tool_with_events(
 ) -> tuple[Any, dict[str, Any]]:
     """Invoke a tool and emit generic lifecycle events using its runtime name."""
     name = _tool_name(tool, fallback_name)
-    input_summary = _tool_input_summary(tool_input)
+    # pairs this call's running/completed/failed events, as parallel calls of one tool interleave
+    input_summary = {**_tool_input_summary(tool_input), "tool_call_id": uuid.uuid4().hex[:12]}
     _emit_tool_state(agent, name, "running", input_summary)
     started = time.perf_counter()
 
@@ -196,7 +201,7 @@ async def invoke_tool_with_events(
     duration_ms = round((time.perf_counter() - started) * 1000, 1)
     result_object = _tool_result_object(result)  # parsed once: tools may return JSON strings
     result_summary = _tool_result_summary(result_object)
-    details = {**result_summary, "duration_ms": duration_ms}
+    details = {**input_summary, **result_summary, "duration_ms": duration_ms}
     failure = result_object.get("error") if result_object else None
     if not failure and result_object:
         metadata = result_object.get("search_metadata")

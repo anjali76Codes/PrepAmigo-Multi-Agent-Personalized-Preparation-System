@@ -60,6 +60,7 @@ The template is `backend/.env.example`.
 - `JWT_SECRET` must be private and consistent with the secret used to sign backend sessions. In production, Node auth requires a valid token. The local development middleware accepts requests without a token only when `NODE_ENV` is not `production`.
 - `GOOGLE_CLIENT_ID` is needed for Google sign-in. Leave optional provider keys blank when not using those providers.
 - `SERPAPI_API_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_BASE_URL` control the Node-side Job Intelligence/LLM providers.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `ENABLE_DAILY_DIGEST`, and `DAILY_DIGEST_HOUR` configure the morning digest email. Email is off while `SMTP_HOST` is blank. See [EMAIL_NOTIFICATIONS_SETUP.md](EMAIL_NOTIFICATIONS_SETUP.md) for where to get credentials.
 
 The backend starts MongoDB connection initialization in `src/index.ts` through `src/config/db.ts`. Planning models are registered through `src/models/index.ts` before the connection is used. MongoDB must be available before the backend can serve data-backed requests.
 

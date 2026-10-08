@@ -7,3 +7,4 @@ export type {
 } from "./types";
 export { AgentStreamClient } from "./agentStreamClient";
 export { useAgentStream } from "./useAgentStream";
+export { toolCallText, toolLabel } from "./toolCall";

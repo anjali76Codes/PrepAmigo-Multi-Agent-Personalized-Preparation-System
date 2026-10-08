@@ -25,6 +25,22 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
   OPENAI_BASE_URL: z.string().optional(),
   LLM_PROVIDER: z.string().default("gemini"),
+
+  // SMTP for outbound email (morning digest, etc). Blank SMTP_HOST disables sending.
+  SMTP_HOST: z.string().optional().default(""),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z.string().optional().transform((value) =>
+    value === undefined ? false : ["true", "1", "yes", "on"].includes(value.trim().toLowerCase()),
+  ),
+  SMTP_USER: z.string().optional().default(""),
+  SMTP_PASS: z.string().optional().default(""),
+  MAIL_FROM: z.string().optional().default("PrepAmigo <no-reply@prepamigo.app>"),
+
+  // Morning task-digest email + its matching dashboard notification.
+  ENABLE_DAILY_DIGEST: z.string().optional().transform((value) =>
+    value === undefined ? true : ["true", "1", "yes", "on"].includes(value.trim().toLowerCase()),
+  ),
+  DAILY_DIGEST_HOUR: z.coerce.number().min(0).max(23).default(7),
 });
 
 const _env = envSchema.safeParse(process.env);
