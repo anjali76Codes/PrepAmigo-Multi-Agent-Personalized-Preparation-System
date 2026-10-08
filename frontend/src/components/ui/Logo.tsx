@@ -10,7 +10,7 @@ export function Logo({ className, compact = false, tone = 'default', ...props }:
   const isInverse = tone === 'inverse';
   return (
     <div className={cn('flex items-center gap-2 select-none', className)} {...props}>
-      <div className={cn("relative flex h-15 w-15 items-center justify-center rounded-full shadow-pop overflow-hidden", isInverse ? "bg-chrome text-chrome" : "bg-carbon-900 text-white")}>
+      <div className={cn("relative flex h-15 w-15 items-center justify-center rounded-full shadow-pop overflow-hidden", isInverse ? "bg-chrome text-chrome" : "bg-soft-rose text-white")}>
         {/* <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
