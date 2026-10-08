@@ -222,8 +222,9 @@ export function ResourceChat() {
         </div>
       </div>
 
-      <div className="bg-bg px-4 pb-4 pt-2 shrink-0">
-        <div className="max-w-4xl mx-auto">
+      {/* Floating Chat Input at the bottom */}
+      <div className="bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-5 pt-3 shrink-0">
+        <div className="max-w-4xl mx-auto shadow-lg rounded-3xl">
           <ChatInput onSend={handleSend} disabled={busy} placeholder="Ask about your resources..." />
         </div>
       </div>

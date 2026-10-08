@@ -248,6 +248,7 @@ export function Chat() {
           },
         },
         threadId,
+        // Chat uploaded file text supersedes stored profile resume
         attachedFile?.text || user?.profile?.resume_text
       );
     } catch (err: any) {

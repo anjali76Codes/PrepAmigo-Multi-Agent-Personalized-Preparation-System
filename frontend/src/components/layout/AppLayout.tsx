@@ -1,5 +1,5 @@
 import { useOutlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "../ui/Logo";
 import { Icon } from "../ui/Icon";
@@ -49,7 +49,22 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const outlet = useOutlet();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("prepamigo_sidebar_open");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("prepamigo_sidebar_open", String(isSidebarOpen));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [isSidebarOpen]);
 
   // Authentication guard controlled via featureFlags (VITE_ENABLE_AUTH)
   if (featureFlags.enableAuth) {
@@ -96,19 +111,70 @@ export function AppLayout() {
         className="hidden md:flex flex-col bg-carbon-900 text-on-chrome relative overflow-hidden z-10"
       >
         <div
-          className={`h-16 flex items-center shrink-0 transition-all ${isSidebarOpen ? "px-6 justify-between gap-2" : "justify-center"}`}
+          className={`h-16 flex items-center shrink-0 transition-all ${
+            isSidebarOpen ? "px-5 justify-between gap-2" : "justify-center px-2"
+          }`}
         >
-          {isSidebarOpen && (
-            <div className=" transition-opacity text-sm">
-              <Logo tone="inverse" />
-            </div>
+          {isSidebarOpen ? (
+            <>
+              <div className="transition-opacity text-sm">
+                <Logo tone="inverse" />
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+                className="p-2 text-on-chrome-muted hover:text-on-chrome hover:bg-white/10 rounded-xl transition-all duration-150 flex items-center justify-center shrink-0 cursor-pointer active:scale-95"
+              >
+                {/* Sleek modern sidebar collapse icon (ChatGPT style) */}
+                <svg
+                  className="w-6 h-6 pointer-events-none select-none shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="18" height="18" x="3" y="3" rx="2" />
+                  <path d="M9 3v18" />
+                  <path d="m16 15-3-3 3-3" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            /* When collapsed: single mascot icon button that swaps to the expand icon on hover */
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+              className="group relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-95"
+            >
+              {/* Mascot image - fades out on hover */}
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-chrome text-chrome shadow-pop overflow-hidden transition-all duration-200 group-hover:opacity-0 group-hover:scale-90">
+                <Mascot variant="nosy.png" style={{ width: "auto", height: "auto" }} />
+              </div>
+
+              {/* Sleek expand icon overlay - circular and matches the mascot avatar */}
+              <div className="absolute inset-0 flex items-center justify-center text-on-chrome opacity-0 scale-90 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 border border-white/20 text-on-chrome shadow-md">
+                  <svg
+                    className="w-6 h-6 pointer-events-none select-none shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M9 3v18" />
+                    <path d="m14 9 3 3-3 3" />
+                  </svg>
+                </div>
+              </div>
+            </button>
           )}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-white/10 rounded-xl transition-colors flex items-center justify-center"
-          >
-            <Icon name="menu" tone="inverse" className="text-2xl" />
-          </button>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">

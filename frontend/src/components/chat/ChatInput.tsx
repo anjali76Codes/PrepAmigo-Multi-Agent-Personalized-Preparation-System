@@ -3,6 +3,7 @@ import { cn } from "../../utils/utils";
 import { AnimatePresence } from "framer-motion";
 import { Icon } from "../ui/Icon";
 import { SLASH_TEMPLATES, TemplatePicker, MUTED_BTN, type SlashTemplate } from "./TemplatePicker";
+import { extractTextFromFile } from "../../lib/resumeParser";
 
 // ─── Native SVG Icons (reliable, zero flicker, consistent fill/stroke) ────────
 
@@ -318,44 +319,11 @@ export function ChatInput({
     }
 
     const name = file.name;
-    const lower = name.toLowerCase();
 
     setIsParsingFile(true);
     try {
-      if (lower.endsWith(".txt") || lower.endsWith(".md")) {
-        const text = await file.text();
-        setAttachedFile({ name, size: file.size, text });
-      } else if (lower.endsWith(".pdf") || lower.endsWith(".docx")) {
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const res = reader.result as string;
-            const base64 = res.split(",")[1] || "";
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const base64 = await base64Promise;
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const response = await fetch(`${apiUrl}/api/agent/parse-resume`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: name, base64Data: base64 }),
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({ error: "Failed to extract text from file" }));
-          throw new Error(errData.error || `Server returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        setAttachedFile({ name, size: file.size, text: data.text });
-      } else {
-        setFileError("Unsupported format. Please upload .txt, .md, .pdf, or .docx.");
-      }
+      const text = await extractTextFromFile(file);
+      setAttachedFile({ name, size: file.size, text });
     } catch (err: any) {
       console.error("Resume file extraction failed:", err);
       setFileError(err.message || "Failed to process resume file.");

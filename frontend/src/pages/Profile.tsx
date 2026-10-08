@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { useAuth, type ExperienceLevel } from '../hooks/useAuth';
+import { extractTextFromFile } from '../lib/resumeParser';
 
 export function Profile() {
   const shouldReduceMotion = useReducedMotion();
@@ -73,40 +74,9 @@ export function Profile() {
     setIsUploadingResume(true);
 
     try {
-      if (ext === 'txt' || ext === 'md') {
-        const text = await file.text();
-        setResumeFilename(name);
-        setResumeText(text);
-      } else {
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const res = reader.result as string;
-            const base64 = res.split(',')[1] || '';
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const base64 = await base64Promise;
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const response = await fetch(`${apiUrl}/api/agent/parse-resume`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: name, base64Data: base64 }),
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({ error: 'Failed to extract text' }));
-          throw new Error(errData.error || `Server returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        setResumeFilename(name);
-        setResumeText(data.text || '');
-      }
+      const extractedText = await extractTextFromFile(file);
+      setResumeFilename(name);
+      setResumeText(extractedText);
     } catch (err: any) {
       console.error('Resume upload failed:', err);
       setResumeError(err.message || 'Failed to process resume file.');
