@@ -19,6 +19,7 @@ export interface JourneyAction {
 }
 
 export interface AgentJourneyProps extends Partial<JourneyConfig> {
+    sprintId?: string;
     variant?: JourneyVariant;
     steps?: JourneyStep[];
     activeIndex?: number;
@@ -54,6 +55,7 @@ export function AgentJourney(props: AgentJourneyProps) {
     const variant = props.variant || 'chat';
     const config = { ...JOURNEY_PRESETS[variant], ...props };
     const {
+        sprintId,
         nodeSize,
         labelSize,
         showMascot,
@@ -389,6 +391,11 @@ export function AgentJourney(props: AgentJourneyProps) {
                     return (
                         <div
                             key={i}
+                            data-reward-node={
+                                sprintId && levelIds?.[i]
+                                    ? `${sprintId}:${levelIds[i]}`
+                                    : undefined
+                            }
                             className={cn(
                                 "absolute flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 group",
                                 interactive && "cursor-pointer focus-visible:ring-2 focus-visible:outline-none ring-chrome ring-offset-4 rounded-full"
@@ -581,10 +588,30 @@ export function ChatJourney(props: Omit<AgentJourneyProps, 'variant'>) {
     return <AgentJourney variant="chat" {...props} />;
 }
 
-export function SprintMap({ nodeStates, onNodeClick, levelIds, levelTitles, className }: {
-    sprintId?: string; nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[];
-    onNodeClick?: (levelId: string, index: number) => void; levelIds?: string[];
-    levelTitles?: string[]; className?: string;
+export function SprintMap({
+    sprintId,
+    nodeStates,
+    onNodeClick,
+    levelIds,
+    levelTitles,
+    className,
+}: {
+    sprintId?: string;
+    nodeStates: ('completed' | 'current' | 'locked' | 'upcoming')[];
+    onNodeClick?: (levelId: string, index: number) => void;
+    levelIds?: string[];
+    levelTitles?: string[];
+    className?: string;
 }) {
-    return <AgentJourney variant="sprint" nodeStates={nodeStates} onNodeClick={onNodeClick} levelIds={levelIds} levelTitles={levelTitles} className={className} />;
+    return (
+        <AgentJourney
+            variant="sprint"
+            sprintId={sprintId}
+            nodeStates={nodeStates}
+            onNodeClick={onNodeClick}
+            levelIds={levelIds}
+            levelTitles={levelTitles}
+            className={className}
+        />
+    );
 }

@@ -1,61 +1,83 @@
+import type { ReactNode } from "react";
 import { Mascot } from "../ui/Mascot";
+import { Icon } from "../ui/Icon";
 
 interface Props {
     tab: "flashcards" | "quizzes";
-    total: number;      // number of quizzes or decks
-    completed: number;  // how many have is_completed === true
-    items: number;      // total questions or cards across all sets
+    total: number;
+    completed: number;
+    items: number;
+}
+
+const COPY = {
+    flashcards: {
+        icon: "albums",
+        mascot: "Thinking.png",
+        kicker: "Flashcard review",
+        title: "Master your concepts",
+        text: "Review important concepts from your preparation roadmap.",
+        unit: "Decks",
+    },
+    quizzes: {
+        icon: "help-circle",
+        mascot: "Motivated.png",
+        kicker: "Knowledge check",
+        title: "See how much you know",
+        text: "Practice questions based on the topics you're preparing for.",
+        unit: "Quizzes",
+    },
+};
+
+function Stat({ value, label, className = "min-w-[82px]", children }: { value?: ReactNode; label: string; className?: string; children?: ReactNode }) {
+    return (
+        <div className={`bg-bg border border-border/70 rounded-2xl px-4 py-2.5 ${className}`}>
+            {children ?? <div className="text-lg font-extrabold text-carbon-900 leading-none">{value}</div>}
+            <div className="text-[11px] font-semibold text-carbon-500 mt-1">{label}</div>
+        </div>
+    );
 }
 
 export function Hero({ tab, total, completed, items }: Props) {
-    const flashcards = tab === "flashcards";
+    const c = COPY[tab];
     const percent = total ? Math.round((completed / total) * 100) : 0;
 
-    const stats = [
-        { label: flashcards ? "Decks" : "Quizzes", value: total },
-        { label: "Completed", value: `${completed}/${total}` },
-        { label: flashcards ? "Flashcards" : "Questions", value: items },
-    ];
-
     return (
-        <div className="bg-white border border-border/80 rounded-2xl p-5 sm:p-6 mb-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-            <div className="flex items-center gap-5">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-lavender-100 flex items-center justify-center shrink-0 border border-chrome/10 overflow-hidden">
-                    <Mascot variant={flashcards ? "Thinking.png" : "Motivated.png"} size="md" style={{ width: 64, height: 64 }} />
-                </div>
-                <div>
-                    <h2 className="text-lg sm:text-xl font-extrabold text-carbon-900 tracking-tight">
-                        {flashcards ? "Master Concepts with Flashcards" : "Test Your Knowledge"}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-carbon-600 mt-0.5 max-w-md">
-                        {flashcards ? "Spaced-repetition cards tailored to your sprint topics." : "Interactive scenario-based quizzes generated from your syllabus."}
-                    </p>
-                </div>
-            </div>
+        <div className="relative overflow-hidden bg-surface border border-border/70 rounded-3xl p-5 sm:p-6 shadow-card mb-6">
+            <div className="absolute -right-12 -top-16 w-40 h-40 rounded-full bg-beige-100/50 blur-3xl pointer-events-none" />
 
-            <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
-                <div className="flex items-center gap-2.5">
-                    {stats.map((s) => (
-                        <div key={s.label} className="bg-bg border border-border/70 rounded-xl px-3.5 py-2 text-center min-w-[76px]">
-                            <div className="text-base font-extrabold text-carbon-900 leading-tight">{s.value}</div>
-                            <div className="text-[10px] font-bold text-carbon-500 uppercase tracking-wider mt-0.5">{s.label}</div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-lavender-100 border border-border/70 flex items-center justify-center shrink-0 overflow-hidden">
+                        <Mascot variant={c.mascot} size="md" style={{ width: 68, height: 68 }} />
+                    </div>
+
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <Icon name={c.icon} className="text-beige-500" />
+                            <span className="text-xs font-semibold text-cocoa">{c.kicker}</span>
                         </div>
-                    ))}
+                        <h2 className="text-lg sm:text-xl font-extrabold text-carbon-900 tracking-tight">{c.title}</h2>
+                        <p className="text-xs sm:text-sm text-carbon-500 mt-1 max-w-md">{c.text}</p>
+                    </div>
                 </div>
 
-                <div className="bg-bg border border-border/70 rounded-xl px-4 py-2 flex flex-col justify-center min-w-[120px]">
-                    <div className="flex justify-between items-center text-xs font-bold text-carbon-700 mb-1">
-                        <span className="text-[10px] uppercase tracking-wider text-carbon-500">Progress</span>
-                        <span>{percent}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-border/60 overflow-hidden">
-                        <div
-                            className="h-full bg-chrome rounded-full transition-all duration-500"
-                            style={{ width: `${percent}%` }}
-                        />
-                    </div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                    <Stat value={total} label={c.unit} />
+                    <Stat value={`${completed}/${total}`} label="Completed" />
+                    <Stat value={items} label={tab === "flashcards" ? "Cards" : "Questions"} />
+                    <Stat label="Progress" className="min-w-[120px]">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-extrabold text-chrome">{percent}%</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-border/60 overflow-hidden">
+                            <div
+                                className="h-full bg-chrome rounded-full transition-all duration-500"
+                                style={{ width: `${percent}%` }}
+                            />
+                        </div>
+                    </Stat>
                 </div>
             </div>
         </div>
     );
-}
+}
