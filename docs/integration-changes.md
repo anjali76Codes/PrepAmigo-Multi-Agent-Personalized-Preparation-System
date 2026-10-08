@@ -3,7 +3,7 @@
 > **Document Version:** 1.0.0  
 > **Date:** October 6, 2026  
 > **Branch:** `rijhan-integration`  
-> **Status:** Completed & Verified  
+> **Status:** Integration snapshot recorded; some screens and flows still use sample data. See the [repository README](../README.md) for current local setup and service defaults.
 
 ---
 
@@ -11,7 +11,7 @@
 
 This document provides an exhaustive, authoritative record of all architectural changes, additions, schema migrations, bug fixes, and file removals performed during the end-to-end integration of **PrepAmigo**:
 
-1. **Frontend (React 19 + Vite + Tailwind CSS)**: Completely replaced hardcoded mock datasets with live API integrations, centralized authentication state, implemented first-time candidate onboarding, streamlined chat-to-roadmap redirection, and eliminated obsolete prototype routes.
+1. **Frontend (React 19 + Vite + Tailwind CSS)**: Connected core preparation flows to live API integrations, centralized authentication state, implemented first-time candidate onboarding, streamlined chat-to-roadmap redirection, and eliminated obsolete prototype routes. Some screens and flows continue to use sample data.
 2. **Backend Gateway (Node.js + Express + TypeScript + Mongoose)**: Decoupled database operations from the Python agent runtime, resolved sprint-to-day relational persistence bugs, introduced in-flight concurrency locks, added profile management endpoints, and automated candidate resume auto-ingestion.
 3. **Agent Service (Python 3.11 + FastAPI + LangGraph)**: Stripped out direct MongoDB dependencies to achieve a 100% stateless architecture, resolved the hardcoded 45-day duration constraint with dynamic natural-language extraction, and ensured full end-to-end SSE telemetry over Redis.
 
@@ -29,7 +29,7 @@ flowchart TD
         StreamClient["AgentStreamClient (SSE Reader)"]
     end
 
-    subgraph Gateway ["Express Backend Gateway (:4000)"]
+    subgraph Gateway ["Express Backend Gateway (:3000)"]
         AuthRoutes["Auth & Profile Routes (/api/auth)"]
         AgentController["Agent Controller (/api/agent/run)"]
         PlanController["Plan Controller (/api/plans)"]
@@ -100,7 +100,7 @@ flowchart TD
   Prevents duplicate plan documents when Redis history replay and live pub/sub messages trigger `persistGeneratedPlan` concurrently.
 
 ### 3.4. Schema Enhancements
-- **[`backend/src/models/User.ts`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/backend/src/models/User.ts)**:
+- **[`backend/src/models/User.ts`](../backend/src/models/User.ts)**:
   - Added `resume_filename: { type: String, default: null }`
   - Added `resume_text: { type: String, default: null }` to `profile` subdocument.
 - **Normalized Resource References**: Inlined `normalizeReferenceType` to map agent resource types (`paper` $\rightarrow$ `article`, `video` $\rightarrow$ `video`, `book` $\rightarrow$ `book`, `documentation` $\rightarrow$ `documentation`) directly onto the `Reference` Mongoose subdocument schema.
@@ -130,12 +130,12 @@ flowchart TD
 
 ### 4.1. Centralized Auth Context
 - **Problem**: Auth state was duplicated across multiple hook instances (`useAuth.ts`), causing login state to fall out of sync after signup, preventing onboarding dialogs from opening.
-- **Solution**: Created a single-instance React Context provider in [`frontend/src/hooks/useAuth.ts`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/hooks/useAuth.ts):
+- **Solution**: Created a single-instance React Context provider in [`frontend/src/hooks/useAuth.ts`](../frontend/src/hooks/useAuth.ts):
   - Exposes `user`, `loading`, `setUser`, `updateProfile`, `logout`, and `refreshUser`.
-  - Wrapped around the entire component tree in [`frontend/src/App.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/App.tsx).
+  - Wrapped around the entire component tree in [`frontend/src/App.tsx`](../frontend/src/App.tsx).
 
 ### 4.2. Clean Public Landing Visits
-- Modified `GET /api/auth/me` in [`backend/src/auth/routes.ts`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/backend/src/auth/routes.ts):
+- Modified `GET /api/auth/me` in [`backend/src/auth/routes.ts`](../backend/src/auth/routes.ts):
   - Returns HTTP 200 `{ user: null }` when no JWT session cookie is present, eliminating browser console 401 error alerts on public routes (`/`, `/login`, `/signup`).
 
 ### 4.3. Profile Persistence Endpoint
@@ -144,12 +144,12 @@ flowchart TD
   - Atomically updates and returns the refreshed `User` object.
 
 ### 4.4. First-Time Candidate Onboarding
-- **[`frontend/src/components/auth/OnboardingDialog.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/components/auth/OnboardingDialog.tsx)** (New):
+- **[`frontend/src/components/auth/OnboardingDialog.tsx`](../frontend/src/components/auth/OnboardingDialog.tsx)** (New):
   - Full modal with role suggestion badges, experience level selector (`Student`, `Fresher`, `Experienced`), technical skills tags, and drag-and-drop resume upload with text parsing.
-- **[`frontend/src/components/layout/AppLayout.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/components/layout/AppLayout.tsx)**:
+- **[`frontend/src/components/layout/AppLayout.tsx`](../frontend/src/components/layout/AppLayout.tsx)**:
   - Scopes skip keys per user (`prepamigo_onboarding_skipped_${user.id || user.sub}`).
   - Automatically launches `OnboardingDialog` on login/signup if `!user.profile?.target_role`.
-- **[`frontend/src/pages/Auth.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/pages/Auth.tsx)**:
+- **[`frontend/src/pages/Auth.tsx`](../frontend/src/pages/Auth.tsx)**:
   - Immediately calls `setUser(data.user)` on email signup/login and Google Auth, enabling instant session activation without page reload.
 
 ### 4.5. Frontend Route Protection & Cross-Service Auth Passing
@@ -159,9 +159,9 @@ flowchart TD
     - Displays a non-blocking loading spinner while the session hydrates.
     - Automatically redirects unauthenticated guests to `/login` via `<Navigate to="/login" state={{ from: location }} replace />`.
 - **Landing Page & Chat Query Interception Buffer**:
-  - In [`frontend/src/pages/Home.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/pages/Home.tsx), if an unauthenticated visitor enters a query into the hero chat input, the system buffers the prompt to `sessionStorage.setItem("prepamigo_pending_query", trimmed)` and redirects to `/login`.
+  - In [`frontend/src/pages/Home.tsx`](../frontend/src/pages/Home.tsx), if an unauthenticated visitor enters a query into the hero chat input, the system buffers the prompt to `sessionStorage.setItem("prepamigo_pending_query", trimmed)` and redirects to `/login`.
   - Upon successful authentication or signup, the user is navigated to `/dashboard/chat`.
-  - [`frontend/src/pages/Chat.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/pages/Chat.tsx) reads the buffered query from `sessionStorage`, removes the session key, and auto-submits the prompt to initiate roadmap generation seamlessly.
+  - [`frontend/src/pages/Chat.tsx`](../frontend/src/pages/Chat.tsx) reads the buffered query from `sessionStorage`, removes the session key, and auto-submits the prompt to initiate roadmap generation seamlessly.
 - **API Request Authentication & Token Propagation**:
   - Every backend endpoint under `/api/plans/*`, `/api/sprints/*`, `/api/sprint-days/*`, `/api/progress/*`, and `/api/agent/*` is guarded with `requireAuth` middleware.
   - When the backend invokes the Python agent service via `/internal/agent/execute` or `/internal/agent/extract-resume`, `pythonAuthHeaders(req)` extracts the active session token (or signs a cryptographically verified JWT bearer token with `JWT_SECRET`) and forwards it in the `Authorization: Bearer <token>` header, securing the Python service endpoints against unauthorized calls.
@@ -179,26 +179,26 @@ flowchart TD
   2. The LLM extraction schema in `interview_prep_fields.py` only recognized `company`, `role`, and `location`.
   3. The backend gateway did not extract or pass `plan_days` in the execute payload.
 - **Solution**:
-  - **[`agents-service/src/tools/duration.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/tools/duration.py)** (New):
+  - **[`agents-service/src/tools/duration.py`](../agents-service/src/tools/duration.py)** (New):
     - `extract_duration_days(text)`: Parses days (`90 days`, `90-day`), months (`3 months` $\rightarrow 90$), and weeks (`6 weeks` $\rightarrow 42$) within bounds $[1, 365]$.
     - `resolve_plan_total_days(state, candidate_texts)`: Evaluates state, inputs, query, and recent conversation messages.
-  - **[`agents-service/src/streaming/runner.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/streaming/runner.py)**: Resolves `plan_days` from `query` or `workflow_text_input` and injects `inputs["plan_total_days"]`.
-  - **[`agents-service/src/agents/interview_prep_orchestrator.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/interview_prep_orchestrator.py)**:
+  - **[`agents-service/src/streaming/runner.py`](../agents-service/src/streaming/runner.py)**: Resolves `plan_days` from `query` or `workflow_text_input` and injects `inputs["plan_total_days"]`.
+  - **[`agents-service/src/agents/interview_prep_orchestrator.py`](../agents-service/src/agents/interview_prep_orchestrator.py)**:
     - `_prepare`: Retains `plan_total_days` across turns and clarification pauses.
     - `_run_planner`: Passes resolved `total_days` directly to `PlannerAgent.build_plan()`.
-  - **[`backend/src/agent/controller.ts`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/backend/src/agent/controller.ts)**:
+  - **[`backend/src/agent/controller.ts`](../backend/src/agent/controller.ts)**:
     - Added `extractPlanDays(query)` and passes `plan_days` in payloads to `/internal/agent/execute` in both `runAgentHandler` and `triggerInterviewPrep`.
 
 ### 5.2. Profile Resume Auto-Ingestion
 - In `backend/src/agent/controller.ts`, if the user has not explicitly attached a file in chat, the backend checks `User.findById(userId).select("profile.resume_text")` and automatically forwards the candidate's stored resume to the agent service.
 
 ### 5.3. Streamlined Chat Redirection
-- **[`frontend/src/components/chat/Messages.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/components/chat/Messages.tsx)**:
+- **[`frontend/src/components/chat/Messages.tsx`](../frontend/src/components/chat/Messages.tsx)**:
   - Replaced bulky mock cards with a compact completion redirect card:
     ```
     [✓ {Role} at {Company} plan ready!] [Go to Roadmap ->] [Calendar]
     ```
-- **[`frontend/src/pages/Chat.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/pages/Chat.tsx)**:
+- **[`frontend/src/pages/Chat.tsx`](../frontend/src/pages/Chat.tsx)**:
   - Added header bar with a live pulsing agent indicator and a **"New Plan"** reset button.
 
 ### 5.4. Removal of Obsolete Prototype Pages
@@ -209,7 +209,7 @@ flowchart TD
   - `frontend/src/components/preps/PrepOverview.tsx`
   - `frontend/src/components/preps/SkillGapMap.tsx`
   - `frontend/src/components/preps/AffectedTopics.tsx`
-- Unified all navigation exclusively to [`frontend/src/pages/Roadmap.tsx`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/frontend/src/pages/Roadmap.tsx), which now includes a **Multi-Plan Switcher** pill bar for users with multiple active preparation roadmaps.
+- Unified all navigation exclusively to [`frontend/src/pages/Roadmap.tsx`](../frontend/src/pages/Roadmap.tsx), which now includes a **Multi-Plan Switcher** pill bar for users with multiple active preparation roadmaps.
 
 ---
 

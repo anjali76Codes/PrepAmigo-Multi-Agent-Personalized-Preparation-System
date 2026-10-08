@@ -28,7 +28,7 @@ The loop exits when the LLM produces a response with no further tool calls.
 
 ## System Prompt
 
-Defined in [`agents-service/src/prompts/system_prompts.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/prompts/system_prompts.py) as `COMPANY_RESEARCH_PROMPT`.
+Defined in [`agents-service/src/prompts/system_prompts.py`](../../agents-service/src/prompts/system_prompts.py) as `COMPANY_RESEARCH_PROMPT`.
 
 Injected by `CompanyResearchAgent.__call__` as a `SystemMessage` prepended to the full conversation history on every turn. Key behavioral rules it enforces:
 
@@ -43,7 +43,7 @@ Injected by `CompanyResearchAgent.__call__` as a `SystemMessage` prepended to th
 
 ## The 2 External APIs
 
-All data comes through [`tools/company_research_tools.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/tools/company_research_tools.py) via the shared `serpapi_client`.
+All data comes through [`tools/company_research_tools.py`](../../agents-service/src/tools/company_research_tools.py) via the shared `serpapi_client`.
 
 ### 1. Google Search API — `search_company_overview`
 - **Engine:** `google`

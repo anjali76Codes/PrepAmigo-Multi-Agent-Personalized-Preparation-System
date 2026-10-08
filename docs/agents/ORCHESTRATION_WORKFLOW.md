@@ -4,7 +4,7 @@ This document provides a comprehensive technical architecture and data specifica
 1. End-to-end orchestration flow and architecture diagram.
 2. State passing mechanics, exact keys, and lifecycle within LangGraph `AgentState`.
 3. Agent-by-agent tasks, inputs, outputs, and exact SerpApi engines/parameters used.
-4. Downstream integration contract for the upcoming **Planner Agent** and **Data Parser Agent**.
+4. The integrated **Planner Agent** stage and the separate Markdown parser utility.
 
 ---
 
@@ -33,13 +33,12 @@ flowchart TD
         SG -->|skill_gaps & target context| RA["interview_prep_research (run_research)\nContentResearchAgent\nDeep dives per identified gap"]
     end
     
-    subgraph EvaluationStage ["Stage 4: Evaluation & State Consolidation"]
-        RA -->|researched_materials| Eval["interview_prep_evaluate (evaluate)\nReAct evaluation & final packaging"]
+    subgraph PlanningStage ["Stage 4: Study Plan"]
+        RA -->|researched_materials| Planner["interview_prep_plan (run_planner)\nPlannerAgent\nBuilds plan, sprints & sprint days"]
     end
     
-    subgraph FuturePipeline ["Stage 5: Downstream Synthesis (Planned)"]
-        Eval -.-> Planner["Planner Agent\n(Converts findings into Sprints & Calendar)"]
-        Planner -.-> DataParser["Data Parser Agent\n(Emits Roadmaps, Flashcards, Dashboards)"]
+    subgraph EvaluationStage ["Stage 5: Evaluation & State Consolidation"]
+        Planner --> Eval["interview_prep_evaluate (evaluate)\nReAct evaluation & final packaging"]
     end
     
     Eval --> SaveMem["save_memory -> END"]
@@ -91,7 +90,7 @@ AgentState
 ## 3. Agent Details & SerpApi Specifications
 
 ### 3.1 Company Research Agent
-* **File**: [`agents/company_research_agent.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/company_research_agent.py) (wrapped by [`CompanyResearchNode`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/company_research_node.py))
+* **File**: [`agents/company_research_agent.py`](../../agents-service/src/agents/company_research_agent.py) (wrapped by [`CompanyResearchNode`](../../agents-service/src/agents/company_research_node.py))
 * **Primary Task**: Conducts deep background research into the target company's engineering blog, infrastructure choices, system architecture, company culture, leadership, financials, and recent news.
 * **SerpApi Engines & APIs Used**:
   1. **Google Web Search (`engine: "google"`)**
@@ -113,7 +112,7 @@ AgentState
 ---
 
 ### 3.2 Job Intelligence Agent
-* **File**: [`agents/job_intelligence_agent.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/job_intelligence_agent.py)
+* **File**: [`agents/job_intelligence_agent.py`](../../agents-service/src/agents/job_intelligence_agent.py)
 * **Primary Task**: Analyzes live hiring market postings for the requested role and company to identify recurring technical skills, qualifications, seniority distributions, and common responsibilities.
 * **SerpApi Engines & APIs Used**:
   1. **Google Jobs Search (`engine: "google_jobs"`)**
@@ -133,7 +132,7 @@ AgentState
 ---
 
 ### 3.3 Skill Gap Agent
-* **File**: [`agents/skill_gap_agent.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/skill_gap_agent.py) (wrapped by [`SkillGapNode`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/skill_gap_node.py))
+* **File**: [`agents/skill_gap_agent.py`](../../agents-service/src/agents/skill_gap_agent.py) (wrapped by [`SkillGapNode`](../../agents-service/src/agents/skill_gap_node.py))
 * **Primary Task**: Performs comparative analysis between candidate capabilities (parsed from resume text) and requirements collected by Company Research and Job Intelligence.
 * **SerpApi Usage**: **None** (pure LLM reasoning and deterministic scoring).
 * **Internal Execution Pipeline**:
@@ -147,7 +146,7 @@ AgentState
 ---
 
 ### 3.4 Content Research Agent
-* **File**: [`agents/research_agent.py`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/research_agent.py) (wrapped by [`ResearchNode`](file:///C:/project/PrepAmigo-Multi-Agent-Personalized-Preparation-System/agents-service/src/agents/research_node.py))
+* **File**: [`agents/research_agent.py`](../../agents-service/src/agents/research_agent.py) (wrapped by [`ResearchNode`](../../agents-service/src/agents/research_node.py))
 * **Primary Task**: For every gap topic passed in `state["skill_gaps"]`, compiles a curated learning module containing verified documentation links, books, research papers, video tutorials, and interactive exercises.
 * **SerpApi Engines & APIs Used**:
   1. **Google Technical Documentation Search (`engine: "google"`)**
@@ -185,29 +184,11 @@ AgentState
 
 ---
 
-## 4. Downstream Contract: Planner Agent & Data Parser
+## 4. Planner stage and parser utility
 
-The orchestration pipeline guarantees that once Stage 4 (`interview_prep_evaluate`) completes, the LangGraph state contains all prerequisites for the **Planner Agent** and **Data Parser Agent**:
+The integrated planner runs after research and before final evaluation. It reads the interview-prep context, skill-gap priorities, and researched materials, then creates a structured study plan in the backend's plan/sprint/sprint-day shape. The output is added to the graph state as `study_plan`; it may also be written to the configured plan output directory and synchronized to the backend.
 
-```
-State available to Planner Agent:
-├── task_context["company_profile"]   ──► Company context, interview culture, engineering stack
-├── task_context["job_intelligence"]  ──► Role requirements, responsibility weights
-├── task_context["skill_gap"]         ──► Candidate readiness score, missing skills
-└── state["researched_materials"]     ──► Verified documentation, tutorials, textbooks, exercises
-```
-
-### Planned Downstream Tasks:
-1. **Planner Agent**:
-   * Reads `task_context["skill_gap"]["priority_gaps"]` and `state["researched_materials"]`.
-   * Allocates learning topics into realistic study sprints (Day 1..N), daily tasks, and revision checkpoints.
-2. **Data Parser Agent**:
-   * Transforms planner schedules into user-facing schemas:
-     * **Roadmap**: Day-by-day objectives, time estimates, reference links.
-     * **Calendar**: Event schedule, reminders, rescheduling handlers.
-     * **Resource Pack**: Curated links and video transcripts.
-     * **Assessments**: Weekly quizzes and flashcards generated directly from `researched_materials`.
-     * **Progress Dashboard**: Gamified XP, milestones, and badge progression.
+The **Markdown Plan Parser** is a separate developer utility, not a node in this LangGraph workflow. It reads local Markdown plan files and produces a validated JSON payload; see the [Parser Agent guide](PARSER_AGENT_GUIDE.md) for its inputs, outputs, and limitations.
 
 ---
 
@@ -216,4 +197,4 @@ State available to Planner Agent:
 | Mode | Trigger in `.env` | Behavior |
 |---|---|---|
 | **Live Production** | `SERPAPI_ENABLED=true`<br>`SERPAPI_API_KEY=...` | Live queries to Google, Google News, Google Jobs, Google Scholar, and YouTube. All successful responses cached locally in `.data/research_cache/` to avoid burning duplicate credits. |
-| **Offline Development** | `SERPAPI_ENABLED=false` | Loads pre-recorded JSON fixture from `SERPAPI_DUMMY_DATA_PATH=serpapi_fixtures.example.json`. Bypasses all live network calls, enabling free and offline end-to-end testing. |
+| **Offline Development** | `SERPAPI_ENABLED=false` | Loads pre-recorded JSON fixture from `SERPAPI_DUMMY_DATA_PATH` (default `.data/serpapi_fixtures.json` relative to `agents-service/`). Avoids SerpApi requests; model calls and some non-SerpApi data sources may still be live. |
