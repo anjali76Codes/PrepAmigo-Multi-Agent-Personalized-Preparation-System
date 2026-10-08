@@ -111,8 +111,8 @@ Code: `backend/src/services/mailer.ts` (SMTP), `backend/src/services/dailyDigest
 ## 4. Check that it works
 
 1. Start the backend and look for `Daily digest job scheduled (local hour 7, checked hourly).` in the log.
-2. To test without waiting for the digest hour, temporarily set `DAILY_DIGEST_HOUR` to the current hour and restart. The job fires at minute 5 of the hour.
-3. Check that the email arrived (in the Mailpit inbox, if you used Option A), and that `GET /api/notifications` (or the Notifications page) shows a `daily-digest` entry.
+2. Send a digest immediately with `POST /api/notifications/test-digest`. See [EMAIL_TESTING.md](EMAIL_TESTING.md).
+3. Check that the email arrived (in the Mailpit inbox, if you used Option A), and that the Notifications page shows a `daily-digest` entry.
 
 ## 5. Troubleshooting
 

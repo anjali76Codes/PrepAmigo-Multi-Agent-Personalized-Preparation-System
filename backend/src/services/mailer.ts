@@ -19,6 +19,10 @@ function getTransporter(): Transporter | null {
       port: config.SMTP_PORT,
       secure: config.SMTP_SECURE,
       auth: config.SMTP_USER ? { user: config.SMTP_USER, pass: config.SMTP_PASS } : undefined,
+      // Nodemailer's defaults (2 min connect, 10 min idle) let a bad host stall a request or the digest job.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   }
   return transporter;
@@ -31,15 +35,21 @@ export interface SendMailInput {
   text: string;
 }
 
-/** Sends an email; returns false (and logs) instead of throwing when SMTP is unconfigured or the send fails. */
-export async function sendMail(input: SendMailInput): Promise<boolean> {
+export interface SendMailResult {
+  delivered: boolean;
+  /** Why it wasn't delivered: SMTP unconfigured, or the SMTP server's error (e.g. "535 ... Username and Password not accepted"). */
+  error?: string;
+}
+
+/** Sends an email; reports failure (and logs it) instead of throwing. */
+export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
   const client = getTransporter();
-  if (!client) return false;
+  if (!client) return { delivered: false, error: "SMTP_HOST is not set; outbound email is disabled." };
   try {
     await client.sendMail({ from: config.MAIL_FROM, ...input });
-    return true;
+    return { delivered: true };
   } catch (error) {
     logger.error("Failed to send email", { error, to: input.to });
-    return false;
+    return { delivered: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
