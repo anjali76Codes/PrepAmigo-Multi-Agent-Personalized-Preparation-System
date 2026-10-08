@@ -7,3 +7,5 @@ export { JobPostingRaw } from "./JobPostingRaw.js";
 export { JobIntelligenceProfile } from "./JobIntelligenceProfile.js";
 export { Assessment } from "./Assessment.js";
 export { Flashcard } from "./Flashcard.js";
+export { UserResource } from "./UserResource.js";
+export { RagSource } from "./RagSource.js";

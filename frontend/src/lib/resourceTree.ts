@@ -1,7 +1,7 @@
 import { folders, files } from "../data/mockNotes";
 import type { Prep } from "../data/mockData";
 import { buildSprintLevelNodes } from "./sprintLevels";
-import { getCustomItems, type CustomResourceItem } from "./customResources";
+import type { CustomResourceItem } from "./customResources";
 
 export type TreeNode = {
     id: string;
@@ -51,8 +51,7 @@ function buildCustomTreeNodes(parentId: string, allCustom: CustomResourceItem[])
     });
 }
 
-export function buildTree(prep?: Prep | null): TreeNode[] {
-    const customItems = getCustomItems();
+export function buildTree(prep?: Prep | null, customItems: CustomResourceItem[] = []): TreeNode[] {
 
     const prepNotesChildren = [
         file("pn-1", "System Design Cheat Sheets", "journal"),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
 import { Card } from "../components/ui/Card";
@@ -8,6 +8,7 @@ import { ChatInput } from "../components/chat/ChatInput";
 import { DirectorySearch } from "../components/resources/DirectorySearch";
 import { FolderTile } from "../components/resources/FolderIcon";
 import { buildTree, filterTree } from "../lib/resourceTree";
+import { getCustomItems, type CustomResourceItem } from "../lib/customResources";
 import { useAppContext } from "../context/AppContext";
 import { SUGGESTED_QUESTIONS } from "../data/mockNotes";
 
@@ -16,7 +17,18 @@ const PREVIEW_COUNT = 4;
 export function ResourcePackHome() {
   const navigate = useNavigate();
   const { activePrep } = useAppContext();
-  const tree = useMemo(() => buildTree(activePrep), [activePrep]);
+  const [customItems, setCustomItems] = useState<CustomResourceItem[]>([]);
+  const [resourceError, setResourceError] = useState("");
+  useEffect(() => {
+    let active = true;
+    getCustomItems()
+      .then((items) => { if (active) setCustomItems(items); })
+      .catch((error: unknown) => {
+        if (active) setResourceError(error instanceof Error ? error.message : "Could not load your resources.");
+      });
+    return () => { active = false; };
+  }, []);
+  const tree = useMemo(() => buildTree(activePrep, customItems), [activePrep, customItems]);
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const matches = useMemo(() => filterTree(tree, q), [tree, q]);
@@ -51,6 +63,11 @@ export function ResourcePackHome() {
             </h2>
 
             <DirectorySearch value={query} onChange={setQuery} />
+            {resourceError && (
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {resourceError}
+              </p>
+            )}
 
             {shown.length === 0 ? (
               <div className="text-center py-10 text-carbon-500">No results found.</div>

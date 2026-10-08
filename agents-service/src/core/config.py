@@ -144,6 +144,8 @@ class Settings:
     mem0_qdrant_url: str = os.getenv("MEM0_QDRANT_URL", "").strip()
     mem0_qdrant_api_key: str = os.getenv("MEM0_QDRANT_API_KEY", "").strip()
     ollama_embed_model: str = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text").strip()
+    pinecone_api_key: str = os.getenv("PINECONE_API_KEY", "").strip()
+    pinecone_index_host: str = os.getenv("PINECONE_INDEX_HOST", "").strip()
 
     # --- App metadata ---
     app_title: str = os.getenv("APP_TITLE", "PrepAmigo Agents").strip()
