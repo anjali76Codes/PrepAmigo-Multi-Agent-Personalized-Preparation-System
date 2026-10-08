@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
 import { useAppContext } from '../context/AppContext';
 import { plansApi } from '../lib/api/plans';
@@ -89,6 +89,7 @@ function TreeItem({ last, top, delay = 0, done = false, children }: {
 
 export function Roadmap() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { preps, activePrep, setActivePrepId, loadingPreps } = useAppContext();
 
   const mappedData = useMemo(() => {
@@ -135,6 +136,8 @@ export function Roadmap() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [voiceTargetElementId, setVoiceTargetElementId] = useState<string | null>(null);
+  const processedVoiceJumpRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (sprints.length > 0 && Object.keys(openSprints).length === 0) {
@@ -209,6 +212,51 @@ export function Roadmap() {
       })
       .filter((s) => s.levels.length > 0);
   }, [sprints, sprintDays, searchQuery, statusFilter]);
+
+  const voiceJump = searchParams.get('jump');
+  const voiceDayNumber = searchParams.get('day');
+  const voiceSprintNumber = searchParams.get('sprint');
+  useEffect(() => {
+    if (!voiceJump || sprints.length === 0) return;
+    const signature = `${voiceJump}:${voiceDayNumber ?? ''}:${voiceSprintNumber ?? ''}`;
+    if (processedVoiceJumpRef.current === signature) return;
+    processedVoiceJumpRef.current = signature;
+
+    let targetSprint = voiceSprintNumber
+      ? sprints.find((sprint) => sprint.sprint_number === Number(voiceSprintNumber))
+      : undefined;
+    let targetDay: any;
+    if (voiceDayNumber) {
+      const dayIndex = Number(voiceDayNumber) - 1;
+      if (Number.isInteger(dayIndex) && dayIndex >= 0) {
+        targetDay = sprintDays[dayIndex];
+        targetSprint = targetDay
+          ? sprints.find((sprint) => sprint._id === targetDay.sprint_id)
+          : undefined;
+      }
+    }
+    targetSprint ??= sprints[0];
+    if (!targetSprint) return;
+
+    const targetLevel = targetDay
+      ? buildSprintLevelNodes(sprintDays.filter((day) => day.sprint_id === targetSprint?._id))
+          .find((level) => level.days.some((day: any) => day._id === targetDay._id))
+      : undefined;
+    setSearchQuery('');
+    setStatusFilter('All');
+    setOpenSprints({ [targetSprint._id]: true });
+    setOpenLevels(targetLevel ? { [`${targetSprint._id}:${targetLevel.id}`]: true } : {});
+    const elementId = targetDay ? `prob-${targetDay._id}` : `sprint-${targetSprint._id}`;
+    setVoiceTargetElementId(elementId);
+    const timer = window.setTimeout(() => {
+      document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 450);
+    const highlightTimer = window.setTimeout(() => setVoiceTargetElementId(null), 2600);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(highlightTimer);
+    };
+  }, [voiceJump, voiceDayNumber, voiceSprintNumber, sprints, sprintDays]);
 
   const isLevelOpen = (sprintId: string, levelId: string, firstOpenId?: string) =>
     openLevels[`${sprintId}:${levelId}`] ?? levelId === firstOpenId;
@@ -414,7 +462,12 @@ export function Roadmap() {
                 const pct = sprint.total ? (sprint.done / sprint.total) * 100 : 0;
 
                 return (
-                  <Card key={sprint._id} variant="default" className="rounded-3xl">
+                  <Card
+                    key={sprint._id}
+                    id={`sprint-${sprint._id}`}
+                    variant="default"
+                    className={cn('rounded-3xl transition-shadow', voiceTargetElementId === `sprint-${sprint._id}` && 'ring-2 ring-chrome ring-offset-2')}
+                  >
                     <button
                       type="button"
                       aria-expanded={isOpen}
@@ -515,7 +568,10 @@ export function Roadmap() {
                                         <ul className="pt-3">
                                           {level.days.map((day: any, di: number) => (
                                             <TreeItem key={day._id} top={28} done={day.status === 'completed'} last={di === level.days.length - 1} delay={0.05 + di * 0.08}>
-                                              <div id={`prob-${day._id}`}>
+                                              <div
+                                                id={`prob-${day._id}`}
+                                                className={cn(voiceTargetElementId === `prob-${day._id}` && 'rounded-xl ring-2 ring-chrome ring-offset-2')}
+                                              >
                                                 <DayTaskCard
                                                   variant="compact"
                                                   title={`Day ${day.day_number}: ${day.topic_title}`}

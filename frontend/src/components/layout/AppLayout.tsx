@@ -9,6 +9,7 @@ import { SearchBar } from "./SearchBar";
 import React from "react";
 import { Mascot } from "../ui/Mascot";
 import { ErrorState } from "../ui/ErrorState";
+import { VoiceAssistant } from "../VoiceAssistant";
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKey?: string }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode; resetKey?: string }) {
@@ -368,6 +369,8 @@ export function AppLayout() {
           </NavLink>
         ))}
       </nav>
+
+      <VoiceAssistant />
     </div>
   );
 }

@@ -42,8 +42,11 @@ app.get("/health", (_req: Request, res: Response) => {
 // Auth routes
 app.use(authRouter);
 
+import voiceRouter from "./routes/voice.js";
+
 // Agent, job-intelligence, plans, sprints, and progress routes
 app.use(apiRouter);
+app.use("/api/voice", voiceRouter);
 
 // Start accepting requests only after MongoDB is connected and models are registered.
 void connectDB().then(() => {

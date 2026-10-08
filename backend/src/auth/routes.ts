@@ -11,15 +11,18 @@ const isProduction = process.env.NODE_ENV === "production";
 const sessionCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" as const : "lax" as const,
+  sameSite: isProduction ? ("none" as const) : ("lax" as const),
   path: "/",
 };
 
-function setSessionCookie(res: import("express").Response, user: { _id: unknown; email: string; name: string }) {
+function setSessionCookie(
+  res: import("express").Response,
+  user: { _id: unknown; email: string; name: string },
+) {
   const sessionToken = jwt.sign(
     { sub: user._id, email: user.email, name: user.name },
     process.env.JWT_SECRET!,
-    { expiresIn: SESSION_TTL }
+    { expiresIn: SESSION_TTL },
   );
 
   res.cookie("session", sessionToken, {
@@ -37,17 +40,23 @@ router.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, and password are required" });
+      return res
+        .status(400)
+        .json({ error: "Name, email, and password are required" });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters long" });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
-      return res.status(400).json({ error: "An account with this email already exists" });
+      return res
+        .status(400)
+        .json({ error: "An account with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -88,7 +97,9 @@ router.post("/api/auth/login", async (req, res) => {
     }
 
     if (!user.password) {
-      return res.status(401).json({ error: "Account was created using Google. Please sign in with Google." });
+      return res.status(401).json({
+        error: "Account was created using Google. Please sign in with Google.",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -120,7 +131,9 @@ router.post("/api/auth/google", async (req, res) => {
 
     const googleUser = await verifyGoogleToken(idToken);
     if (!googleUser.email) {
-      return res.status(400).json({ error: "Google account does not provide an email address" });
+      return res
+        .status(400)
+        .json({ error: "Google account does not provide an email address" });
     }
     const cleanEmail = googleUser.email.toLowerCase();
 
@@ -163,7 +176,12 @@ router.get("/api/auth/me", async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { sub?: string; id?: string; email?: string; name?: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      sub?: string;
+      id?: string;
+      email?: string;
+      name?: string;
+    };
     const userId = decoded.sub || decoded.id;
     if (!userId) {
       return res.status(200).json({ user: null });
@@ -196,7 +214,10 @@ router.put("/api/auth/profile", async (req, res) => {
   if (!token) return res.status(401).json({ error: "Authentication required" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { sub?: string; id?: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      sub?: string;
+      id?: string;
+    };
     const userId = decoded.sub || decoded.id;
     if (!userId) return res.status(401).json({ error: "Invalid token" });
 
@@ -222,15 +243,33 @@ router.put("/api/auth/profile", async (req, res) => {
         : currentProfile.experience_level;
 
     user.profile = {
-      target_role: typeof target_role === "string" ? target_role.trim().slice(0, 100) : currentProfile.target_role,
+      target_role:
+        typeof target_role === "string"
+          ? target_role.trim().slice(0, 100)
+          : currentProfile.target_role,
       experience_level: normalizedLevel,
       skills: Array.isArray(skills)
-        ? skills.map((s: any) => String(s).trim().slice(0, 50)).filter(Boolean).slice(0, 50)
+        ? skills
+            .map((s: any) => String(s).trim().slice(0, 50))
+            .filter(Boolean)
+            .slice(0, 50)
         : currentProfile.skills || [],
-      github_url: typeof github_url === "string" ? github_url.trim().slice(0, 255) : currentProfile.github_url,
-      resume_url: typeof resume_url === "string" ? resume_url.trim().slice(0, 2048) : currentProfile.resume_url,
-      resume_filename: typeof resume_filename === "string" ? resume_filename.trim().slice(0, 255) : currentProfile.resume_filename,
-      resume_text: typeof resume_text === "string" ? resume_text.slice(0, 100000) : currentProfile.resume_text,
+      github_url:
+        typeof github_url === "string"
+          ? github_url.trim().slice(0, 255)
+          : currentProfile.github_url,
+      resume_url:
+        typeof resume_url === "string"
+          ? resume_url.trim().slice(0, 2048)
+          : currentProfile.resume_url,
+      resume_filename:
+        typeof resume_filename === "string"
+          ? resume_filename.trim().slice(0, 255)
+          : currentProfile.resume_filename,
+      resume_text:
+        typeof resume_text === "string"
+          ? resume_text.slice(0, 100000)
+          : currentProfile.resume_text,
     };
 
     await user.save();
