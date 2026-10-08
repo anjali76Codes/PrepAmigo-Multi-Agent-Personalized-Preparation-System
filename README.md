@@ -1,42 +1,17 @@
 <div align="center">
 
-  <a href="#">
-    <img src="frontend/public/assets/Mascot/banner.png" alt="PrepAmigo Header" width="100%" max-width="800" />
-  </a>
-
-  <br />
-  <br />
+  <p align="center">
+    <img src="frontend/public/assets/Mascot/hi.png" alt="PrepAmigo Mascot" height="85" valign="middle" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=48&pause=1000&color=E88D43&center=false&vCenter=true&width=300&lines=PrepAmigo" alt="PrepAmigo Text" valign="middle" />
+  </p>
 
   <p><strong>Make every day count before interview day.</strong></p>
   <p>Company-aware interview preparation, shaped around your role, skills, and available time.</p>
 
   <p>
-    <a href="YOUR_LIVE_URL_HERE" target="_blank">
-      <img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
-    </a>
-    &nbsp;
-    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank">
-      <img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
-    </a>
-    &nbsp;
-    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank">
-      <img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" />
-    </a>
-  </p>
-
-
-  <p>
-    <a href="YOUR_LIVE_URL_HERE" target="_blank">
-      <img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
-    </a>
-    &nbsp;
-    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank">
-      <img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
-    </a>
-    &nbsp;
-    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank">
-      <img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" />
-    </a>
+    <a href="YOUR_LIVE_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
+    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
   </p>
 
   <p>
@@ -47,9 +22,7 @@
     <a href="#documentation">Documentation</a>
   </p>
 
-
 </div>
-
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
