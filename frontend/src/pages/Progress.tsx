@@ -13,6 +13,7 @@ import { Mascot } from '../components/ui/Mascot';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { computeGamification } from '../lib/gamification';
+import { Card } from '../components/ui/Card';
 
 export function Progress() {
   const shouldReduceMotion = useReducedMotion();
@@ -62,26 +63,54 @@ export function Progress() {
           className="w-full px-6 md:px-12 py-6 md:py-8 space-y-8 pb-12"
         >
           {/* Header Card */}
-          <div className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center justify-between shadow-pop border border-chrome-accent/50 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-chrome text-white text-xs font-bold mb-2 shadow-2xs">
-                <Icon name="sparkles" /> {gamification.aiCredits} AI Credits Available
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: shouldReduceMotion ? 0 : 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card
+              variant="default"
+              className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center gap-6"
+            >
+              {/* Content */}
+              <div className="flex-1 min-w-0 space-y-4">
+
+                {/* Back to Dashboard */}
+                <Link to="/dashboard">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 -ml-3 font-bold text-chrome hover:bg-surface/50 mb-4"
+                  >
+                    <Icon name="arrow-back" />
+                    Dashboard
+                  </Button>
+                </Link>
+
+                {/* Title */}
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-carbon-900">
+                    Progress & Gamification
+                  </h1>
+
+                  <p className="text-sm md:text-base text-carbon-500 mt-1">
+                    Track your learning progress, XP, streaks, and achievements.
+                  </p>
+                </div>
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-deep-emerald mb-2 tracking-tight">
-                Progress & Gamification
-              </h1>
-              <p className="text-base md:text-lg text-forest-emerald/80 font-medium max-w-xl">
-                Earn <span className="font-bold text-deep-emerald">20 XP</span> per level topic and{" "}
-                <span className="font-bold text-deep-emerald">30 XP</span> per assessment.
-                <span className="text-deep-emerald font-bold ml-1 block mt-1 md:inline md:mt-0">
-                  XP can be used as AI Credits in Resource Assistant.
-                </span>
-              </p>
-            </div>
-            <div className="relative z-10 hidden sm:flex shrink-0">
-              <Mascot size="lg" variant="Thinking.png" className="bg-white shadow-card rounded-full p-2" />
-            </div>
-          </div>
+
+              {/* Mascot */}
+              <div className="hidden sm:flex shrink-0 w-32 h-32 md:w-36 md:h-36 rounded-full bg-surface overflow-hidden items-center justify-center">
+                <Mascot variant="OK.png" size="lg" />
+              </div>
+            </Card>
+          </motion.div>
 
           {/* Stats Breakdown */}
           <ProgressStats stats={gamification} />
@@ -98,7 +127,7 @@ export function Progress() {
 
             <div className="space-y-8">
               <SkillLevelBars skills={gamification.skillLevels} velocity={gamification.learningVelocity} />
-              <TitleCard titles={titles} />
+              {/* <TitleCard titles={titles} /> */}
             </div>
           </div>
 
