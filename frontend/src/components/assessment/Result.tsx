@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Mascot } from "../ui/Mascot";
+import type { MascotVariant } from "../ui/Mascot";
 import { Button, fade } from "./shared";
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
     /** omit to hide the "Try again" button */
     onAgain?: () => void;
     exitLabel?: string;
-    mascot?: string;
+    mascot?: MascotVariant;
 }
 
 export function Result({ title, sub, onExit, onAgain, exitLabel = "Back to list", mascot = "Motivated.png" }: Props) {
