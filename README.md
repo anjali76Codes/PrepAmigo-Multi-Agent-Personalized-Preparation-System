@@ -1,8 +1,33 @@
 <div align="center">
-  <img src="frontend/public/assets/Mascot/hi.png" alt="PrepAmigo mascot" width="132" />
-  <h1>PrepAmigo</h1>
+
+  <table border="0">
+    <tr>
+      <td align="center" valign="middle">
+        <img src="frontend/public/assets/Mascot/hi.png" alt="PrepAmigo mascot" width="100" />
+      </td>
+      <td align="center" valign="middle">
+        <h1 style="border-bottom: none; margin: 0; padding: 0;">PrepAmigo</h1>
+      </td>
+    </tr>
+  </table>
+
   <p><strong>Make every day count before interview day.</strong></p>
   <p>Company-aware interview preparation, shaped around your role, skills, and available time.</p>
+
+  <p>
+    <a href="YOUR_LIVE_URL_HERE" target="_blank">
+      <img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
+    </a>
+    &nbsp;
+    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank">
+      <img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
+    </a>
+    &nbsp;
+    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank">
+      <img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" />
+    </a>
+  </p>
+
   <p>
     <a href="#quick-start"><strong>🚀 Quick start</strong></a>
     &nbsp;·&nbsp;
@@ -10,6 +35,7 @@
     &nbsp;·&nbsp;
     <a href="#documentation">Documentation</a>
   </p>
+
 </div>
 
 <p align="center">
