@@ -94,7 +94,7 @@ def test_sync_indexes_searchable_source_metadata(monkeypatch):
     assert vectors[0]["metadata"]["text"].startswith("Title: Caching")
     assert vectors[0]["metadata"]["user_id"] == "user-a"
     assert vectors[0]["metadata"]["source_id"] == "note:one"
-    assert len(index.deleted) == 2
+    assert len(index.deleted) == 1
 
 
 def test_sync_fails_if_stale_vectors_cannot_be_deleted(monkeypatch):
@@ -110,6 +110,47 @@ def test_sync_fails_if_stale_vectors_cannot_be_deleted(monkeypatch):
         assert str(exc) == "Pinecone delete failed"
     else:
         raise AssertionError("A failed Pinecone deletion must fail synchronization.")
+
+
+def test_sync_batches_sources_for_embedding_and_upsert(monkeypatch):
+    class FakeIndex:
+        def __init__(self):
+            self.deleted = []
+            self.upsert_batches = []
+
+        def delete(self, **kwargs):
+            self.deleted.append(kwargs)
+
+        def upsert(self, *, namespace, vectors):
+            self.upsert_batches.append((namespace, vectors))
+
+    embedded_batches = []
+
+    def fake_embed(_pc, texts, input_type):
+        embedded_batches.append((texts, input_type))
+        return [[0.1, 0.2] for _ in texts]
+
+    monkeypatch.setattr(rag, "_pinecone_config", lambda: ("test-key", "test-index.example", "pdf_namespace"))
+    monkeypatch.setattr(rag, "_embed_texts", fake_embed)
+    documents = [
+        rag.RagDocument(
+            source_id=f"note:{index}",
+            content_hash=f"{index:064x}",
+            title=f"Note {index}",
+            source_type="note",
+            content=f"Saved note content {index}",
+        )
+        for index in range(37)
+    ]
+    index = FakeIndex()
+
+    rag._sync_index(None, index, "user-a", documents, [])
+
+    assert len(index.deleted) == 4
+    assert len(embedded_batches) == 1
+    assert len(embedded_batches[0][0]) == len(documents)
+    assert len(index.upsert_batches) == 1
+    assert len(index.upsert_batches[0][1]) == len(documents)
 
 
 def test_query_uses_only_the_requested_user_namespace(monkeypatch):

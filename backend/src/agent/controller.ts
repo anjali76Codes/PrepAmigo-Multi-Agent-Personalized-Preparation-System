@@ -45,6 +45,20 @@ const runUserMap = new Map<string, string>(); // runId -> userId
 
 const WEBSITE_CONTEXT_LIMIT = 18000;
 
+async function fetchProfileResumeText(userId: string): Promise<string | null> {
+  if (!userId || !Types.ObjectId.isValid(userId)) return null;
+  try {
+    const dbUser = await User.findById(userId).select("profile.resume_text");
+    if (dbUser?.profile?.resume_text) {
+      logger.info(`[Agent Gateway] Using stored profile resume for user ${userId}`);
+      return dbUser.profile.resume_text;
+    }
+  } catch (err) {
+    logger.warn(`[Agent Gateway] Could not load user profile resume:`, err);
+  }
+  return null;
+}
+
 function scoreWebsiteDocument(document: string, queryTerms: string[]): number {
   const normalized = document.toLowerCase();
   return queryTerms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0);
@@ -337,6 +351,7 @@ const defaultSteps: Record<AgentStreamEvent["type"], string> = {
   waiting: "awaiting_input",
   processing: "processing",
   structuring: "structuring",
+  tool_call: "tool_call",
   completed: "final",
   failed: "failure",
   ping: "heartbeat",
@@ -468,18 +483,8 @@ export async function runAgentHandler(
     }
 
     // Auto-ingest profile resume if not explicitly attached in chat
-    let effectiveResumeText = resumeText;
-    if (!effectiveResumeText && userId && Types.ObjectId.isValid(userId)) {
-      try {
-        const dbUser = await User.findById(userId).select("profile.resume_text");
-        if (dbUser?.profile?.resume_text) {
-          effectiveResumeText = dbUser.profile.resume_text;
-          logger.info(`[Agent Gateway] Using stored profile resume for user ${userId}`);
-        }
-      } catch (err) {
-        logger.warn(`[Agent Gateway] Could not load user profile resume:`, err);
-      }
-    }
+    const effectiveResumeText =
+      resumeText || (userId ? await fetchProfileResumeText(userId) : null);
     const websiteContext = userId ? await retrieveWebsiteContext(userId, query.trim()) : "";
 
     // Start background listener to persist plan when completed
@@ -612,6 +617,7 @@ function triggerInterviewPrep(
   input: Record<string, string>,
   resume = false,
   userMessage?: string,
+  profileResumeText?: string | null,
 ): void {
   const query = resume
     ? userMessage || "Continue my interview preparation request with the clarification provided."
@@ -634,7 +640,12 @@ function triggerInterviewPrep(
       user_id: userId,
       plan_days: extractPlanDays(userMessage || query),
       workflow_mode: "interview_prep",
-      workflow_input: resume ? {} : input,
+      workflow_input: resume
+        ? {}
+        : {
+            ...input,
+            ...(profileResumeText ? { resume_text: String(profileResumeText).slice(0, 50000) } : {}),
+          },
       workflow_text_input: resume ? null : userMessage || null,
       resume_input: resume ? input : null,
     }),
@@ -681,7 +692,10 @@ export async function startInterviewPrepHandler(
     const idempotencyKey = validateIdempotencyKey(req.body?.idempotencyKey);
     const candidateThreadId = `interview-prep-${encodeURIComponent(userId)}-${uuidv4()}`;
     const reservation = await reserveWorkflowRun(userId, idempotencyKey, candidateThreadId);
-    if (reservation.created) triggerInterviewPrep(req, reservation.run, userId, input, false, message);
+    if (reservation.created) {
+      const profileResumeText = await fetchProfileResumeText(userId);
+      triggerInterviewPrep(req, reservation.run, userId, input, false, message, profileResumeText);
+    }
     res.status(202).json({ success: true, ...reservation.run });
   } catch (error: any) {
     const status = error?.message?.includes("required")

@@ -141,7 +141,7 @@ export async function createResourceHandler(req: AuthenticatedRequest, res: Resp
       ? await UserResource.findOneAndUpdate(
         { user_id: userId, legacy_id: parsed.data.legacyId },
         { $setOnInsert: itemData },
-        { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true },
+        { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true },
       )
       : await UserResource.create(itemData);
     res.status(201).json({ success: true, data: {
@@ -172,7 +172,7 @@ export async function updateResourceHandler(req: AuthenticatedRequest, res: Resp
     const item = await UserResource.findOneAndUpdate(
       { _id: resourceId, user_id: userId },
       { $set: parsed.data },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     ).lean();
     if (!item) return invalid(res, "Resource not found.", 404);
     res.status(200).json({ success: true, data: {
@@ -320,30 +320,68 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
     }));
     const deleted = indexed.filter((source) => !liveSourceIds.has(source.source_id)).map((source) => source.source_id);
 
-    const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/resources/sync-and-query`, {
+    if (changed.length || deleted.length) {
+      const syncResponse = await fetch(`${config.AGENTS_SERVICE_URL}/internal/resources/sync`, {
+        method: "POST",
+        headers: agentsAuthHeaders(String(userId)),
+        signal: AbortSignal.timeout(120_000),
+        body: JSON.stringify({
+          user_id: String(userId),
+          documents: changed,
+          deleted_source_ids: deleted,
+        }),
+      });
+      if (!syncResponse.ok) {
+        const detail = await syncResponse.text();
+        logger.warn("Resource index sync failed", { status: syncResponse.status, detail });
+        let error = "Your resources could not be indexed for search.";
+        try {
+          const body = JSON.parse(detail) as { detail?: unknown };
+          if (syncResponse.status === 503 && typeof body.detail === "string" && body.detail.startsWith("Resource retrieval is missing configuration:")) {
+            error = body.detail;
+          }
+        } catch {
+          // Keep the user-facing error generic for non-JSON service failures.
+        }
+        res.status(syncResponse.status === 503 ? 503 : 502).json({ success: false, error });
+        return;
+      }
+      const syncResult = await syncResponse.json() as { success?: boolean };
+      if (!syncResult.success) {
+        res.status(502).json({ success: false, error: "The resource indexing service returned an invalid response." });
+        return;
+      }
+
+      const changedHashes = changed.map((document) => ({
+        updateOne: {
+          filter: { user_id: userId, source_id: document.source_id },
+          update: { $set: {
+            content_hash: document.content_hash || "",
+          } },
+          upsert: true,
+        },
+      }));
+      if (changedHashes.length) await RagSource.bulkWrite(changedHashes);
+      if (deleted.length) await RagSource.deleteMany({ user_id: userId, source_id: { $in: deleted } });
+    }
+
+    const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/resources/query`, {
       method: "POST",
       headers: agentsAuthHeaders(String(userId)),
       signal: AbortSignal.timeout(120_000),
-      body: JSON.stringify({
-        user_id: String(userId),
-        query: query.data,
-        documents: changed,
-        deleted_source_ids: deleted,
-      }),
+      body: JSON.stringify({ user_id: String(userId), query: query.data }),
     });
     if (!response.ok) {
       const detail = await response.text();
       logger.warn("Resource retrieval service rejected a query", { status: response.status, detail });
-      let error = "The resource search service could not complete the request.";
-      try {
-        const body = JSON.parse(detail) as { detail?: unknown };
-        if (response.status === 503 && typeof body.detail === "string" && body.detail.startsWith("Resource retrieval is missing configuration:")) {
-          error = body.detail;
-        }
-      } catch {
-        // The generic user-facing error is used when the retrieval service does not return JSON.
-      }
-      res.status(response.status === 503 ? 503 : 502).json({ success: false, error });
+      res.status(response.status === 503 ? 503 : response.status === 504 ? 504 : 502).json({
+        success: false,
+        error: response.status === 503
+          ? "The resource search service is unavailable."
+          : response.status === 504
+            ? "Your resources were indexed, but answer generation timed out. Please try again."
+          : "Your resources were indexed, but the assistant could not generate an answer.",
+      });
       return;
     }
     const result = await response.json() as {
@@ -355,17 +393,6 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
       return;
     }
 
-    const changedHashes = changed.map((document) => ({
-      updateOne: {
-        filter: { user_id: userId, source_id: document.source_id },
-        update: { $set: {
-          content_hash: document.content_hash || "",
-        } },
-        upsert: true,
-      },
-    }));
-    if (changedHashes.length) await RagSource.bulkWrite(changedHashes);
-    if (deleted.length) await RagSource.deleteMany({ user_id: userId, source_id: { $in: deleted } });
     res.status(200).json({ success: true, data: {
       answer: result.data.answer,
       sources: result.data.sources ?? [],

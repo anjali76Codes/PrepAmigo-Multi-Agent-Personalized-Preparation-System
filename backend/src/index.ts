@@ -5,6 +5,7 @@ import { logger } from "./utils/logger.js";
 import authRouter from "./auth/routes.js";
 import apiRouter from "./routes/index.js";
 import { connectDB } from "./config/db.js";
+import { startDailyDigestJob } from "./jobs/dailyDigest.js";
 import cors from "cors";
 
 const app = express();
@@ -50,5 +51,6 @@ void connectDB().then(() => {
     logger.info(
       `Server running in ${config.NODE_ENV} mode on port ${config.PORT}`,
     );
+    startDailyDigestJob();
   });
 });

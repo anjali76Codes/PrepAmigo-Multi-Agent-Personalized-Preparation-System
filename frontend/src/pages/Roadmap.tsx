@@ -414,12 +414,16 @@ export function Roadmap() {
                 const pct = sprint.total ? (sprint.done / sprint.total) * 100 : 0;
 
                 return (
-                  <Card key={sprint._id} variant="default" className="rounded-3xl overflow-hidden">
+                  <Card key={sprint._id} variant="default" className="rounded-3xl">
                     <button
                       type="button"
                       aria-expanded={isOpen}
                       onClick={() => setOpenSprints((p) => ({ ...p, [sprint._id]: !isOpen }))}
-                      className="w-full flex items-center gap-4 p-4 md:p-5 text-left hover:bg-lavender-50 transition-colors"
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 md:p-5 text-left transition-colors",
+                        "sticky top-0 z-10 bg-surface/95 backdrop-blur-md",
+                        isOpen ? "rounded-t-3xl border-b border-border shadow-2xs hover:bg-lavender-50/80" : "rounded-3xl hover:bg-lavender-50"
+                      )}
                     >
                       <span
                         className={cn(
@@ -453,7 +457,7 @@ export function Roadmap() {
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.25, ease: 'easeInOut' }}
-                          className="overflow-hidden border-t border-border bg-lavender-50"
+                          className="overflow-hidden border-t border-border bg-lavender-50 rounded-b-3xl"
                         >
                           {/* sprint → levels */}
                           <ul className="p-4 md:p-6 ml-1">

@@ -580,6 +580,18 @@ class InterviewPrepOrchestrator:
         has_user_resume = bool(resume_text.strip())
 
         if not has_user_resume:
+            await dispatch_event(
+                make_event("interview_prep", "skill_gap_analysis", "running", {
+                    "message": (
+                        "No resume found in your profile or attached in chat. "
+                        "Building your preparation roadmap using a general software engineering baseline. "
+                        "Upload your resume in Profile settings for personalized skill gap analysis."
+                    ),
+                    "has_resume": False,
+                    "no_resume_warning": True,
+                }),
+                None,
+            )
             # Baseline resume so skill-gap analysis and planner can build a comprehensive study plan
             resume_text = (
                 f"Candidate Software Engineer\n"

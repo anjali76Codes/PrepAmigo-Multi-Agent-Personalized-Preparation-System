@@ -5,6 +5,7 @@ export type EventType =
   | "waiting"
   | "processing"
   | "structuring"
+  | "tool_call"
   | "completed"
   | "failed"
   | "ping";

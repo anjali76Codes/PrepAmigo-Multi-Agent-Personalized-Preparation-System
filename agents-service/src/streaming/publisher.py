@@ -14,6 +14,7 @@ _DEFAULT_STEPS = {
     EventType.WAITING: "awaiting_input",
     EventType.PROCESSING: "processing",
     EventType.STRUCTURING: "structuring",
+    EventType.TOOL_CALL: "tool_call",
     EventType.COMPLETED: "final",
     EventType.FAILED: "failure",
     EventType.PING: "heartbeat",

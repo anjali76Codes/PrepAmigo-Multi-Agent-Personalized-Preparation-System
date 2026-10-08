@@ -9,11 +9,15 @@ import { Mascot } from '../components/ui/Mascot';
 import { cn } from '../utils/utils';
 import { getAppPreferences } from '../lib/preferences';
 import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
+import { KanbanBoard } from '../components/calendar/KanbanBoard';
+import { plansApi } from '../lib/api/plans';
 import type { ISprintDay } from '../mocks/interviewPlan.mock';
 
 type Tab = 'today' | 'backlog' | 'upcoming';
+type ViewMode = 'list' | 'kanban';
 
-const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const dateKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const startOfToday = () => {
   const d = new Date();
@@ -116,6 +120,7 @@ export function Calendar() {
 
   const [selectedPrepId, setSelectedPrepId] = useState<string>(preps[0]?.id || '');
   const [activeTab, setActiveTab] = useState<Tab>('today');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showBanner, setShowBanner] = useState(true);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -182,8 +187,29 @@ export function Calendar() {
 
   const missedCount = backlogTasks.filter((t) => t.status !== 'completed').length;
 
-  const toggleTask = (id: string) =>
+  const toggleTask = (id: string) => {
+    const task = tasks.find((t) => t._id === id);
     setTasks((prev) => prev.map((t) => (t._id === id ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t)));
+    // Persist completions of real sprint days (awards XP/streak, unlocks the next sprint's material).
+    // The backend has no "un-complete", so unticking stays local, as on the Roadmap.
+    if (task && task.status !== 'completed' && task.sprint_id !== 'custom' && /^[a-f0-9]{24}$/i.test(id)) {
+      void plansApi.completeDay(id).catch((err) => console.warn('[Calendar] Could not mark day complete on backend:', err));
+    }
+  };
+
+  const doneTasks = tasks.filter((t) => t.status === 'completed');
+  const kanbanColumns = [
+    { key: 'backlog', label: 'Backlog', dot: 'bg-coral-500', tasks: backlogTasks.filter((t) => t.status !== 'completed') },
+    { key: 'today', label: 'Today', dot: 'bg-chrome', tasks: todayTasks.filter((t) => t.status !== 'completed') },
+    { key: 'upcoming', label: 'Upcoming', dot: 'bg-lavender-500', tasks: upcomingTasks.filter((t) => t.status !== 'completed') },
+    { key: 'done', label: 'Done', dot: 'bg-chrome-accent', tasks: doneTasks },
+  ];
+  // Scheduling bucket (backlog/today/upcoming) is date-derived and fixed; the only thing
+  // dragging between columns can change is completion, i.e. a move into or out of "done".
+  const handleKanbanDrop = (taskId: string, fromColumn: string, toColumn: string) => {
+    if (fromColumn === toColumn) return;
+    if (fromColumn === 'done' || toColumn === 'done') toggleTask(taskId);
+  };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,90 +399,124 @@ export function Calendar() {
                 )}
               </AnimatePresence>
 
-              {/* Tabs */}
+              {/* Tabs + view toggle */}
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
-                  {([
-                    ['today', 'Today', todayTasks.length],
-                    ['backlog', 'Backlog', missedCount],
-                    ['upcoming', 'Upcoming', upcomingTasks.length],
-                  ] as [Tab, string, number][]).map(([key, label, count]) => (
-                    <button
-                      key={key}
-                      onClick={() => setActiveTab(key)}
-                      className={cn(
-                        'px-4 h-8 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5',
-                        activeTab === key ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
-                      )}
-                    >
-                      {label}
-                      <span className={cn('text-[10px]', activeTab === key ? 'text-on-chrome-muted' : 'text-carbon-500')}>{count}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <Link to="/dashboard/practice" className="text-xs font-bold text-chrome hover:underline flex items-center gap-1">
-                  Whole plan <Icon name="arrow-forward" className="text-xs" />
-                </Link>
-              </div>
-
-              {/* List */}
-              <div className="space-y-3">
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {currentList.map((task, i) => (
-                    <motion.div
-                      key={task._id}
-                      layout="position"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ delay: Math.min(i, 6) * 0.04, duration: 0.2 }}
-                    >
-                      <DayTaskCard
-                        variant="compact"
-                        title={task.day_number === 999 ? task.topic_title : `Day ${task.day_number}: ${task.topic_title}`}
-                        completed={task.status === 'completed'}
-                        resources={buildResources(task)}
-                        onToggleComplete={() => toggleTask(task._id)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {currentList.length === 0 && (
-                  <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
-                    <Mascot variant="Chilling.png" size="lg" style={{ width: 110, height: 110 }} />
-                    <p className="font-bold text-carbon-900">
-                      {activeTab === 'backlog' ? 'Backlog is empty' : activeTab === 'today' ? 'Nothing scheduled today' : 'Nothing coming up'}
-                    </p>
-                    <p className="text-sm text-carbon-500">
-                      {activeTab === 'backlog' ? "You're all caught up." : 'Add something below or adjust your plan in chat.'}
-                    </p>
-                  </Card>
-                )}
-
-                {!isAddingTask ? (
-                  <button
-                    onClick={() => setIsAddingTask(true)}
-                    className="w-full flex items-center justify-center gap-2 text-xs font-bold text-carbon-500 hover:text-carbon-900 py-3 rounded-2xl border-2 border-dashed border-border hover:bg-surface transition-colors"
-                  >
-                    <Icon name="add" className="text-base" /> Add something else to do
-                  </button>
+                {viewMode === 'list' ? (
+                  <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
+                    {([
+                      ['today', 'Today', todayTasks.length],
+                      ['backlog', 'Backlog', missedCount],
+                      ['upcoming', 'Upcoming', upcomingTasks.length],
+                    ] as [Tab, string, number][]).map(([key, label, count]) => (
+                      <button
+                        key={key}
+                        onClick={() => setActiveTab(key)}
+                        className={cn(
+                          'px-4 h-8 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5',
+                          activeTab === key ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
+                        )}
+                      >
+                        {label}
+                        <span className={cn('text-[10px]', activeTab === key ? 'text-on-chrome-muted' : 'text-carbon-500')}>{count}</span>
+                      </button>
+                    ))}
+                  </div>
                 ) : (
-                  <form onSubmit={handleAddTask} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-2">
-                    <input
-                      autoFocus
-                      type="text"
-                      placeholder="What do you want to do?"
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="flex-1 h-10 px-3 text-sm bg-transparent outline-none text-carbon-900"
-                    />
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingTask(false)}>Cancel</Button>
-                    <Button type="submit" size="sm">Add</Button>
-                  </form>
+                  <h3 className="text-sm font-bold text-carbon-900 px-1">Board</h3>
                 )}
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
+                    {([
+                      ['list', 'list-outline'],
+                      ['kanban', 'grid-outline'],
+                    ] as [ViewMode, string][]).map(([mode, icon]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        aria-label={mode === 'list' ? 'List view' : 'Kanban view'}
+                        aria-pressed={viewMode === mode}
+                        onClick={() => setViewMode(mode)}
+                        className={cn(
+                          'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
+                          viewMode === mode ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
+                        )}
+                      >
+                        <Icon name={icon} className="text-sm" />
+                      </button>
+                    ))}
+                  </div>
+                  <Link to="/dashboard/practice" className="text-xs font-bold text-chrome hover:underline flex items-center gap-1 whitespace-nowrap">
+                    Whole plan <Icon name="arrow-forward" className="text-xs" />
+                  </Link>
+                </div>
               </div>
+
+              {viewMode === 'kanban' ? (
+                <KanbanBoard
+                  columns={kanbanColumns}
+                  buildResources={buildResources}
+                  onToggleComplete={toggleTask}
+                  onDropTask={handleKanbanDrop}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {currentList.map((task, i) => (
+                      <motion.div
+                        key={task._id}
+                        layout="position"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ delay: Math.min(i, 6) * 0.04, duration: 0.2 }}
+                      >
+                        <DayTaskCard
+                          variant="compact"
+                          title={task.day_number === 999 ? task.topic_title : `Day ${task.day_number}: ${task.topic_title}`}
+                          completed={task.status === 'completed'}
+                          resources={buildResources(task)}
+                          onToggleComplete={() => toggleTask(task._id)}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+
+                  {currentList.length === 0 && (
+                    <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
+                      <Mascot variant="Chilling.png" size="lg" style={{ width: 110, height: 110 }} />
+                      <p className="font-bold text-carbon-900">
+                        {activeTab === 'backlog' ? 'Backlog is empty' : activeTab === 'today' ? 'Nothing scheduled today' : 'Nothing coming up'}
+                      </p>
+                      <p className="text-sm text-carbon-500">
+                        {activeTab === 'backlog' ? "You're all caught up." : 'Add something below or adjust your plan in chat.'}
+                      </p>
+                    </Card>
+                  )}
+
+                  {!isAddingTask ? (
+                    <button
+                      onClick={() => setIsAddingTask(true)}
+                      className="w-full flex items-center justify-center gap-2 text-xs font-bold text-carbon-500 hover:text-carbon-900 py-3 rounded-2xl border-2 border-dashed border-border hover:bg-surface transition-colors"
+                    >
+                      <Icon name="add" className="text-base" /> Add something else to do
+                    </button>
+                  ) : (
+                    <form onSubmit={handleAddTask} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="What do you want to do?"
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        className="flex-1 h-10 px-3 text-sm bg-transparent outline-none text-carbon-900"
+                      />
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingTask(false)}>Cancel</Button>
+                      <Button type="submit" size="sm">Add</Button>
+                    </form>
+                  )}
+                </div>
+              )}
             </motion.div>
 
             {/* Sidebar */}
@@ -582,11 +642,17 @@ export function Calendar() {
                 <Card variant="default" className="p-5 space-y-3">
                   <div>
                     <h3 className="font-bold text-carbon-900">
-                      {new Date(`${selectedCalendarDate}T00:00:00`).toLocaleDateString(undefined, {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {(() => {
+                        const parts = selectedCalendarDate.split('-').map(Number);
+                        const d = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(selectedCalendarDate);
+                        return isNaN(d.getTime())
+                          ? selectedCalendarDate
+                          : d.toLocaleDateString(undefined, {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric',
+                            });
+                      })()}
                     </h3>
                     <p className="text-xs font-semibold text-carbon-500">
                       {selectedDateTasks.length} {selectedDateTasks.length === 1 ? 'task' : 'tasks'} scheduled

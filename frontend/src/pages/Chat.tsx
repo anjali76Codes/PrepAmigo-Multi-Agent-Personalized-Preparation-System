@@ -12,6 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import { featureFlags } from '../config/featureFlags';
 import { AgentStreamClient } from '../lib/agentStream/agentStreamClient';
 import type { AgentStreamEvent } from '../lib/agentStream/types';
+import { toolCallText } from '../lib/agentStream/toolCall';
 
 const PIPELINE_STEPS: JourneyStep[] = [
   { agent: 'Supervisor', text: 'Analyzing your goal and routing…' },
@@ -121,24 +122,25 @@ export function Chat() {
       },
     ]);
 
-    const updateJourneyIndex = (index: number, statusText?: string) => {
+    // null: keep the current step (only its status text changes)
+    const updateJourneyIndex = (requested: number | null, statusText?: string) => {
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === journeyId
-            ? {
-                ...m,
-                data: {
-                  ...m.data,
-                  activeIndex: Math.min(index, PIPELINE_STEPS.length - 1),
-                  steps: statusText
-                    ? m.data.steps.map((step: JourneyStep, stepIndex: number) =>
-                        stepIndex === index ? { ...step, text: statusText } : step
-                      )
-                    : m.data.steps,
-                },
-              }
-            : m
-        )
+        prev.map((m) => {
+          if (m.id !== journeyId) return m;
+          const index = Math.min(requested ?? (Number(m.data?.activeIndex) || 0), PIPELINE_STEPS.length - 1);
+          return {
+            ...m,
+            data: {
+              ...m.data,
+              activeIndex: index,
+              steps: statusText
+                ? m.data.steps.map((step: JourneyStep, stepIndex: number) =>
+                    stepIndex === index ? { ...step, text: statusText } : step
+                  )
+                : m.data.steps,
+            },
+          };
+        })
       );
     };
 
@@ -175,10 +177,13 @@ export function Chat() {
               return;
             }
             const stepIdx = mapEventToStepIndex(event);
-            const statusText = typeof event.payload?.message === 'string'
-              ? event.payload.message
-              : undefined;
-            updateJourneyIndex(stepIdx, statusText);
+            const statusText = event.type === 'tool_call'
+              ? toolCallText(event.payload)
+              : typeof event.payload?.message === 'string'
+                ? event.payload.message
+                : undefined;
+            // a tool call from an agent the map doesn't know (index 0) must not rewind the journey
+            updateJourneyIndex(event.type === 'tool_call' && stepIdx === 0 ? null : stepIdx, statusText);
           },
           onWaiting: (payload) => {
             // ReAct evaluator paused for clarification
@@ -243,6 +248,7 @@ export function Chat() {
           },
         },
         threadId,
+        // Chat uploaded file text supersedes stored profile resume
         attachedFile?.text || user?.profile?.resume_text
       );
     } catch (err: any) {

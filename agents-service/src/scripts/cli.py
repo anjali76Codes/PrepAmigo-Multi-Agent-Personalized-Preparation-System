@@ -80,7 +80,7 @@ def show_step(event: dict) -> None:
     DIM = "\033[2m"
     RESET = "\033[0m"
 
-    color = CYAN if event_type == "RESEARCHING" else (MAGENTA if event_type == "STRUCTURING" else (YELLOW if event_type == "PROCESSING" else GREEN))
+    color = CYAN if event_type in ("RESEARCHING", "TOOL_CALL") else (MAGENTA if event_type == "STRUCTURING" else (YELLOW if event_type == "PROCESSING" else GREEN))
 
     if status == "running":
         print(f"  {color}[SSE: {event_type} - RUNNING]{RESET} {message}", flush=True)

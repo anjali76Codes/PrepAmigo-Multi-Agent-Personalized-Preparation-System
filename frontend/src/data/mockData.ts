@@ -200,11 +200,12 @@ export interface AgentEvent {
 
 export interface Notification {
   id: string;
-  type: 'reminder' | 'missed-task' | 'plan-update' | 'quiz-result' | 'streak-warning' | 'milestone-unlock';
+  type: 'reminder' | 'missed-task' | 'plan-update' | 'quiz-result' | 'streak-warning' | 'milestone-unlock' | 'daily-digest';
   title: string;
   message: string;
   timestamp: string;
   reason?: string;
+  read: boolean;
 }
 
 // --------------------------------------------------------------------------
@@ -409,6 +410,6 @@ export const mockAgentEvents: AgentEvent[] = [
 ];
 
 export const mockNotifications: Notification[] = [
-  { id: 'notif-1', type: 'missed-task', title: 'Missed Task', message: 'You missed your System Design reading.', timestamp: '2026-09-25T09:00:00Z' },
-  { id: 'notif-2', type: 'plan-update', title: 'Plan Updated', message: 'Sprint 2 was adjusted to focus more on Trees & Graphs.', reason: 'Low score on recent assessment.', timestamp: '2026-09-25T10:01:00Z' },
+  { id: 'notif-1', type: 'missed-task', title: 'Missed Task', message: 'You missed your System Design reading.', timestamp: '2026-09-25T09:00:00Z', read: false },
+  { id: 'notif-2', type: 'plan-update', title: 'Plan Updated', message: 'Sprint 2 was adjusted to focus more on Trees & Graphs.', reason: 'Low score on recent assessment.', timestamp: '2026-09-25T10:01:00Z', read: false },
 ];

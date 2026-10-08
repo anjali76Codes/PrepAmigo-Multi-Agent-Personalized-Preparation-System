@@ -5,9 +5,10 @@ import { useAppContext } from '../../context/AppContext';
 
 export function SearchBar() {
   const navigate = useNavigate();
-  const { preps } = useAppContext();
+  const { preps, notifications } = useAppContext();
   const prep = preps[0];
   const streak = prep?.learningContext?.progress?.streak || 0;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -101,6 +102,11 @@ export function SearchBar() {
       <div className="flex items-center gap-3 shrink-0">
         <button onClick={() => navigate('/dashboard/notifications')} className="w-10 h-10 rounded-full bg-white/50 text-carbon-700 flex items-center justify-center hover:bg-white transition-colors relative">
           <Icon name="notifications-outline" className="text-xl" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 min-w-4 h-4 px-1 rounded-full bg-coral-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
         <div className="flex items-center gap-1.5 bg-sunny-100 text-bg px-3 py-1.5 rounded-xl font-semibold text-sm">
           <Icon name="flame" /> {streak}

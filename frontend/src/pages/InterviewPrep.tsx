@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../components/ui/Icon";
+import { toolCallText } from "../lib/agentStream/toolCall";
 
 type WorkflowStatus =
   | "idle"
@@ -63,13 +64,16 @@ export function InterviewPrep() {
       "calling_agent",
       "processing",
       "structuring",
+      "tool_call",
     ]) {
       source.addEventListener(eventType, (event) => {
         const parsed = JSON.parse((event as MessageEvent).data);
         const message =
-          parsed.payload?.message ||
-          parsed.payload?.step ||
-          eventType.replaceAll("_", " ");
+          eventType === "tool_call"
+            ? toolCallText(parsed.payload)
+            : parsed.payload?.message ||
+              parsed.payload?.step ||
+              eventType.replaceAll("_", " ");
         setEvents((previous) => [...previous.slice(-7), message]);
         setStatus("running");
       });

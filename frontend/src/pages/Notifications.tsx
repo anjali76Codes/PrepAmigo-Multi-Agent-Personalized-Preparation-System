@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
@@ -7,12 +7,15 @@ import { Select } from '../components/ui/Select';
 
 export function Notifications() {
   const shouldReduceMotion = useReducedMotion();
-  const { notifications: mockNotifications } = useAppContext();
-  const [notifications, setNotifications] = useState(mockNotifications.map(n => ({ ...n, read: false })));
+  const { notifications, markNotificationRead, markAllNotificationsRead, refreshNotifications } = useAppContext();
+
+  useEffect(() => {
+    void refreshNotifications();
+  }, [refreshNotifications]);
   const [filter, setFilter] = useState<string>('all');
-  
-  const filteredNotifs = filter === 'all' 
-    ? notifications 
+
+  const filteredNotifs = filter === 'all'
+    ? notifications
     : notifications.filter(n => n.type === filter);
 
   const getIcon = (type: string) => {
@@ -23,6 +26,7 @@ export function Notifications() {
       case 'quiz-result': return 'analytics-outline';
       case 'streak-warning': return 'flame-outline';
       case 'milestone-unlock': return 'trophy-outline';
+      case 'daily-digest': return 'sunny-outline';
       default: return 'notifications-outline';
     }
   };
@@ -34,20 +38,13 @@ export function Notifications() {
         return 'bg-beige-100 text-beige-600 border-beige-600/20';
       case 'plan-update':
       case 'quiz-result':
+      case 'daily-digest':
         return 'bg-navy-100 text-navy-700 border-navy-700/20';
       case 'milestone-unlock':
         return 'bg-navy-100 text-navy-700 border-navy-700/20';
-      default: 
+      default:
         return 'bg-surface text-carbon-500 border-border';
     }
-  };
-
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const markRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   return (
@@ -68,8 +65,9 @@ export function Notifications() {
               <option value="missed-task">Missed tasks</option>
               <option value="plan-update">Plan updates</option>
               <option value="reminder">Reminders</option>
+              <option value="daily-digest">Daily digest</option>
             </Select>
-            <Button variant="outline" onClick={markAllRead} className="rounded-xl border-border hover:bg-surface-muted bg-white">Mark all read</Button>
+            <Button variant="outline" onClick={() => void markAllNotificationsRead()} className="rounded-xl border-border hover:bg-surface-muted bg-white">Mark all read</Button>
           </div>
         </div>
       </div>
@@ -84,7 +82,7 @@ export function Notifications() {
             <div 
               key={notif.id} 
               className={`p-6 rounded-[2rem] border transition-all duration-300 cursor-pointer hover:-translate-y-1 ${notif.read ? 'bg-white/50 border-border opacity-75' : 'bg-white border-border shadow-pop'}`}
-              onClick={() => markRead(notif.id)}
+              onClick={() => void markNotificationRead(notif.id)}
             >
               <div className="flex gap-4">
                 <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center border ${getStyles(notif.type)}`}>

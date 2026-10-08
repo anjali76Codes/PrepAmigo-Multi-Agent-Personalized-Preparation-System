@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { mockAgentEvents as initialAgentEvents, mockNotifications as initialNotifications } from '../data/mockData';
+import { mockAgentEvents as initialAgentEvents } from '../data/mockData';
 import type { Prep, AgentEvent, Notification } from '../data/mockData';
 import { plansApi, apiPlanToPrep } from '../lib/api/plans';
+import { apiNotificationToNotification, notificationsApi } from '../lib/api/notifications';
 import { useAuth } from '../hooks/useAuth';
 import { featureFlags } from '../config/featureFlags';
 
@@ -18,6 +19,9 @@ interface AppContextType {
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
   refreshPreps: () => Promise<void>;
   loadingPreps: boolean;
+  refreshNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,8 +31,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [preps, setPreps] = useState<Prep[]>([]);
   const [activePrepId, setActivePrepId] = useState<string | null>(null);
   const [agentEvents, setAgentEvents] = useState<AgentEvent[]>(initialAgentEvents);
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingPreps, setLoadingPreps] = useState(false);
+
+  const refreshNotifications = useCallback(async () => {
+    if (featureFlags.enableAuth && !user) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const res = await notificationsApi.list();
+      setNotifications((res.data || []).map(apiNotificationToNotification));
+    } catch (err) {
+      console.warn('[AppContext] Could not fetch notifications from backend:', err);
+    }
+  }, [user]);
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    try {
+      await notificationsApi.markRead(id);
+    } catch (err) {
+      console.warn('[AppContext] Could not mark notification read:', err);
+    }
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await notificationsApi.markAllRead();
+    } catch (err) {
+      console.warn('[AppContext] Could not mark all notifications read:', err);
+    }
+  }, []);
 
   const refreshPreps = useCallback(async () => {
     if (featureFlags.enableAuth && !user) {
@@ -84,7 +119,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     void refreshPreps();
-  }, [user, authLoading, refreshPreps]);
+    void refreshNotifications();
+  }, [user, authLoading, refreshPreps, refreshNotifications]);
 
   const activePrep = preps.find((p) => p.id === activePrepId) || preps[0] || null;
 
@@ -102,6 +138,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setNotifications,
         refreshPreps,
         loadingPreps,
+        refreshNotifications,
+        markNotificationRead,
+        markAllNotificationsRead,
       }}
     >
       {children}

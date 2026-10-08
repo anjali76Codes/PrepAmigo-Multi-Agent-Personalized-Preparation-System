@@ -126,6 +126,7 @@ export class AgentStreamClient {
       "waiting",
       "processing",
       "structuring",
+      "tool_call",
       "completed",
       "failed",
       "ping",

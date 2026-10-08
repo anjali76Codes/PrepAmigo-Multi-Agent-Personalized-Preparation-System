@@ -9,6 +9,7 @@ import progressRouter from "./progress.routes.js";
 import assessmentsRouter from "./assessments.routes.js";
 import flashcardsRouter from "./flashcards.routes.js";
 import resourcesRouter from "./resources.routes.js";
+import notificationsRouter from "./notifications.routes.js";
 
 const apiRouter = Router();
 
@@ -21,5 +22,6 @@ apiRouter.use("/api", progressRouter);
 apiRouter.use("/api/assessments", assessmentsRouter);
 apiRouter.use("/api/flashcards", flashcardsRouter);
 apiRouter.use("/api", resourcesRouter);
+apiRouter.use("/api/notifications", notificationsRouter);
 
 export default apiRouter;
