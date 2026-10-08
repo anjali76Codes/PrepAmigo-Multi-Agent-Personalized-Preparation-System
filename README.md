@@ -24,6 +24,21 @@
     </a>
   </p>
 
+
+  <p>
+    <a href="YOUR_LIVE_URL_HERE" target="_blank">
+      <img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
+    </a>
+    &nbsp;
+    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank">
+      <img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
+    </a>
+    &nbsp;
+    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank">
+      <img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" />
+    </a>
+  </p>
+
   <p>
     <a href="#quick-start"><strong>🚀 Quick start</strong></a>
     &nbsp;·&nbsp;
@@ -31,6 +46,7 @@
     &nbsp;·&nbsp;
     <a href="#documentation">Documentation</a>
   </p>
+
 
 </div>
 
