@@ -8,7 +8,7 @@ import { BadgeGrid } from '../components/preps/BadgeGrid';
 import { StreakCalendar } from '../components/preps/StreakCalendar';
 import { SkillLevelBars } from '../components/preps/SkillLevelBars';
 import { MilestoneTrack } from '../components/preps/MilestoneTrack';
-import { TitleCard } from '../components/preps/TitleCard';
+// import { TitleCard } from '../components/preps/TitleCard';
 import { Mascot } from '../components/ui/Mascot';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -43,16 +43,16 @@ export function Progress() {
     );
   }
 
-  const titles = [
-    {
-      id: "t-1",
-      name: gamification.completedSprints >= 4
-        ? "Lead Architect"
-        : gamification.completedSprints >= 2
-          ? "Senior Candidate"
-          : "Candidate",
-    },
-  ];
+  // const titles = [
+  //   {
+  //     id: "t-1",
+  //     name: gamification.completedSprints >= 4
+  //       ? "Lead Architect"
+  //       : gamification.completedSprints >= 2
+  //         ? "Senior Candidate"
+  //         : "Candidate",
+  //   },
+  // ];
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
