@@ -48,7 +48,7 @@ export function SetCard({ title, meta, badge, icon, index, onClick, locked }: Pr
             </div>
 
             <div className="pt-2">
-                <div className="font-bold text-base text-carbon-900 group-hover:text-navy-900 leading-snug tracking-tight line-clamp-1">
+                <div className="font-bold text-base text-carbon-900 group-hover:text-deep-emerald leading-snug tracking-tight line-clamp-1">
                     {title}
                 </div>
                 <div className="text-xs text-carbon-500 mt-1 flex items-center gap-1.5 font-medium">
@@ -58,4 +58,4 @@ export function SetCard({ title, meta, badge, icon, index, onClick, locked }: Pr
             </div>
         </motion.button>
     );
-}
+}

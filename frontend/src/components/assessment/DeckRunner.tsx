@@ -44,7 +44,7 @@ export function DeckRunner({ deck, onExit }: { deck: FlashcardDeck; onExit: () =
         <div className="space-y-5 max-w-3xl mx-auto">
             <div className="flex items-center justify-between">
                 <Back onClick={onExit} label="All decks" />
-                <span className="text-sm font-bold text-navy-300">Card {idx + 1} of {total}</span>
+                <span className="text-sm font-bold text-rosewood">Card {idx + 1} of {total}</span>
             </div>
             <ProgressBar value={Object.keys(ratings).length} total={total} />
 
@@ -68,7 +68,7 @@ export function DeckRunner({ deck, onExit }: { deck: FlashcardDeck; onExit: () =
                             <div style={face} className="absolute inset-0 bg-surface border border-border rounded-3xl shadow-card p-10 flex flex-col items-center justify-center text-center gap-5">
                                 <Badge>{card.category}</Badge>
                                 <p className="text-2xl md:text-3xl font-bold text-carbon-900 leading-snug">{card.front}</p>
-                                <span className="text-sm font-semibold text-navy-300 flex items-center gap-1">
+                                <span className="text-sm font-semibold text-rosewood flex items-center gap-1">
                                     <Icon name="refresh" /> Tap to reveal
                                 </span>
                             </div>
@@ -91,7 +91,7 @@ export function DeckRunner({ deck, onExit }: { deck: FlashcardDeck; onExit: () =
                 <AnimatePresence mode="wait">
                     {flipped ? (
                         <motion.div key="rate" {...fade} className="flex items-center gap-3">
-                            <span className="text-sm text-navy-300 font-semibold">How well did you know it?</span>
+                            <span className="text-sm text-rosewood font-semibold">How well did you know it?</span>
                             {RATINGS.map((r) => (
                                 <button
                                     key={r.label}

@@ -24,10 +24,10 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
   return (
     <Card variant="default" className="p-6">
       <h3 className="text-lg font-semibold mb-6 text-carbon-900">Live Learning Context</h3>
-      
+
       <div className="space-y-6">
-        <motion.div 
-          animate={{ backgroundColor: highlight && (highlightField === 'role' || highlightField === 'all') ? 'var(--color-navy-100)' : 'transparent' }}
+        <motion.div
+          animate={{ backgroundColor: highlight && (highlightField === 'role' || highlightField === 'all') ? 'var(--color-soft-rose)' : 'transparent' }}
           className="rounded-control p-2 -mx-2 transition-colors relative"
         >
           <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wider mb-2 flex justify-between items-center">
@@ -39,8 +39,8 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
           <div className="text-carbon-900">{context.targetRole}</div>
         </motion.div>
 
-        <motion.div 
-          animate={{ backgroundColor: highlight && (highlightField === 'summary' || highlightField === 'all') ? 'var(--color-navy-100)' : 'transparent' }}
+        <motion.div
+          animate={{ backgroundColor: highlight && (highlightField === 'summary' || highlightField === 'all') ? 'var(--color-soft-rose)' : 'transparent' }}
           className="rounded-control p-2 -mx-2 transition-colors relative"
         >
           <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wider mb-2 flex justify-between items-center">
@@ -52,8 +52,8 @@ export function LearningContextPanel({ context, highlightField, highlightSource 
           <div className="text-sm text-carbon-900 leading-relaxed">{context.resumeSummary}</div>
         </motion.div>
 
-        <motion.div 
-          animate={{ backgroundColor: highlight && (highlightField === 'gaps' || highlightField === 'all') ? 'var(--color-navy-100)' : 'transparent' }}
+        <motion.div
+          animate={{ backgroundColor: highlight && (highlightField === 'gaps' || highlightField === 'all') ? 'var(--color-soft-rose)' : 'transparent' }}
           className="rounded-control p-2 -mx-2 transition-colors relative"
         >
           <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wider mb-2 flex justify-between items-center">

@@ -168,7 +168,7 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/60 backdrop-blur-sm overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep-emerald/60 backdrop-blur-sm overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -177,7 +177,7 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
           className="bg-white rounded-[2rem] shadow-2xl border border-border w-full max-w-2xl overflow-hidden my-8"
         >
           {/* Header Banner */}
-          <div className="bg-navy-900 text-white p-6 md:p-8 relative overflow-hidden">
+          <div className="bg-deep-emerald text-white p-6 md:p-8 relative overflow-hidden">
             <div className="relative z-10 flex items-center justify-between">
               <div>
                 <span className="text-xs uppercase font-extrabold tracking-wider text-chrome-accent">
@@ -216,11 +216,10 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
                     key={role}
                     type="button"
                     onClick={() => setTargetRole(role)}
-                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                      targetRole === role
-                        ? "bg-navy-700 text-white border-navy-700"
-                        : "bg-surface text-carbon-600 border-border hover:bg-lavender-100"
-                    }`}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${targetRole === role
+                      ? "bg-expresso text-white border-expresso"
+                      : "bg-surface text-carbon-600 border-border hover:bg-lavender-100"
+                      }`}
                   >
                     {role}
                   </button>
@@ -243,11 +242,10 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
                     key={level.id}
                     type="button"
                     onClick={() => setExperienceLevel(level.id)}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      experienceLevel === level.id
-                        ? "border-chrome bg-lavender-100 shadow-sm"
-                        : "border-border bg-bg hover:border-chrome/50"
-                    }`}
+                    className={`p-3 rounded-xl border text-left transition-all ${experienceLevel === level.id
+                      ? "border-chrome bg-lavender-100 shadow-sm"
+                      : "border-border bg-bg hover:border-chrome/50"
+                      }`}
                   >
                     <div className="font-bold text-sm text-carbon-900">{level.title}</div>
                     <div className="text-xs text-carbon-500 mt-0.5">{level.desc}</div>
@@ -265,7 +263,7 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
                 {skills.map((skill) => (
                   <span
                     key={skill}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-border rounded-full text-xs font-bold text-navy-800 shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-border rounded-full text-xs font-bold text-forest-emerald shadow-2xs"
                   >
                     {skill}
                     <button
@@ -317,11 +315,10 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
-                  resumeFilename
-                    ? "border-green-500 bg-green-50/50"
-                    : "border-border bg-bg hover:border-chrome"
-                }`}
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${resumeFilename
+                  ? "border-green-500 bg-green-50/50"
+                  : "border-border bg-bg hover:border-chrome"
+                  }`}
               >
                 {isUploadingResume ? (
                   <div className="flex items-center justify-center gap-2 text-sm text-carbon-600 py-2">

@@ -11,8 +11,8 @@ export function PromptToPlan() {
             </Reveal>
 
             <div className="grid gap-8 md:grid-cols-2">
-                <RevealCard className="bg-navy-900 p-8 flex flex-col justify-center rounded-[2rem] text-white">
-                    <p className="text-navy-100 mb-4 text-sm font-semibold uppercase tracking-widest">
+                <RevealCard className="bg-deep-emerald p-8 flex flex-col justify-center rounded-[2rem] text-white">
+                    <p className="text-soft-rose mb-4 text-sm font-semibold uppercase tracking-widest">
                         Your Input
                     </p>
                     <div className="rounded-2xl bg-white/10 p-6 shadow-inner border border-white/10">

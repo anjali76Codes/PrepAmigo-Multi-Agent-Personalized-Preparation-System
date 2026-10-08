@@ -31,9 +31,9 @@ const STEPS: {
       step: '1',
       title: 'Input',
       desc: 'Tell us your target role and upload your resume.',
-      card: 'bg-navy-900 text-white',
+      card: 'bg-deep-emerald text-white',
       descColor: 'text-on-chrome-muted',
-      badge: 'bg-chrome-accent text-navy-900',
+      badge: 'bg-chrome-accent text-deep-emerald',
       x: '14.6%',
       y: '14.6%',
       mood: 'idle',
@@ -42,9 +42,9 @@ const STEPS: {
       step: '2',
       title: 'Analyze',
       desc: 'Our agents find company expectations and your skill gaps.',
-      card: 'bg-lavender-100 text-navy-900',
-      descColor: 'text-navy-500',
-      badge: 'bg-navy-900 text-white',
+      card: 'bg-lavender-100 text-deep-emerald',
+      descColor: 'text-cocoa',
+      badge: 'bg-deep-emerald text-white',
       x: '85.4%',
       y: '14.6%',
       mood: 'think',
@@ -53,9 +53,9 @@ const STEPS: {
       step: '3',
       title: 'Plan',
       desc: 'We generate a day-by-day study roadmap.',
-      card: 'bg-navy-500 text-white',
+      card: 'bg-cocoa text-white',
       descColor: 'text-white/85',
-      badge: 'bg-white text-navy-900',
+      badge: 'bg-white text-deep-emerald',
       x: '85.4%',
       y: '85.4%',
       mood: 'idle',
@@ -64,9 +64,9 @@ const STEPS: {
       step: '4',
       title: 'Adapt',
       desc: 'The plan shifts based on your quiz scores and missed days.',
-      card: 'bg-chrome-accent text-navy-900',
-      descColor: 'text-navy-500',
-      badge: 'bg-navy-900 text-white',
+      card: 'bg-chrome-accent text-deep-emerald',
+      descColor: 'text-cocoa',
+      badge: 'bg-deep-emerald text-white',
       x: '14.6%',
       y: '85.4%',
       mood: 'cheer',
@@ -143,7 +143,7 @@ function RingMarker({ index, active }: { index: number; active: number }) {
       <motion.div
         animate={{ scale: on ? 1.4 : 1, opacity: on ? 1 : 0.35 }}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        className="h-3 w-3 rounded-full bg-navy-900 ring-4 ring-bg"
+        className="h-3 w-3 rounded-full bg-deep-emerald ring-4 ring-bg"
       />
     </div>
   );
@@ -178,7 +178,7 @@ export function ScrollSteps() {
   if (reduceMotion) {
     return (
       <section className="relative z-10 mx-auto max-w-6xl px-6 py-24">
-        <h2 className="mb-12 text-center text-3xl font-bold text-navy-900">
+        <h2 className="mb-12 text-center text-3xl font-bold text-deep-emerald">
           How PrepAmigo Works
         </h2>
         <RevealStagger className="grid gap-6 pt-6 md:grid-cols-2">
@@ -200,14 +200,14 @@ export function ScrollSteps() {
     <section ref={ref} className="relative z-10 h-[220vh] md:h-[260vh]">
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center">
         <Reveal className="absolute left-0 right-0 top-16 px-6 text-center">
-          <h2 className="text-3xl font-bold text-navy-900 mt-14">How PrepAmigo Works</h2>
+          <h2 className="text-3xl font-bold text-deep-emerald mt-14">How PrepAmigo Works</h2>
         </Reveal>
 
         {/* Stage: cards sit ON the circumference of the ring */}
         <div className="relative -mt-24 h-60 w-60 md:mt-10 md:h-[540px] md:w-[540px]">
           <motion.div
             style={{ rotate: ringRotate }}
-            className="absolute inset-0 rounded-full border-2 border-dashed border-navy-100/40"
+            className="absolute inset-0 rounded-full border-2 border-dashed border-soft-rose/40"
           />
 
           <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
@@ -235,7 +235,7 @@ export function ScrollSteps() {
               type="button"
               aria-label={`Go to step ${s.step}: ${s.title}`}
               onClick={() => goToStep(i)}
-              className={`h-3 w-3 rounded-full border-2 border-navy-900 transition-colors ${i === active ? 'bg-navy-900' : 'bg-transparent'
+              className={`h-3 w-3 rounded-full border-2 border-deep-emerald transition-colors ${i === active ? 'bg-deep-emerald' : 'bg-transparent'
                 }`}
             />
           ))}

@@ -247,7 +247,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
         const quizItems: Item[] = quiz.questions.map((q, i) => ({ kind: "quiz" as const, question: q, quizId: quiz._id, idx: i }));
         const cardItems: Item[] = deck ? deck.cards.map((c, i) => ({ kind: "card" as const, card: c, deckId: deck._id, idx: i })) : [];
         return shuffle([...quizItems, ...cardItems]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [quiz._id, deck?._id]);
 
     const total = items.length;
@@ -320,7 +320,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-white border border-border text-carbon-700 shadow-xs">
                         {pos + 1} of {total}
                     </span>
-                    <span className="text-xs font-bold text-navy-500 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-cocoa uppercase tracking-wider">
                         {Math.round((visitedCount / total) * 100)}%
                     </span>
                 </div>

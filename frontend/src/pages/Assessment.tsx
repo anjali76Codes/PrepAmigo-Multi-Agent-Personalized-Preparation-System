@@ -169,8 +169,8 @@ export function Assessment() {
                     {/* ── Header ── */}
                     <div className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between shadow-pop border border-chrome-accent/50 relative overflow-hidden gap-6">
                         <div className="relative z-10">
-                            <h1 className="text-2xl md:text-3xl font-extrabold text-navy-900 mb-2 tracking-tight">Assessment</h1>
-                            <p className="text-base md:text-lg text-navy-800/80 font-medium">Test your knowledge with quizzes and flashcards.</p>
+                            <h1 className="text-2xl md:text-3xl font-extrabold text-deep-emerald mb-2 tracking-tight">Assessment</h1>
+                            <p className="text-base md:text-lg text-forest-emerald/80 font-medium">Test your knowledge with quizzes and flashcards.</p>
                         </div>
                         {/* Only show tabs when not in level flow */}
                         {!showCombined && (

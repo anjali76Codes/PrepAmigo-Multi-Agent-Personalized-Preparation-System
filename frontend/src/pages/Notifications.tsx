@@ -29,15 +29,15 @@ export function Notifications() {
 
   const getStyles = (type: string) => {
     switch (type) {
-      case 'missed-task': 
-      case 'streak-warning': 
+      case 'missed-task':
+      case 'streak-warning':
         return 'bg-beige-100 text-beige-600 border-beige-600/20';
       case 'plan-update':
       case 'quiz-result':
       case 'daily-digest':
-        return 'bg-navy-100 text-navy-700 border-navy-700/20';
+        return 'bg-soft-rose text-expresso border-expresso/20';
       case 'milestone-unlock':
-        return 'bg-navy-100 text-navy-700 border-navy-700/20';
+        return 'bg-soft-rose text-expresso border-expresso/20';
       default:
         return 'bg-surface text-carbon-500 border-border';
     }
@@ -52,8 +52,8 @@ export function Notifications() {
             <p className="text-lg text-carbon-500">Stay updated on your learning journey.</p>
           </div>
           <div className="flex gap-4">
-            <Select 
-              value={filter} 
+            <Select
+              value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className="bg-white border-border rounded-xl"
             >
@@ -75,8 +75,8 @@ export function Notifications() {
           className="max-w-4xl mx-auto space-y-4 pb-12"
         >
           {filteredNotifs.length > 0 ? filteredNotifs.map(notif => (
-            <div 
-              key={notif.id} 
+            <div
+              key={notif.id}
               className={`p-6 rounded-[2rem] border transition-all duration-300 cursor-pointer hover:-translate-y-1 ${notif.read ? 'bg-white/50 border-border opacity-75' : 'bg-white border-border shadow-pop'}`}
               onClick={() => void markNotificationRead(notif.id)}
             >
@@ -86,7 +86,7 @@ export function Notifications() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className={`font-semibold ${notif.read ? 'text-carbon-900' : 'text-navy-700'}`}>{notif.title}</h3>
+                    <h3 className={`font-semibold ${notif.read ? 'text-carbon-900' : 'text-expresso'}`}>{notif.title}</h3>
                     <span className="text-xs text-carbon-500 whitespace-nowrap">
                       {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>

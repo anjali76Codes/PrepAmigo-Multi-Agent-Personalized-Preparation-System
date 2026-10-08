@@ -102,18 +102,17 @@ export function AppLayout() {
   ];
 
   return (
-    <div className="flex h-screen bg-carbon-900 text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
+    <div className="flex h-screen bg-deep-emerald text-carbon-700 overflow-hidden font-sans selection:bg-chrome-accent selection:text-chrome relative z-0">
       {/* Desktop Sidebar */}
       <motion.aside
         initial={{ width: 256 }}
         animate={{ width: isSidebarOpen ? 256 : 80 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="hidden md:flex flex-col bg-carbon-900 text-on-chrome relative overflow-hidden z-10"
+        className="hidden md:flex flex-col bg-deep-emerald text-on-chrome relative overflow-hidden z-10"
       >
         <div
-          className={`h-16 flex items-center shrink-0 transition-all ${
-            isSidebarOpen ? "px-5 justify-between gap-2" : "justify-center px-2"
-          }`}
+          className={`h-16 flex items-center shrink-0 transition-all ${isSidebarOpen ? "px-5 justify-between gap-2" : "justify-center px-2"
+            }`}
         >
           {isSidebarOpen ? (
             <>
@@ -126,7 +125,6 @@ export function AppLayout() {
                 aria-label="Collapse sidebar"
                 className="p-2 text-on-chrome-muted hover:text-on-chrome hover:bg-white/10 rounded-xl transition-all duration-150 flex items-center justify-center shrink-0 cursor-pointer active:scale-95"
               >
-                {/* Sleek modern sidebar collapse icon (ChatGPT style) */}
                 <svg
                   className="w-6 h-6 pointer-events-none select-none shrink-0"
                   viewBox="0 0 24 24"
@@ -143,19 +141,16 @@ export function AppLayout() {
               </button>
             </>
           ) : (
-            /* When collapsed: single mascot icon button that swaps to the expand icon on hover */
             <button
               onClick={() => setIsSidebarOpen(true)}
               title="Expand sidebar"
               aria-label="Expand sidebar"
               className="group relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 cursor-pointer active:scale-95"
             >
-              {/* Mascot image - fades out on hover */}
               <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-chrome text-chrome shadow-pop overflow-hidden transition-all duration-200 group-hover:opacity-0 group-hover:scale-90">
                 <Mascot variant="nosy.png" style={{ width: "auto", height: "auto" }} />
               </div>
 
-              {/* Sleek expand icon overlay - circular and matches the mascot avatar */}
               <div className="absolute inset-0 flex items-center justify-center text-on-chrome opacity-0 scale-90 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 border border-white/20 text-on-chrome shadow-md">
                   <svg
@@ -194,7 +189,7 @@ export function AppLayout() {
               {({ isActive }) => (
                 <>
                   <div
-                    className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? "bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]" : "bg-white/5 group-hover:bg-white/10"}`}
+                    className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? "bg-chrome-accent text-cocoa shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]" : "bg-white/5 group-hover:bg-white/10"}`}
                   >
                     <Icon
                       name={item.icon}

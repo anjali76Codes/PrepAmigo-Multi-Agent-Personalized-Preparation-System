@@ -56,7 +56,7 @@ function Processing() {
           return (
             <li
               key={label}
-              className={`flex items-center gap-2 text-base transition-colors ${done ? "text-navy-300" : active ? "text-carbon-900 font-semibold" : "text-navy-300/50"
+              className={`flex items-center gap-2 text-base transition-colors ${done ? "text-rosewood" : active ? "text-carbon-900 font-semibold" : "text-rosewood/50"
                 }`}
             >
               <span className="w-4 h-4 flex items-center justify-center shrink-0">

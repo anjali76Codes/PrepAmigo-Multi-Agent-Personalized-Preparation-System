@@ -36,11 +36,11 @@ export function Profile() {
 
   const userInitials = user?.name
     ? user.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
     : 'JD';
 
   const handleAddSkill = (skill: string) => {
@@ -191,7 +191,7 @@ export function Profile() {
                 {skills.map((skill) => (
                   <span
                     key={skill}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-border rounded-full text-xs font-bold text-navy-800 shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-border rounded-full text-xs font-bold text-forest-emerald shadow-2xs"
                   >
                     {skill}
                     <button
@@ -236,11 +236,10 @@ export function Profile() {
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                  resumeFilename
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${resumeFilename
                     ? "border-green-500 bg-green-50/40"
                     : "border-border bg-bg hover:border-chrome"
-                }`}
+                  }`}
               >
                 {isUploadingResume ? (
                   <div className="flex items-center justify-center gap-2 text-sm text-carbon-600">

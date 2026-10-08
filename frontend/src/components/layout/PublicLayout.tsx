@@ -31,7 +31,7 @@ export function PublicLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen text-carbon-700 relative flex flex-col font-sans selection:bg-navy-100 selection:text-navy-800 bg-transparent">
+    <div className="min-h-screen text-carbon-700 relative flex flex-col font-sans selection:bg-soft-rose selection:text-forest-emerald bg-transparent">
       {/* Organic Background */}
       <PageBackground className="fixed inset-0 z-[-1]" />
 
@@ -41,23 +41,23 @@ export function PublicLayout() {
           ? 'max-w-4xl h-16 px-6 rounded-full border border-border bg-surface/90 backdrop-blur-xl shadow-pop text-carbon-700'
           : 'max-w-7xl h-18 md:h-20 px-6 md:px-8 rounded-2xl md:rounded-full border border-white/15 bg-carbon-900/90 backdrop-blur-xl shadow-2xl text-white'
           }`}>
-          <Link to="/" className="flex items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-navy-700 rounded-control">
+          <Link to="/" className="flex items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-expresso rounded-control">
             <Logo tone={isScrolled ? "default" : "inverse"} />
           </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex flex-1 items-center justify-end gap-8">
-            <a href="#features" onClick={goTo('features')} className={`text-sm font-medium transition-colors outline-none focus-visible:text-navy-700 ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}>
+            <a href="#features" onClick={goTo('features')} className={`text-sm font-medium transition-colors outline-none focus-visible:text-expresso ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}>
               Features
             </a>
-            <a href="#agents" onClick={goTo('agents')} className={`text-sm font-medium transition-colors outline-none focus-visible:text-navy-700 ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}>
+            <a href="#agents" onClick={goTo('agents')} className={`text-sm font-medium transition-colors outline-none focus-visible:text-expresso ${isScrolled ? 'text-carbon-500 hover:text-carbon-900' : 'text-white/70 hover:text-white'}`}>
               Agents
             </a>
             <div className={`flex items-center gap-4 border-l pl-8 ${isScrolled ? 'border-border' : 'border-white/20'}`}>
-              {/* <Link to="/login" className="text-sm font-medium text-carbon-500 hover:text-carbon-900 transition-colors outline-none focus-visible:text-navy-700">
+              {/* <Link to="/login" className="text-sm font-medium text-carbon-500 hover:text-carbon-900 transition-colors outline-none focus-visible:text-expresso">
                 Log in
               </Link> */}
-              <Link to="/signup" className="outline-none focus-visible:ring-2 focus-visible:ring-navy-700 rounded-control">
+              <Link to="/signup" className="outline-none focus-visible:ring-2 focus-visible:ring-expresso rounded-control">
                 <Button className="rounded-control h-10 px-6 font-semibold" variant="primary">
                   Get Started
                 </Button>

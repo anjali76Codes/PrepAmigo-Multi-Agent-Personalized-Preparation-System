@@ -18,7 +18,7 @@ export function NotFound() {
         className="w-full max-w-lg mx-auto text-center flex flex-col items-center z-10"
       >
         <div className="relative mb-6">
-          <div className="absolute -inset-4 bg-navy-100/50 rounded-full blur-2xl -z-10" />
+          <div className="absolute -inset-4 bg-soft-rose/50 rounded-full blur-2xl -z-10" />
           <Mascot
             variant="Embarassment.png"
             size="xl"

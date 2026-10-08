@@ -59,7 +59,7 @@ export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => v
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-white border border-border text-carbon-700 shadow-xs">
                         Question <strong className="text-carbon-900">{idx + 1}</strong> of {total}
                     </span>
-                    <span className="text-xs font-bold text-navy-500 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-cocoa uppercase tracking-wider">
                         {Math.round(((idx + (checked ? 1 : 0)) / total) * 100)}%
                     </span>
                 </div>
@@ -203,4 +203,4 @@ export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => v
             </AnimatePresence>
         </div>
     );
-}
+}

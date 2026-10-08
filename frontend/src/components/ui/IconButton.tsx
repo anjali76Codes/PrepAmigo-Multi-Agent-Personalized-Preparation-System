@@ -12,8 +12,8 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ className, icon, variant = 'ghost', size = 'md', isLoading, disabled, tone = 'default', ...props }, ref) => {
-    const baseStyles = cn('inline-flex items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50', tone === 'inverse' ? 'focus-visible:ring-chrome-accent' : 'focus-visible:ring-navy-700');
-    
+    const baseStyles = cn('inline-flex items-center justify-center rounded-control transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50', tone === 'inverse' ? 'focus-visible:ring-chrome-accent' : 'focus-visible:ring-expresso');
+
     const variants = tone === 'inverse' ? {
       primary: 'bg-chrome-accent text-chrome hover:bg-chrome-accent/90 shadow-pop',
       secondary: 'bg-chrome-hover text-on-chrome border border-chrome-border hover:bg-chrome-border',
@@ -25,7 +25,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       ghost: 'hover:bg-surface-muted text-carbon-500 hover:text-carbon-900',
       danger: 'bg-danger-100 text-danger-600 hover:bg-danger-600/20 border border-danger-600/20',
     };
-    
+
     const sizes = {
       sm: 'h-8 w-8 text-lg',
       md: 'h-10 w-10 text-xl',

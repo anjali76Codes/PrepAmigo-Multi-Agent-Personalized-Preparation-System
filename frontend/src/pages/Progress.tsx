@@ -48,8 +48,8 @@ export function Progress() {
       name: gamification.completedSprints >= 4
         ? "Lead Architect"
         : gamification.completedSprints >= 2
-        ? "Senior Candidate"
-        : "Candidate",
+          ? "Senior Candidate"
+          : "Candidate",
     },
   ];
 
@@ -67,13 +67,13 @@ export function Progress() {
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-chrome text-white text-xs font-bold mb-2 shadow-2xs">
                 <Icon name="sparkles" /> {gamification.aiCredits} AI Credits Available
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-navy-900 mb-2 tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-deep-emerald mb-2 tracking-tight">
                 Progress & Gamification
               </h1>
-              <p className="text-base md:text-lg text-navy-800/80 font-medium max-w-xl">
-                Earn <span className="font-bold text-navy-900">20 XP</span> per level topic and{" "}
-                <span className="font-bold text-navy-900">30 XP</span> per assessment.
-                <span className="text-navy-900 font-bold ml-1 block mt-1 md:inline md:mt-0">
+              <p className="text-base md:text-lg text-forest-emerald/80 font-medium max-w-xl">
+                Earn <span className="font-bold text-deep-emerald">20 XP</span> per level topic and{" "}
+                <span className="font-bold text-deep-emerald">30 XP</span> per assessment.
+                <span className="text-deep-emerald font-bold ml-1 block mt-1 md:inline md:mt-0">
                   XP can be used as AI Credits in Resource Assistant.
                 </span>
               </p>
