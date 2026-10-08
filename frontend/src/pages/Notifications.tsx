@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { Icon } from '../components/ui/Icon';
@@ -7,7 +7,11 @@ import { Select } from '../components/ui/Select';
 
 export function Notifications() {
   const shouldReduceMotion = useReducedMotion();
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useAppContext();
+  const { notifications, markNotificationRead, markAllNotificationsRead, refreshNotifications } = useAppContext();
+
+  useEffect(() => {
+    void refreshNotifications();
+  }, [refreshNotifications]);
   const [filter, setFilter] = useState<string>('all');
 
   const filteredNotifs = filter === 'all'

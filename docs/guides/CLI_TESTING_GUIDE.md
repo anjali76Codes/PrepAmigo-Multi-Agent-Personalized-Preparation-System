@@ -76,13 +76,13 @@ Website : https://stripe.com
 Evidence: 5 tech/culture sources, 8 news articles.
 ```
 
-**With `SERPAPI_ENABLED=false`** (set in `.env`), data is read from `serpapi_fixtures.example.json`. The fixture covers a limited set of companies. If your company isn't in the fixture, the agent will produce partial results — this is expected.
+**With `SERPAPI_ENABLED=false`** (set in `agents-service/.env`), searches read the file configured by `SERPAPI_DUMMY_DATA_PATH`. For example, set it to `docs/serpapi_fixtures.example.json` or `docs/serpapi_fixtures.pipeline.json` from the `agents-service/` directory. Fixture mode avoids SerpApi requests, but does not disable model calls or other non-SerpApi sources.
 
 ---
 
 ## Mode 3 — Full Pipeline (`--prep`)
 
-Runs the complete orchestration chain **silently** (no intermediate SSE spam). All state passes internally between agents. Displays only the final research output — exactly what the **Planner Agent would receive** when it's built.
+Runs the interview-preparation orchestration chain **silently** (no intermediate SSE spam). All state passes internally between agents. Displays the final research output passed to the planning step.
 
 ```powershell
 # Minimum required: --prep, --company, --role
@@ -172,9 +172,9 @@ evaluate (merge results into final state)
 ```ini
 # .env — key settings for testing
 
-# Offline mode: reads from serpapi_fixtures.example.json (no API credits used)
+# Offline mode: reads from the configured fixture file (no SerpApi requests)
 SERPAPI_ENABLED=false
-SERPAPI_DUMMY_DATA_PATH=serpapi_fixtures.example.json
+SERPAPI_DUMMY_DATA_PATH=docs/serpapi_fixtures.example.json
 
 # Log level: set to DEBUG to see full agent reasoning
 LOG_LEVEL=INFO
@@ -189,9 +189,9 @@ STREAM_RESPONSES=true
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `Company Profile: not available` | Company not in fixture file | Add company to `serpapi_fixtures.example.json` or set `SERPAPI_ENABLED=true` |
+| `Company Profile: not available` | Company not in fixture file | Add company to the configured fixture or set `SERPAPI_ENABLED=true` |
 | `Job Intelligence: not available` | Role not in fixture, or `JobIntelligenceAgent` fallback hit | Check `SERPAPI_ENABLED`, check fixture coverage |
-| `Skill Gap: Analysis failed` | LLM call failed or timeout | Check `GEMINI_API_KEY` / LLM configuration |
+| `Skill Gap: Analysis failed` | LLM call failed or timed out | Check Ollama is reachable and `OLLAMA_MODEL` is available; review the configured LLM provider |
 | `Readiness 0%, 0 gaps` | No skills in job intelligence data | Fixture data for that role may lack skill entries |
 | Pipeline hangs at `run_research` | Research tools timing out | Set `RESEARCH_TIMEOUT_SECONDS=10` in `.env` for faster test cycles |
 | REPL not routing to `interview_prep` | Supervisor prompt mismatch | Use `--prep` mode instead for direct pipeline testing |
@@ -200,7 +200,7 @@ STREAM_RESPONSES=true
 
 ## Adding a Company to Fixtures
 
-To test a specific company in offline mode, add an entry to `serpapi_fixtures.example.json`:
+To test a specific company in offline mode, copy `agents-service/docs/serpapi_fixtures.example.json` to a local fixture file and add an entry there. Set `SERPAPI_DUMMY_DATA_PATH` in `agents-service/.env` to that file's path relative to `agents-service/`:
 
 ```json
 {

@@ -5,13 +5,26 @@ import { Icon } from "../components/ui/Icon";
 import { ChatInput } from "../components/chat/ChatInput";
 import { Mascot } from "../components/ui/Mascot";
 import { SUGGESTED_QUESTIONS } from "../data/mockNotes";
-import { AgentStreamClient } from "../lib/agentStream/agentStreamClient";
+import { apiFetch } from "../lib/api/client";
 
+interface ResourceSource {
+  source_id: string;
+  title: string;
+  source_type: string;
+  folder_path: string;
+  url: string;
+}
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   thinking?: boolean;
+  sources?: ResourceSource[];
+}
+
+interface ResourceSearchResponse {
+  success: boolean;
+  data: { answer: string; sources: ResourceSource[] };
 }
 
 const STEPS = [
@@ -94,14 +107,7 @@ export function ResourceChat() {
   const endRef = useRef<HTMLDivElement>(null);
   const consumed = useRef(false);
   const counter = useRef(0);
-  const clientRef = useRef<AgentStreamClient | null>(null);
-  const threadId = useRef(`resources-${crypto.randomUUID()}`);
   const nextId = () => `m-${++counter.current}`;
-
-  useEffect(() => {
-    clientRef.current = new AgentStreamClient();
-    return () => clientRef.current?.close();
-  }, []);
 
   const handleSend = async (text: string) => {
     const question = text.trim();
@@ -113,34 +119,19 @@ export function ResourceChat() {
       { id: aId, role: "assistant", content: "", thinking: true },
     ]);
     setBusy(true);
-    const finishWith = (content: string) => {
-      setMessages((p) => p.map((m) => (m.id === aId ? { ...m, thinking: false, content } : m)));
+    const finishWith = (content: string, sources: ResourceSource[] = []) => {
+      setMessages((p) => p.map((m) => (m.id === aId ? { ...m, thinking: false, content, sources } : m)));
       setBusy(false);
     };
 
     try {
-      const client = clientRef.current || new AgentStreamClient();
-      clientRef.current = client;
-      await client.startAgentRun(question, {
-        onCompleted: (payload) => {
-          const result = payload?.result;
-          const answer = payload?.message || result?.summary || result?.answer;
-          finishWith(typeof answer === "string" && answer.trim()
-            ? answer
-            : "I couldn't find an answer in your saved PrepAmigo content.");
-        },
-        onWaiting: (payload) => {
-          const clarification = typeof payload?.question === "string"
-            ? payload.question
-            : payload?.question?.question || payload?.message;
-          finishWith(clarification || "Could you clarify what you would like to know?");
-        },
-        onError: (error) => {
-          finishWith(error instanceof Error ? error.message : error?.detail || error?.error || "The resource assistant could not answer. Please try again.");
-        },
-      }, threadId.current);
+      const response = await apiFetch<ResourceSearchResponse>("/api/resources/search", {
+        method: "POST",
+        body: JSON.stringify({ query: question }),
+      });
+      finishWith(response.data.answer, response.data.sources);
     } catch (error) {
-      finishWith(error instanceof Error ? error.message : "The resource assistant could not start. Please try again.");
+      finishWith(error instanceof Error ? error.message : "The resource assistant could not answer. Please try again.");
     }
   };
 
@@ -213,6 +204,25 @@ export function ResourceChat() {
                 ) : (
                   <div className="rounded-2xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-xs w-fit max-w-full">
                     <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">{m.content}</p>
+                    {!!m.sources?.length && (
+                      <div className="mt-4 border-t border-border pt-3">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-carbon-500">Sources</p>
+                        <ul className="space-y-2">
+                          {m.sources.map((source) => (
+                            <li key={source.source_id} className="text-xs">
+                              {source.url ? (
+                                <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-chrome hover:underline">
+                                  {source.title}
+                                </a>
+                              ) : (
+                                <span className="font-semibold text-carbon-800">{source.title}</span>
+                              )}
+                              <span className="ml-2 text-carbon-500">{source.folder_path || source.source_type}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../ui/Icon";
 import { DirectorySearch } from "./DirectorySearch";
@@ -15,8 +16,11 @@ import {
 } from "../../lib/resourceTree";
 import {
   addCustomItem,
-  updateCustomItem,
   deleteCustomItem,
+  getCustomItems,
+  getLegacyCustomItems,
+  clearLegacyCustomItems,
+  type CustomResourceItem,
 } from "../../lib/customResources";
 import { SearchResults } from "./SearchResults";
 import { cn } from "../../utils/utils";
@@ -143,10 +147,14 @@ function ListNode({
 
 export function ResourceDirectory() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const { activePrep } = useAppContext();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [customItems, setCustomItems] = useState<CustomResourceItem[]>([]);
+  const [legacyCount, setLegacyCount] = useState(0);
+  const [importingLegacy, setImportingLegacy] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
-  const tree = useMemo(() => buildTree(activePrep), [activePrep, refreshKey]);
+  const tree = useMemo(() => buildTree(activePrep, customItems), [activePrep, customItems]);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [path, setPath] = useState<string[]>(() => {
@@ -155,18 +163,34 @@ export function ResourceDirectory() {
   });
   const [open, setOpen] = useState<Set<string>>(() => new Set(path));
 
+  useEffect(() => {
+    const id = params.get("open");
+    if (!id) return;
+    const nextPath = pathToId(tree, id);
+    if (nextPath) {
+      setPath(nextPath);
+      setOpen(new Set(nextPath));
+    }
+  }, [params, tree]);
+
   // Modal states
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [activeNote, setActiveNote] = useState<{
-    id?: string;
-    title: string;
-    content: string;
-    isCustom?: boolean;
-    parentId?: string;
-  } | null>(null);
+  useEffect(() => {
+    let active = true;
+    getCustomItems()
+      .then((items) => {
+        if (!active) return;
+        setCustomItems(items);
+        const imported = new Set(items.map((item) => item.legacyId).filter(Boolean));
+        setLegacyCount(getLegacyCustomItems().filter((item) => !imported.has(item.id)).length);
+      })
+      .catch((error: unknown) => {
+        if (active) setLoadError(error instanceof Error ? error.message : "Could not load your resources.");
+      });
+    return () => { active = false; };
+  }, []);
 
   const q = query.trim().toLowerCase();
   const filtered = useMemo(() => filterTree(tree, q), [tree, q]);
@@ -192,59 +216,90 @@ export function ResourceDirectory() {
       return n;
     });
 
-  const handleCreateFolder = (e: React.FormEvent) => {
+  const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFolderName.trim()) return;
-    addCustomItem({
-      parentId: currentFolderId,
-      title: newFolderName.trim(),
-      kind: "folder",
-    });
-    setNewFolderName("");
-    setShowFolderModal(false);
-    setRefreshKey((k) => k + 1);
-  };
-
-  const handleSaveNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeNote || !activeNote.title.trim()) return;
-
-    if (activeNote.id && activeNote.isCustom) {
-      updateCustomItem(activeNote.id, {
-        title: activeNote.title.trim(),
-        content: activeNote.content,
-      });
-    } else {
-      addCustomItem({
+    try {
+      const item = await addCustomItem({
         parentId: currentFolderId,
-        title: activeNote.title.trim(),
-        kind: "file",
-        content: activeNote.content,
-        icon: "journal",
+        title: newFolderName.trim(),
+        kind: "folder",
       });
+      setCustomItems((items) => [...items, item]);
+      setNewFolderName("");
+      setShowFolderModal(false);
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not create the folder.");
     }
-    setActiveNote(null);
-    setShowNoteModal(false);
-    setRefreshKey((k) => k + 1);
   };
 
   const handleDeleteCustom = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this custom item?")) {
-      deleteCustomItem(id);
-      setRefreshKey((k) => k + 1);
+      void deleteCustomItem(id).then(() => {
+        const removed = new Set([id]);
+        let added = true;
+        while (added) {
+          added = false;
+          for (const item of customItems) {
+            if (!removed.has(item.id) && removed.has(item.parentId)) {
+              removed.add(item.id);
+              added = true;
+            }
+          }
+        }
+        setCustomItems((items) => items.filter((item) => !removed.has(item.id)));
+        setLoadError("");
+      }).catch((error: unknown) => {
+        setLoadError(error instanceof Error ? error.message : "Could not delete the resource.");
+      });
+    }
+  };
+
+  const handleImportLegacy = async () => {
+    const legacyItems = getLegacyCustomItems();
+    const importedIds = new Map(
+      customItems.filter((item) => item.legacyId).map((item) => [item.legacyId!, item.id]),
+    );
+    const legacyIds = new Set(legacyItems.map((item) => item.id));
+    const pending = legacyItems.filter((item) => !importedIds.has(item.id));
+    setImportingLegacy(true);
+    setLoadError("");
+    try {
+      while (pending.length) {
+        const readyIndex = pending.findIndex((item) =>
+          item.parentId === "root" ||
+          importedIds.has(item.parentId) ||
+          !legacyIds.has(item.parentId),
+        );
+        if (readyIndex === -1) {
+          throw new Error("The old browser folders contain a parent cycle and could not be imported safely.");
+        }
+        const [item] = pending.splice(readyIndex, 1);
+        const saved = await addCustomItem({
+          legacyId: item.id,
+          parentId: importedIds.get(item.parentId) || "root",
+          title: item.title,
+          kind: item.kind,
+          content: item.content,
+          url: item.url,
+          icon: item.icon,
+        });
+        importedIds.set(item.id, saved.id);
+        setCustomItems((items) => items.some((current) => current.id === saved.id) ? items : [...items, saved]);
+      }
+      clearLegacyCustomItems();
+      setLegacyCount(0);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not import the older browser notes.");
+    } finally {
+      setImportingLegacy(false);
     }
   };
 
   const handleOpenNote = (node: TreeNode) => {
-    setActiveNote({
-      id: node.id,
-      title: node.title,
-      content: node.content ?? "",
-      isCustom: node.isCustom,
-      parentId: node.parentId,
-    });
-    setShowNoteModal(true);
+    if (node.isCustom) navigate(`/resource-pack/notes/${encodeURIComponent(node.id)}`);
   };
 
   return (
@@ -275,15 +330,7 @@ export function ResourceDirectory() {
         <div className="flex items-center gap-2">
           {/* Action buttons */}
           <button
-            onClick={() => {
-              setActiveNote({
-                title: "",
-                content: "",
-                isCustom: true,
-                parentId: currentFolderId,
-              });
-              setShowNoteModal(true);
-            }}
+            onClick={() => navigate(`/resource-pack/notes/new?parent=${encodeURIComponent(currentFolderId)}`)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-chrome text-white text-xs font-bold rounded-lg hover:bg-chrome/90 transition-colors shadow-2xs"
           >
             <Icon name="add" className="text-sm" />
@@ -320,9 +367,25 @@ export function ResourceDirectory() {
         </div>
       </div>
 
+      {loadError && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {loadError}
+        </p>
+      )}
+      {legacyCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+          <p className="text-sm text-carbon-700">
+            {legacyCount} older browser resource{legacyCount === 1 ? "" : "s"} are not in your account yet.
+          </p>
+          <Button size="sm" variant="outline" loading={importingLegacy} onClick={() => void handleImportLegacy()}>
+            Import from this browser
+          </Button>
+        </div>
+      )}
+
       {view === "grid" ? (
         q ? (
-          <SearchResults hits={hits} onFolder={jumpTo} />
+          <SearchResults hits={hits} onFolder={jumpTo} onNote={handleOpenNote} />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {items.map((n) =>
@@ -474,78 +537,6 @@ export function ResourceDirectory() {
         </div>
       )}
 
-      {/* Note Editor/Viewer Modal */}
-      {showNoteModal && activeNote && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full border border-border shadow-xl space-y-4 flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-2">
-                <Icon name="journal" className="text-chrome" />
-                {activeNote.id ? (activeNote.isCustom ? "Edit Note" : "View Note") : "New Note"}
-              </h3>
-              <button
-                onClick={() => setShowNoteModal(false)}
-                className="text-carbon-400 hover:text-carbon-700"
-              >
-                <Icon name="close" className="text-lg" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveNote} className="space-y-4 flex-1 flex flex-col min-h-0">
-              <div>
-                <label className="block text-xs font-bold text-carbon-700 uppercase tracking-wider mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  readOnly={!activeNote.isCustom && !!activeNote.id}
-                  placeholder="e.g. Distributed Caching Strategies"
-                  value={activeNote.title}
-                  onChange={(e) => setActiveNote({ ...activeNote, title: e.target.value })}
-                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-carbon-900 text-sm font-medium focus:outline-none focus:border-chrome"
-                />
-              </div>
-
-              <div className="flex-1 flex flex-col min-h-[200px]">
-                <label className="block text-xs font-bold text-carbon-700 uppercase tracking-wider mb-1">
-                  Content / Notes
-                </label>
-                <textarea
-                  readOnly={!activeNote.isCustom && !!activeNote.id}
-                  placeholder="Write your notes, key takeaways, code snippets or explanations here..."
-                  value={activeNote.content}
-                  onChange={(e) => setActiveNote({ ...activeNote, content: e.target.value })}
-                  className="w-full flex-1 min-h-[200px] resize-y bg-bg border border-border rounded-xl p-4 text-carbon-900 text-sm leading-relaxed font-normal focus:outline-none focus:border-chrome"
-                />
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <span className="text-xs text-carbon-500">
-                  Folder:{" "}
-                  <span className="font-semibold text-carbon-800">
-                    {currentFolder?.title || "Root Directory"}
-                  </span>
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowNoteModal(false)}
-                  >
-                    {activeNote.isCustom || !activeNote.id ? "Cancel" : "Close"}
-                  </Button>
-                  {(activeNote.isCustom || !activeNote.id) && (
-                    <Button type="submit" variant="primary">
-                      Save Note
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

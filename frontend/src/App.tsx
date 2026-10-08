@@ -25,6 +25,7 @@ import { ResourcePackHome } from "./pages/ResourcePackHome";
 import { NotesDirectory } from "./pages/NotesDirectory";
 import { ResourceChat } from "./pages/ResourceChat";
 import { ResourceChatHistory } from "./pages/ResourceChatHistory";
+import { ResourceNoteEditor } from "./pages/ResourceNoteEditor";
 import { LevelDetail } from "./pages/LevelDetail";
 import { NotFound } from "./pages/NotFound";
 import { AnimatePresence, motion } from "framer-motion";
@@ -98,6 +99,7 @@ function AnimatedRoutes() {
           <Route path="/resource-pack">
             <Route index element={<ResourcePackHome />} />
             <Route path="notes" element={<NotesDirectory />} />
+            <Route path="notes/:noteId" element={<ResourceNoteEditor />} />
             <Route path="chat/history" element={<ResourceChatHistory />} />
             <Route path="chat" element={<ResourceChat />} />
             <Route path="chat/:chatId" element={<ResourceChat />} />

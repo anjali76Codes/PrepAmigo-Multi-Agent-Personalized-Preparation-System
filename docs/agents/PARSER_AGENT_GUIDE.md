@@ -63,7 +63,7 @@ OLLAMA_MODEL=your-ollama-model
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-`localhost:11434` is the Ollama client endpoint. A model name ending in `-cloud` routes inference to Ollama Cloud; a locally installed model runs inference on the local machine. OpenAI is also supported by the Python service with `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`. Gemini is not currently a provider option in `agents-service/src/core/config.py`.
+`localhost:11434` is the Ollama client endpoint. A model name ending in `-cloud` routes inference to Ollama Cloud; a locally installed model runs inference on the local machine. The Python service currently uses Ollama as its primary provider. An optional OpenAI-compatible endpoint can be configured with `FAST_LLM_BASE_URL`, `FAST_LLM_MODEL`, and `FAST_LLM_API_KEY` for calls explicitly assigned to the fast model profile.
 
 ## Run the parser
 

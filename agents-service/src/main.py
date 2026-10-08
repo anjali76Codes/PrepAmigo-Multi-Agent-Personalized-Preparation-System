@@ -27,6 +27,7 @@ from routers.job_intelligence_router import router as job_intelligence_router
 from routers.skill_gap_router import router as skill_gap_router
 from routers.stream_router import router as stream_router
 from routers.study_material_router import router as study_material_router
+from routers.resource_rag_router import router as resource_rag_router
 from agents.interview_prep_fields import WORKFLOW_FIELDS
 
 configure_logging()
@@ -132,6 +133,7 @@ app.include_router(job_intelligence_router, tags=["Job Intelligence"])
 app.include_router(skill_gap_router, tags=["Skill Gap"])
 app.include_router(stream_router, tags=["Streaming"])
 app.include_router(study_material_router, tags=["Study material"])
+app.include_router(resource_rag_router, tags=["Resource retrieval"])
 
 START_TIME = time.time()
 

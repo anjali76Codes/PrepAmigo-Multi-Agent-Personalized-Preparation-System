@@ -229,7 +229,7 @@ role requirements to identify missing areas.
 
 ## **Technical Architecture**
 
-> **Integration status:** The three services below are independently functional but not yet connected to each other. The frontend currently renders with mock data; the backend and agents-service each run standalone.
+> **Current implementation:** The React frontend, Express backend, and Python agent service are integrated. The backend persists plans and progress in MongoDB and coordinates background agent workflows through Redis-backed streams. Some screens and flows still use sample data; this document also describes product concepts that may be ahead of the current implementation. For runnable setup and current service APIs, see the [repository README](../README.md) and [agent service guide](../agents-service/README.md).
 
 PrepAmigo is a three-service monorepo:
 
@@ -244,7 +244,7 @@ PrepAmigo/
 
 ### **Frontend** (`frontend/`)
 
-**Stack:** React 18 · Vite · TypeScript · Tailwind CSS · Framer Motion · React Router
+**Stack:** React 19 · Vite · TypeScript · Tailwind CSS · Framer Motion · React Router
 
 **Key directories:**
 
@@ -255,7 +255,7 @@ PrepAmigo/
 | `src/hooks/`                 | React hooks — `useAuth.ts` (auth state via backend session API)                                                                                                       |
 | `src/lib/agentStream/`       | SSE client for the agents-service streaming pipeline (`agentStreamClient.ts`, `useAgentStream.ts`)                                                                    |
 | `src/config/featureFlags.ts` | Central feature-flag module (`enableAuth`, `enableSerpApi`) — reads `VITE_ENABLE_AUTH` and `VITE_ENABLE_SERPAPI`                                                      |
-| `src/data/mockData.ts`       | Static mock data used while backend integration is pending                                                                                                            |
+| `src/data/mockData.ts`       | Sample data used by demo and fallback flows                                                                                                                          |
 | `src/context/AppContext.tsx` | Global React context                                                                                                                                                  |
 | `src/utils/utils.ts`         | Shared utility functions (`cn` class merger, etc.)                                                                                                                    |
 | `scripts/`                   | One-off developer scripts (not part of the build)                                                                                                                     |
@@ -347,10 +347,10 @@ Stage 1 (Parallel): Company Research Agent + Job Intelligence Agent
 Stage 2:            Skill Gap Agent (resume vs. requirements)
 Stage 3:            Content Research Agent (deep-dive per gap)
 Stage 4:            Evaluation & state consolidation
-Stage 5 (Planned):  Planner Agent → Data Parser → Roadmaps/Flashcards
+Stage 5:             Planner Agent creates structured study plans; the backend persists plans and exposes plan/progress APIs.
 ```
 
-**SerpAPI feature flag:** `SERPAPI_ENABLED=false` switches all search tool calls to fixture data at `SERPAPI_DUMMY_DATA_PATH` — no API credits consumed in development. See `agents-service/docs/serpapi_fixtures.example.json` for the expected fixture shape.
+**SerpApi feature flag:** `SERPAPI_ENABLED=false` switches Python search tools to fixture data at `SERPAPI_DUMMY_DATA_PATH` and avoids SerpApi requests. The default path is `.data/serpapi_fixtures.json` inside `agents-service/`; copy a fixture from `agents-service/docs/serpapi_fixtures.example.json` or use `agents-service/docs/serpapi_fixtures.pipeline.json` for a broader offline run. Fixture mode does not disable LLM calls.
 
 **Memory providers** (set via `MEMORY_PROVIDER`): `local` (in-process JSON), `mem0` (hosted Mem0 Platform), `mem0_oss` (self-hosted Qdrant + SQLite).
 
