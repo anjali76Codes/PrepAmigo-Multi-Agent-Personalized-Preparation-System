@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Mascot, type MascotVariant } from "../ui/Mascot";
-import type { MascotVariant } from "../ui/Mascot";
 import { Icon } from "../ui/Icon";
 
 interface Props {
