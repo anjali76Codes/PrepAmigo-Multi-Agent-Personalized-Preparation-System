@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Icon } from "../components/ui/Icon";
 import { ChatInput } from "../components/chat/ChatInput";
 import { Mascot } from "../components/ui/Mascot";
@@ -39,7 +39,7 @@ const STEP_MS = 1000;
 
 function UserAvatar() {
   return (
-    <div className="w-12 h-12 rounded-full bg-chrome text-on-chrome flex items-center justify-center shrink-0">
+    <div className="w-12 h-12 rounded-full bg-chrome text-on-chrome flex items-center justify-center shrink-0 border border-chrome-border">
       <Icon name="person" className="text-xl" />
     </div>
   );
@@ -47,7 +47,7 @@ function UserAvatar() {
 
 function AiAvatar() {
   return (
-    <div className="w-16 h-16 rounded-full bg-chrome flex items-center justify-center overflow-hidden shrink-0">
+    <div className="w-16 h-16 rounded-full bg-cocoa flex items-center justify-center overflow-hidden shrink-0">
       <Mascot size="md" variant="nosy.png" />
     </div>
   );
@@ -62,7 +62,7 @@ function Processing() {
   }, []);
 
   return (
-    <div className="flex items-center gap-5 bg-surface border border-border rounded-2xl pl-3 pr-6 py-4 w-fit max-w-full shadow-xs">
+    <div className="relative overflow-hidden flex items-center gap-5 bg-surface border border-border rounded-3xl rounded-tl-md pl-3 pr-6 py-4 w-fit max-w-full shadow-card">
       <Mascot size="md" variant="working.gif" style={{ width: 110, height: 110 }} />
       <ul className="space-y-2">
         {STEPS.map((label, i) => {
@@ -71,12 +71,19 @@ function Processing() {
           return (
             <li
               key={label}
-              className={`flex items-center gap-2 text-base transition-colors ${done ? "text-rosewood" : active ? "text-carbon-900 font-semibold" : "text-rosewood/50"
+              className={`flex items-center gap-2 text-base transition-colors duration-300 ${done ? "text-rosewood" : active ? "text-carbon-900 font-semibold" : "text-rosewood/50"
                 }`}
             >
               <span className="w-4 h-4 flex items-center justify-center shrink-0">
                 {done ? (
-                  <Icon name="checkmark" className="text-sm text-chrome" />
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                    className="flex"
+                  >
+                    <Icon name="checkmark" className="text-sm text-chrome" />
+                  </motion.span>
                 ) : active ? (
                   <span className="flex gap-0.5">
                     {[0, 1, 2].map((d) => (
@@ -97,6 +104,14 @@ function Processing() {
           );
         })}
       </ul>
+
+      {/* Progress along the bottom edge */}
+      <motion.span
+        className="absolute left-0 bottom-0 h-0.5 bg-chrome"
+        initial={false}
+        animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      />
     </div>
   );
 }
@@ -104,6 +119,7 @@ function Processing() {
 export function ResourceChat() {
   const location = useLocation();
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
   const { chatId } = useParams<{ chatId?: string }>();
   const { user, refreshUser } = useAuth();
   const { refreshPreps } = useAppContext();
@@ -211,12 +227,20 @@ export function ResourceChat() {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
+  const showBanner = !hasSufficientCredits || !!creditError;
+
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
-      <header className="bg-white border-b border-border px-4 py-3 shrink-0 flex items-center justify-between">
+      <header className="bg-surface border-b border-border px-4 py-3 shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to="/resource-pack" className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-carbon-500 hover:bg-lavender-100 transition-colors">
-            <Icon name="arrow-back" />
+          <Link
+            to="/resource-pack"
+            aria-label="Back to Resource Pack"
+            className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-chrome hover:bg-lavender-100 transition-colors"
+          >
+            <motion.span whileHover={reduce ? undefined : { x: -2 }} className="flex">
+              <Icon name="arrow-back" />
+            </motion.span>
           </Link>
           <div>
             <h1 className="font-extrabold text-carbon-900 leading-tight">Resource Assistant</h1>
@@ -226,82 +250,137 @@ export function ResourceChat() {
 
         <div className="flex items-center gap-3">
           {/* AI Credits Badge */}
-          <div className="flex items-center gap-1.5 bg-lavender-50 border border-chrome/20 px-3 py-1 rounded-full text-xs font-bold text-carbon-800">
+          <div className="flex items-center gap-1.5 bg-beige-100 border border-border px-3 py-1 rounded-full text-xs font-bold text-carbon-800">
             <img src="/assets/icons/creds.png" alt="" className="w-4 h-4 object-contain" />
-            <span>{currentCredits} Credits</span>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={currentCredits}
+                initial={{ y: reduce ? 0 : -8, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: reduce ? 0 : 8, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {currentCredits} Credits
+              </motion.span>
+            </AnimatePresence>
             <span className="text-[10px] text-carbon-500 font-normal">(2/msg)</span>
           </div>
 
-          <Link to="/resource-pack/chat/history" className="px-3 py-1.5 text-xs font-bold border border-border text-chrome rounded-lg hover:bg-lavender-100 transition-colors">
+          <Link
+            to="/resource-pack/chat/history"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border border-border text-chrome rounded-full hover:bg-lavender-100 transition-colors"
+          >
+            <Icon name="time-outline" className="text-sm" />
             History
           </Link>
         </div>
       </header>
 
       {/* Credit Warning Banner if 0 or < 2 credits */}
-      {(!hasSufficientCredits || creditError) && (
-        <div className="bg-coral-50 border-b border-coral-200 px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-coral-800">
-          <div className="flex items-center gap-2">
-            <Icon name="warning-outline" className="text-base text-coral-600" />
-            <span>
-              {creditError || `You need at least 2 AI credits to use this feature (Current: ${currentCredits}). Complete roadmap levels and quizzes to earn more credits!`}
-            </span>
-          </div>
-          <Link to="/roadmap" className="underline font-bold text-coral-900 ml-2 shrink-0">
-            Earn Credits
-          </Link>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {showBanner && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden shrink-0"
+          >
+            <div className="bg-coral-100 border-b border-coral-500/30 px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-danger-600">
+              <div className="flex items-center gap-2">
+                <Icon name="warning-outline" className="text-base text-coral-500" />
+                <span>
+                  {creditError || `You need at least 2 AI credits to use this feature (Current: ${currentCredits}). Complete roadmap levels and quizzes to earn more credits!`}
+                </span>
+              </div>
+              <Link to="/roadmap" className="underline font-bold text-expresso ml-2 shrink-0">
+                Earn Credits
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 space-y-6">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-6">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center text-center pt-12 gap-5">
-              <Mascot variant="nosy.png" size="xl" />
+            <motion.div
+              initial={{ opacity: 0, y: reduce ? 0 : 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 240, damping: 26 }}
+              className="flex flex-col items-center text-center pt-12 gap-5"
+            >
+              <motion.div
+                animate={reduce ? undefined : { y: [0, -6, 0] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+                className="rounded-full bg-cocoa border border-border overflow-hidden"
+              >
+                <Mascot variant="nosy.png" size="xl" />
+              </motion.div>
               <div>
                 <h2 className="text-2xl font-extrabold text-carbon-900">What do you want to know?</h2>
                 <p className="text-sm text-carbon-500 mt-1">Ask about your sprints, notes, and references.</p>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {messages.map((m) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: reduce ? 0 : 12, scale: reduce ? 1 : 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
               className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
             >
               {m.role === "user" ? <UserAvatar /> : <AiAvatar />}
 
               <div className={m.role === "user" ? "max-w-[80%]" : "flex-1 min-w-0"}>
                 {m.role === "user" ? (
-                  <div className="rounded-2xl rounded-tr-md px-4 py-2.5 bg-chrome text-on-chrome leading-relaxed whitespace-pre-wrap">
+                  <div className="rounded-3xl rounded-tr-md px-5 py-3 bg-chrome text-on-chrome leading-relaxed whitespace-pre-wrap shadow-card">
                     {m.content}
                   </div>
                 ) : m.thinking ? (
                   <Processing />
                 ) : (
-                  <div className="rounded-2xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-xs w-fit max-w-full">
+                  <div className="rounded-3xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-card w-fit max-w-full">
                     <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">{m.content}</p>
                     {!!m.sources?.length && (
                       <details className="mt-4 border-t border-border pt-3 group">
-                        <summary className="text-[11px] font-bold uppercase tracking-wider text-carbon-500 cursor-pointer list-none flex items-center gap-2 select-none hover:text-carbon-700 transition-colors">
+                        <summary className="text-xs font-bold text-carbon-500 cursor-pointer list-none flex items-center gap-2 select-none hover:text-chrome transition-colors">
                           <Icon name="chevron-forward" className="text-base transition-transform group-open:rotate-90" />
-                          View Sources ({m.sources.length})
+                          Sources ({m.sources.length})
                         </summary>
-                        <ul className="space-y-2 mt-3 pl-6 border-l-2 border-border/50 ml-1">
-                          {m.sources.map((source) => (
-                            <li key={source.source_id} className="text-xs">
-                              {source.url ? (
-                                <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-chrome hover:underline">
-                                  {source.title}
-                                </a>
-                              ) : (
-                                <span className="font-semibold text-carbon-800">{source.title}</span>
-                              )}
-                              <span className="ml-2 text-carbon-500">{source.folder_path || source.source_type}</span>
-                            </li>
+                        <ul className="flex flex-col gap-2 mt-3">
+                          {m.sources.map((source, i) => (
+                            <motion.li
+                              key={source.source_id}
+                              initial={{ opacity: 0, x: reduce ? 0 : -6 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.04 }}
+                              className="flex items-center gap-2.5 rounded-xl bg-lavender-50 border border-border px-3 py-2 text-xs min-w-0"
+                            >
+                              <Icon
+                                name={source.url ? "link" : "journal"}
+                                className="text-base text-cocoa shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                {source.url ? (
+                                  <a
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block truncate font-semibold text-chrome hover:underline"
+                                  >
+                                    {source.title}
+                                  </a>
+                                ) : (
+                                  <span className="block truncate font-semibold text-carbon-900">{source.title}</span>
+                                )}
+                                <span className="block truncate text-carbon-500">
+                                  {source.folder_path || source.source_type}
+                                </span>
+                              </div>
+                            </motion.li>
                           ))}
                         </ul>
                       </details>
@@ -318,7 +397,7 @@ export function ResourceChat() {
       {/* Floating Chat Input at the bottom */}
       <div className="bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-5 pt-3 shrink-0">
         <div className="max-w-4xl mx-auto">
-          <div className="shadow-lg rounded-3xl">
+          <div className="rounded-3xl shadow-pop transition-shadow focus-within:ring-2 focus-within:ring-chrome-border">
             <ChatInput
               onSend={handleSend}
               disabled={busy || !hasSufficientCredits}
@@ -333,4 +412,4 @@ export function ResourceChat() {
       </div>
     </div>
   );
-}
+}
