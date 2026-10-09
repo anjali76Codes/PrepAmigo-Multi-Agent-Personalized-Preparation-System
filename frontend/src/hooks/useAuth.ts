@@ -18,6 +18,7 @@ export interface User {
   sub: string;
   email: string;
   name: string;
+  ai_credits?: number;
   profile?: UserProfile;
 }
 
@@ -28,7 +29,9 @@ interface AuthContextType {
   refreshUser: () => Promise<User | null>;
   logout: () => Promise<boolean>;
   updateProfile: (profileData: Partial<UserProfile>) => Promise<boolean>;
+  deleteAccount: (confirmation: string) => Promise<{ success: boolean; error?: string }>;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -94,6 +97,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const deleteAccount = useCallback(async (confirmation: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/auth/account`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ confirmation }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || "Failed to delete account" };
+      }
+
+      if (user) {
+        sessionStorage.removeItem(`prepamigo_onboarding_skipped_${user.id || user.sub}`);
+      }
+      sessionStorage.removeItem("prepamigo_onboarding_skipped");
+      sessionStorage.clear();
+      localStorage.removeItem("prepamigo_app_preferences");
+      setUser(null);
+      return { success: true };
+    } catch (err: any) {
+      console.error("[Auth] Delete account failed:", err);
+      return { success: false, error: err.message || "Failed to delete account" };
+    }
+  }, [user]);
+
   const logout = useCallback(async (): Promise<boolean> => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -125,11 +157,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshUser,
         logout,
         updateProfile,
+        deleteAccount,
       },
     },
     children
   );
 }
+
 
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);

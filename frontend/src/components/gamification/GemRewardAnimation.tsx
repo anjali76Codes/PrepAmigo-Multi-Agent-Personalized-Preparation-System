@@ -124,6 +124,7 @@ function scrollTargetIntoView(sourceEl: Element, targetEl: Element) {
     });
 }
 
+
 function clampToViewport(point: Point, padding = 24): Point {
     return {
         x: Math.min(Math.max(point.x, padding), window.innerWidth - padding),
@@ -322,6 +323,7 @@ export default function GemRewardAnimation({
         const xpPerGem = reward.xp / GEM_COUNT;
         const timers: number[] = [];
 
+
         GEM_DELAYS.forEach((delay) => {
             const arrival = (FLOAT_DURATION + delay + flightDuration) * 1000;
 
@@ -337,6 +339,7 @@ export default function GemRewardAnimation({
                 GEM_DELAYS[GEM_DELAYS.length - 1] +
                 flightDuration) *
             1000;
+
 
         timers.push(
             window.setTimeout(() => {

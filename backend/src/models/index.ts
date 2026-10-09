@@ -9,3 +9,6 @@ export { Assessment } from "./Assessment.js";
 export { Flashcard } from "./Flashcard.js";
 export { UserResource } from "./UserResource.js";
 export { RagSource } from "./RagSource.js";
+export { CustomTask } from "./CustomTask.js";
+export { ChatSession } from "./ChatSession.js";
+export { AuditLog } from "./AuditLog.js";

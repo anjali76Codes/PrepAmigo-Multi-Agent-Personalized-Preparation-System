@@ -243,6 +243,7 @@ function QuizList({
                                     const count = a.questions.length;
                                     const duration = Math.max(3, Math.round(count * 1.5));
                                     const status = a.is_completed ? "Completed" : locked ? "Locked" : "Ready to start";
+                                    const hasScore = a.score !== undefined && a.score !== null;
 
                                     return (
                                         <MotionCard
@@ -303,6 +304,11 @@ function QuizList({
                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-chrome">
                                                     <span className="inline-flex items-center gap-1.5"><Icon name="help-circle" />{count} questions</span>
                                                     <span className="inline-flex items-center gap-1.5"><Icon name="time-outline" />~{duration} min</span>
+                                                    {hasScore && (
+                                                        <span className="inline-flex items-center gap-1.5 font-bold text-deep-emerald">
+                                                            <Icon name="trophy-outline" />Score: {a.score}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <span className={cn(
                                                     "shrink-0 text-sm font-extrabold transition-transform",

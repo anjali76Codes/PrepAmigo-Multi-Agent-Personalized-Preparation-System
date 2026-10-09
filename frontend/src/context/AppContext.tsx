@@ -84,6 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (globalProgress) {
             prep.learningContext.progress = {
               xp: globalProgress.xp_points || 0,
+              ai_credits: globalProgress.ai_credits ?? 30,
               streak: globalProgress.current_streak || globalProgress.streak_count || 0,
               level: Math.floor((globalProgress.xp_points || 0) / 1000) + 1,
               badges: (globalProgress.trophies || []).map((t: any) => ({

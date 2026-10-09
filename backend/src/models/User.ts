@@ -20,6 +20,7 @@ export interface IUser extends Document {
   email: string;
   name: string;
   password?: string;
+  ai_credits: number;
   createdAt: Date;
   updatedAt: Date;
   profile: IUserProfile;
@@ -57,6 +58,7 @@ const userSchema = new Schema<IUser>(
     name: { type: String, required: true, trim: true },
     // Google-authenticated accounts do not have a local password.
     password: { type: String, required: false },
+    ai_credits: { type: Number, default: 30, min: 0 },
     profile: { type: profileSchema, default: () => ({}) },
     plans: [{ type: Schema.Types.ObjectId, ref: "Plan" }],
   },

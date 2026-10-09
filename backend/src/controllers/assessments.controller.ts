@@ -38,18 +38,9 @@ async function claimLegacyAssessments(sprintIds: Types.ObjectId[], userId: Types
  * plans from before this existed). Returns whether anything is generating.
  */
 export async function startMissingMaterial(sprintIds: Types.ObjectId[], requested: boolean): Promise<boolean> {
-  let candidates = sprintIds;
-  if (!requested) {
-    const open = await Sprint.find({ _id: { $in: sprintIds }, status: { $ne: "completed" } })
-      .sort({ sprint_number: 1 }).select("_id plan_id").lean();
-    const currentByPlan = new Map<string, Types.ObjectId>();
-    for (const sprint of open) {
-      if (!currentByPlan.has(String(sprint.plan_id))) currentByPlan.set(String(sprint.plan_id), sprint._id as Types.ObjectId);
-    }
-    candidates = [...currentByPlan.values()];
-  }
+  if (!requested) return false;
   let generating = false;
-  for (const sprintId of candidates) {
+  for (const sprintId of sprintIds) {
     if (await SprintDay.exists({ sprint_id: sprintId, assessment_id: { $exists: false } })) {
       ensureStudyMaterialInBackground(sprintId);
       generating = true;
@@ -57,6 +48,7 @@ export async function startMissingMaterial(sprintIds: Types.ObjectId[], requeste
   }
   return generating;
 }
+
 
 export const getAssessments = async (req: AuthenticatedRequest, res: Response) => {
   const userId = getUserId(req, res);
@@ -188,7 +180,7 @@ export const submitAssessmentAttempt = async (req: AuthenticatedRequest, res: Re
     if (!assessment.is_completed) {
       const sprint = await Sprint.findById(saved.sprint_id).select("plan_id");
       if (sprint) {
-        await claimAssessmentCompletion(userId, new Types.ObjectId(sprint.plan_id));
+        await claimAssessmentCompletion(userId, new Types.ObjectId(sprint.plan_id), new Types.ObjectId(id));
       }
     }
     res.json({ success: true, data: saved });

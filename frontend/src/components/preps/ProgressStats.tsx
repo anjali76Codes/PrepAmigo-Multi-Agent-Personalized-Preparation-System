@@ -136,8 +136,9 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
               />
             </div>
 
-            <div className="mt-2 text-2xl font-extrabold text-deep-emerald">
-              {stats.xp.toLocaleString()}
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-deep-emerald">{stats.xp.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-carbon-500 uppercase">20/level, 30/quiz</span>
             </div>
           </motion.div>
 
@@ -175,8 +176,9 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
               />
             </div>
 
-            <div className="mt-2 text-2xl font-extrabold text-white">
-              {aiCredits.toLocaleString()}
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-extrabold text-white">{aiCredits.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-white/50 uppercase">2/lvl, 3/quiz</span>
             </div>
           </motion.div>
 
@@ -305,6 +307,27 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
 
         </div>
       </div>
+
+      {/* Reward Metrics Guide */}
+      <div className="mt-5 pt-4 border-t border-border/70 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-1.5 font-bold text-carbon-800">
+            <span className="w-2 h-2 rounded-full bg-chrome inline-block" />
+            <span>Day Level: <span className="text-chrome">+20 XP</span> & <span className="text-cocoa">+2 AI Credits</span></span>
+          </div>
+          <div className="flex items-center gap-1.5 font-bold text-carbon-800">
+            <span className="w-2 h-2 rounded-full bg-chrome inline-block" />
+            <span>Quiz Assessment: <span className="text-chrome">+30 XP</span> & <span className="text-cocoa">+3 AI Credits</span></span>
+          </div>
+          <div className="flex items-center gap-1.5 font-bold text-carbon-800">
+            <span className="w-2 h-2 rounded-full bg-chrome inline-block" />
+            <span>7-Day Bonus: <span className="text-chrome">+100 XP</span> & <span className="text-cocoa">+10 AI Credits</span></span>
+          </div>
+        </div>
+        <div className="text-[11px] font-medium text-carbon-500 italic">
+          * Points awarded on initial completion only; reattempts update progress metrics.
+        </div>
+      </div>
     </Card>
   );
-}
+}

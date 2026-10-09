@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { AuthenticatedRequest } from "../types/authenticated-request.js";
 import { Plan } from "../models/Plan.js";
 import { PlanProgress } from "../models/PlanProgress.js";
+import { User } from "../models/User.js";
 import { calculateStreakSummary } from "../utils/planProgress.js";
 import { badId, getUserId, handleFailure, routeParam } from "../utils/planApi.js";
 
@@ -67,14 +68,18 @@ export async function getUserProgressHandler(req: AuthenticatedRequest, res: Res
   const userId = getUserId(req, res);
   if (!userId) return;
   try {
-    const progressRecords = await PlanProgress.find({ user_id: userId })
-      .populate("plan_id", "plan_name company role status completion_percent")
-      .lean();
+    const [progressRecords, user] = await Promise.all([
+      PlanProgress.find({ user_id: userId })
+        .populate("plan_id", "plan_name company role status completion_percent")
+        .lean(),
+      User.findById(userId).select("ai_credits").lean(),
+    ]);
     const streak = calculateStreakSummary(progressRecords.flatMap((progress) => progress.completed_day_dates));
     res.status(200).json({
       success: true,
       data: {
         xp_points: progressRecords.reduce((total, progress) => total + progress.xp_points, 0),
+        ai_credits: user?.ai_credits ?? 30,
         completed_day_count: progressRecords.reduce((total, progress) => total + progress.completed_day_count, 0),
         weekly_bonus_count: progressRecords.reduce((total, progress) => total + progress.weekly_bonus_count, 0),
         ...streak,
@@ -87,4 +92,4 @@ export async function getUserProgressHandler(req: AuthenticatedRequest, res: Res
   } catch (error) {
     handleFailure(res, "Get user progress", error);
   }
-}
+}

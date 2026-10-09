@@ -11,6 +11,7 @@ import { getAppPreferences } from '../lib/preferences';
 import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
 import { KanbanBoard } from '../components/calendar/KanbanBoard';
 import { plansApi } from '../lib/api/plans';
+import { customTasksApi } from '../lib/api/customTasks';
 import type { ISprintDay } from '../mocks/interviewPlan.mock';
 import { Logo } from '../components/ui/Logo';
 
@@ -117,7 +118,7 @@ function PrepSwitcher({ preps, selectedId, onSelect }: { preps: any[]; selectedI
 export function Calendar() {
   const shouldReduceMotion = useReducedMotion();
   const navigate = useNavigate();
-  const { preps } = useAppContext();
+  const { preps, refreshPreps } = useAppContext();
 
   const [selectedPrepId, setSelectedPrepId] = useState<string>(preps[0]?.id || '');
   const [activeTab, setActiveTab] = useState<Tab>('today');
@@ -128,6 +129,7 @@ export function Calendar() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [preferences] = useState(getAppPreferences);
+  const [customTasks, setCustomTasks] = useState<ISprintDay[]>([]);
 
   const selectedPrep = preps.find((p) => p.id === selectedPrepId) || preps[0];
 
@@ -161,40 +163,85 @@ export function Calendar() {
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
   const [backlogIds, setBacklogIds] = useState<Set<string>>(new Set());
 
+  // Fetch custom tasks from backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    customTasksApi.list().then((res) => {
+      if (!isMounted || !res.data) return;
+      const formatted: ISprintDay[] = res.data.map((t) => ({
+        _id: t.id || t._id,
+        sprint_id: 'custom',
+        day_number: 999,
+        scheduled_date: t.scheduled_date,
+        topic_title: t.topic_title,
+        topic_description: t.topic_description || '',
+        objectives: [],
+        estimated_minutes: t.estimated_minutes || 30,
+        references: [],
+        status: t.status as any,
+        completed_at: t.completed_at,
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: t.updatedAt || new Date().toISOString(),
+      }));
+      setCustomTasks(formatted);
+    }).catch((err) => console.warn('[Calendar] Could not fetch custom tasks:', err));
+    return () => { isMounted = false; };
+  }, []);
+
   useEffect(() => {
     const today = new Set<string>();
     const done = new Set<string>();
     const backlog = new Set<string>();
-    mappedPrepTasks.forEach((t) => {
+    const combined = [...customTasks, ...mappedPrepTasks];
+
+    combined.forEach((t) => {
       if (t.status === 'completed') done.add(t._id);
       else if (dateKey(new Date(t.scheduled_date)) === dateKey(new Date())) today.add(t._id);
       else if (t.status === 'in_progress') today.add(t._id);
       else if (isBeforeToday(t.scheduled_date)) backlog.add(t._id);
     });
-    setTasks(mappedPrepTasks);
+    setTasks(combined);
     setTodayIds(today);
     setDoneIds(done);
     setBacklogIds(backlog);
     setShowBanner(true);
-  }, [mappedPrepTasks]);
+  }, [mappedPrepTasks, customTasks]);
 
   const todayTasks = tasks.filter((t) => todayIds.has(t._id));
-  const backlogTasks = tasks.filter((t) => backlogIds.has(t._id));
-  const upcomingTasks = tasks.filter((t) => !todayIds.has(t._id) && !backlogIds.has(t._id) && !doneIds.has(t._id));
+  const allBacklogTasks = tasks.filter((t) => backlogIds.has(t._id));
+  // Last 3 backlog tasks
+  const backlogTasks = allBacklogTasks.slice(-3);
+  const allUpcomingTasks = tasks.filter((t) => !todayIds.has(t._id) && !backlogIds.has(t._id) && !doneIds.has(t._id));
+  // Coming 3 upcoming tasks
+  const upcomingTasks = allUpcomingTasks.slice(0, 3);
   const currentList = activeTab === 'today' ? todayTasks : activeTab === 'backlog' ? backlogTasks : upcomingTasks;
   const selectedDateTasks = selectedCalendarDate
     ? tasks.filter((task) => dateKey(new Date(task.scheduled_date)) === selectedCalendarDate)
     : [];
 
-  const missedCount = backlogTasks.filter((t) => t.status !== 'completed').length;
+  const missedCount = allBacklogTasks.filter((t) => t.status !== 'completed').length;
 
   const toggleTask = (id: string) => {
     const task = tasks.find((t) => t._id === id);
-    setTasks((prev) => prev.map((t) => (t._id === id ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t)));
-    // Persist completions of real sprint days (awards XP/streak, unlocks the next sprint's material).
-    // The backend has no "un-complete", so unticking stays local, as on the Roadmap.
-    if (task && task.status !== 'completed' && task.sprint_id !== 'custom' && /^[a-f0-9]{24}$/i.test(id)) {
-      void plansApi.completeDay(id).catch((err) => console.warn('[Calendar] Could not mark day complete on backend:', err));
+    if (!task) return;
+    const isCompleting = task.status !== 'completed';
+    const nextStatus = isCompleting ? 'completed' : 'pending';
+
+    setTasks((prev) => prev.map((t) => (t._id === id ? { ...t, status: nextStatus, completed_at: isCompleting ? new Date().toISOString() : null } : t)));
+    if (isCompleting) {
+      setDoneIds((prev) => new Set(prev).add(id));
+    } else {
+      setDoneIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+
+    if (task.sprint_id === 'custom') {
+      void customTasksApi.update(id, { status: nextStatus }).catch((err) => console.warn('[Calendar] Could not update custom task:', err));
+    } else if (isCompleting && /^[a-f0-9]{24}$/i.test(id)) {
+      void plansApi.completeDay(id).then(() => refreshPreps()).catch((err) => console.warn('[Calendar] Could not mark day complete on backend:', err));
     }
   };
 
@@ -212,30 +259,44 @@ export function Calendar() {
     if (fromColumn === 'done' || toColumn === 'done') toggleTask(taskId);
   };
 
-  const handleAddTask = (e: React.FormEvent) => {
+  const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-    const id = `custom-${Date.now()}`;
+    const title = newTaskTitle.trim();
+    if (!title) return;
     const now = new Date().toISOString();
-    setTasks((prev) => [
-      ...prev,
-      {
-        _id: id,
-        sprint_id: 'custom',
-        day_number: 999,
-        scheduled_date: now,
-        topic_title: newTaskTitle.trim(),
-        topic_description: '',
-        objectives: [],
-        estimated_minutes: 30,
-        references: [],
-        status: 'pending',
-        completed_at: null,
-        createdAt: now,
-        updatedAt: now,
-      } as ISprintDay,
-    ]);
-    if (activeTab === 'today') setTodayIds((prev) => new Set(prev).add(id));
+
+    try {
+      const res = await customTasksApi.create({
+        title,
+        scheduledDate: now,
+        planId: selectedPrep?.id,
+      });
+
+      if (res.data) {
+        const created = res.data;
+        const formatted: ISprintDay = {
+          _id: created.id || created._id,
+          sprint_id: 'custom',
+          day_number: 999,
+          scheduled_date: created.scheduled_date,
+          topic_title: created.topic_title,
+          topic_description: created.topic_description || '',
+          objectives: [],
+          estimated_minutes: created.estimated_minutes || 30,
+          references: [],
+          status: created.status as any,
+          completed_at: created.completed_at,
+          createdAt: created.createdAt || now,
+          updatedAt: created.updatedAt || now,
+        };
+        setCustomTasks((prev) => [formatted, ...prev]);
+        setTasks((prev) => [formatted, ...prev]);
+        if (activeTab === 'today') setTodayIds((prev) => new Set(prev).add(formatted._id));
+      }
+    } catch (err) {
+      console.warn('[Calendar] Could not create custom task on backend:', err);
+    }
+
     setNewTaskTitle('');
     setIsAddingTask(false);
   };
@@ -248,6 +309,7 @@ export function Calendar() {
   const totalAll = tasks.length;
   const doneAll = tasks.filter((t) => t.status === 'completed').length;
   const overallPct = totalAll > 0 ? Math.round((doneAll / totalAll) * 100) : 0;
+
 
   // ---- month grid from real scheduled dates ----
   const view = useMemo(() => {

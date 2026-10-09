@@ -12,8 +12,12 @@ export function getSprintLabel(a: Assessment, fallback = "Your assessments"): st
     return fallback;
 }
 
-export function getLevelLabel(a: Assessment, fallback: string): string {
-    return a.sprint_context?.level || a.level || (a.level_number ? `Level ${a.level_number}` : fallback);
+export function getLevelLabel(a: Assessment, fallback?: string): string {
+    if (a.sprint_context?.level) return a.sprint_context.level;
+    if (a.level) return a.level;
+    if (a.assessment_number) return `Q${a.assessment_number}`;
+    if (a.level_number) return `Q${a.level_number}`;
+    return fallback || "Q1";
 }
 
 /**
@@ -25,7 +29,7 @@ export function groupBySprint(quizzes: Assessment[]): SprintGroup[] {
 
     quizzes.forEach((quiz, i) => {
         const sprint = getSprintLabel(quiz);
-        const level = getLevelLabel(quiz, `Assessment ${i + 1}`);
+        const level = getLevelLabel(quiz, `Q${quiz.assessment_number || (i % 2 + 1)}`);
         const levels = sprints.get(sprint) ?? new Map<string, Assessment[]>();
         levels.set(level, [...(levels.get(level) ?? []), quiz]);
         sprints.set(sprint, levels);
