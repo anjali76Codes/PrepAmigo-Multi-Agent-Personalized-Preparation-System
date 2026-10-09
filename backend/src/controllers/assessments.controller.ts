@@ -177,13 +177,19 @@ export const submitAssessmentAttempt = async (req: AuthenticatedRequest, res: Re
     sendKnowledgeResults(String(userId), questions
       .filter((q) => q.is_attempted)
       .map((q) => ({ concept: q.concept, correct: Boolean(q.is_correct) })));
+    let newlyAwarded = false;
     if (!assessment.is_completed) {
       const sprint = await Sprint.findById(saved.sprint_id).select("plan_id");
       if (sprint) {
-        await claimAssessmentCompletion(userId, new Types.ObjectId(sprint.plan_id), new Types.ObjectId(id));
+        const completion = await claimAssessmentCompletion(
+          userId,
+          new Types.ObjectId(sprint.plan_id),
+          new Types.ObjectId(id),
+        );
+        newlyAwarded = completion.newlyAwarded;
       }
     }
-    res.json({ success: true, data: saved });
+    res.json({ success: true, data: saved, newly_awarded: newlyAwarded });
   } catch (error) {
     handleFailure(res, "Submit assessment attempt", error);
   }

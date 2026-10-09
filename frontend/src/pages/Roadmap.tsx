@@ -136,6 +136,15 @@ export function Roadmap() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
 
+  const openRoadmapNote = (item: ResourceItem) => {
+    const params = new URLSearchParams({
+      parent: 'root',
+      title: item.title,
+      content: item.title,
+    });
+    navigate(`/resource-pack/notes/new?${params.toString()}`);
+  };
+
   useEffect(() => {
     if (sprints.length > 0 && Object.keys(openSprints).length === 0) {
       setOpenSprints({ [sprints[0]._id]: true });
@@ -521,6 +530,7 @@ export function Roadmap() {
                                                   title={`Day ${day.day_number}: ${day.topic_title}`}
                                                   completed={day.status === 'completed'}
                                                   resources={buildResources(day)}
+                                                  onOpenNote={openRoadmapNote}
                                                   onToggleComplete={() => toggleProblemSolved(day._id)}
                                                 />
                                               </div>

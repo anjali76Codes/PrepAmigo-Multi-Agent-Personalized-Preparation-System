@@ -36,6 +36,12 @@ const STEPS = [
   "Putting the answer together",
 ];
 const STEP_MS = 1000;
+const CHAT_EXAMPLES = [
+  "Summarize my notes",
+  "What resources did I save?",
+  "Get the notes summary in my current sprint",
+  "Make a quick revision checklist from my notes",
+];
 
 function UserAvatar() {
   return (
@@ -57,13 +63,20 @@ function Processing() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), STEP_MS);
+    const t = setInterval(
+      () => setStep((s) => Math.min(s + 1, STEPS.length - 1)),
+      STEP_MS,
+    );
     return () => clearInterval(t);
   }, []);
 
   return (
     <div className="relative overflow-hidden flex items-center gap-5 bg-surface border border-border rounded-3xl rounded-tl-md pl-3 pr-6 py-4 w-fit max-w-full shadow-card">
-      <Mascot size="md" variant="working.gif" style={{ width: 110, height: 110 }} />
+      <Mascot
+        size="md"
+        variant="working.gif"
+        style={{ width: 110, height: 110 }}
+      />
       <ul className="space-y-2">
         {STEPS.map((label, i) => {
           const done = i < step;
@@ -71,8 +84,13 @@ function Processing() {
           return (
             <li
               key={label}
-              className={`flex items-center gap-2 text-base transition-colors duration-300 ${done ? "text-rosewood" : active ? "text-carbon-900 font-semibold" : "text-rosewood/50"
-                }`}
+              className={`flex items-center gap-2 text-base transition-colors duration-300 ${
+                done
+                  ? "text-rosewood"
+                  : active
+                    ? "text-carbon-900 font-semibold"
+                    : "text-rosewood/50"
+              }`}
             >
               <span className="w-4 h-4 flex items-center justify-center shrink-0">
                 {done ? (
@@ -91,7 +109,11 @@ function Processing() {
                         key={d}
                         className="w-1 h-1 rounded-full bg-chrome"
                         animate={{ opacity: [0.2, 1, 0.2] }}
-                        transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }}
+                        transition={{
+                          duration: 0.9,
+                          repeat: Infinity,
+                          delay: d * 0.15,
+                        }}
                       />
                     ))}
                   </span>
@@ -140,17 +162,24 @@ export function ResourceChat() {
   // Load existing session if chatId is in URL
   useEffect(() => {
     if (chatId) {
-      chatSessionsApi.get(chatId).then((res) => {
-        if (res.data?.messages) {
-          setMessages(res.data.messages.map((m) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            sources: m.sources,
-          })));
-          setSessionId(chatId);
-        }
-      }).catch((err) => console.warn("[ResourceChat] Could not load chat session:", err));
+      chatSessionsApi
+        .get(chatId)
+        .then((res) => {
+          if (res.data?.messages) {
+            setMessages(
+              res.data.messages.map((m) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                sources: m.sources,
+              })),
+            );
+            setSessionId(chatId);
+          }
+        })
+        .catch((err) =>
+          console.warn("[ResourceChat] Could not load chat session:", err),
+        );
     }
   }, [chatId]);
 
@@ -159,7 +188,9 @@ export function ResourceChat() {
     if (!question || busy) return;
 
     if (currentCredits < 2) {
-      setCreditError("You need at least 2 AI credits to use this feature. Complete levels or quizzes to earn more credits!");
+      setCreditError(
+        "You need at least 2 AI credits to use this feature. Complete levels or quizzes to earn more credits!",
+      );
       return;
     }
     setCreditError(null);
@@ -167,15 +198,36 @@ export function ResourceChat() {
     const uId = nextId();
     const aId = nextId();
     const userMsg: Message = { id: uId, role: "user", content: question };
-    const thinkingMsg: Message = { id: aId, role: "assistant", content: "", thinking: true };
+    const thinkingMsg: Message = {
+      id: aId,
+      role: "assistant",
+      content: "",
+      thinking: true,
+    };
 
     const newMessagesList = [...messages, userMsg];
+    const conversationHistory = messages
+      .filter((message) => !message.thinking)
+      .slice(-10)
+      .map(({ role, content }) => ({ role, content }));
     setMessages((p) => [...p, userMsg, thinkingMsg]);
     setBusy(true);
 
-    const finishWith = async (content: string, sources: ResourceSource[] = []) => {
-      const assistantMsg: Message = { id: aId, role: "assistant", content, sources };
-      setMessages((p) => p.map((m) => (m.id === aId ? { ...m, thinking: false, content, sources } : m)));
+    const finishWith = async (
+      content: string,
+      sources: ResourceSource[] = [],
+    ) => {
+      const assistantMsg: Message = {
+        id: aId,
+        role: "assistant",
+        content,
+        sources,
+      };
+      setMessages((p) =>
+        p.map((m) =>
+          m.id === aId ? { ...m, thinking: false, content, sources } : m,
+        ),
+      );
       setBusy(false);
 
       // Save to chat session in backend
@@ -198,13 +250,22 @@ export function ResourceChat() {
     };
 
     try {
-      const response = await apiFetch<ResourceSearchResponse>("/api/resources/search", {
-        method: "POST",
-        body: JSON.stringify({ query: question }),
-      });
+      const response = await apiFetch<ResourceSearchResponse>(
+        "/api/resources/search",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            query: question,
+            history: conversationHistory,
+          }),
+        },
+      );
       await finishWith(response.data.answer, response.data.sources);
     } catch (error: any) {
-      const msg = error instanceof Error ? error.message : "The resource assistant could not answer. Please try again.";
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "The resource assistant could not answer. Please try again.";
       if (msg.toLowerCase().includes("credit")) {
         setCreditError(msg);
       }
@@ -238,20 +299,31 @@ export function ResourceChat() {
             aria-label="Back to Resource Pack"
             className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-chrome hover:bg-lavender-100 transition-colors"
           >
-            <motion.span whileHover={reduce ? undefined : { x: -2 }} className="flex">
+            <motion.span
+              whileHover={reduce ? undefined : { x: -2 }}
+              className="flex"
+            >
               <Icon name="arrow-back" />
             </motion.span>
           </Link>
           <div>
-            <h1 className="font-extrabold text-carbon-900 leading-tight">Resource Assistant</h1>
-            <p className="text-[11px] font-semibold text-carbon-500">RAG-powered workspace search</p>
+            <h1 className="font-extrabold text-carbon-900 leading-tight">
+              Resource Assistant
+            </h1>
+            <p className="text-[11px] font-semibold text-carbon-500">
+              RAG-powered workspace search
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {/* AI Credits Badge */}
           <div className="flex items-center gap-1.5 bg-beige-100 border border-border px-3 py-1 rounded-full text-xs font-bold text-carbon-800">
-            <img src="/assets/icons/creds.png" alt="" className="w-4 h-4 object-contain" />
+            <img
+              src="/assets/icons/creds.png"
+              alt=""
+              className="w-4 h-4 object-contain"
+            />
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.span
                 key={currentCredits}
@@ -263,7 +335,9 @@ export function ResourceChat() {
                 {currentCredits} Credits
               </motion.span>
             </AnimatePresence>
-            <span className="text-[10px] text-carbon-500 font-normal">(2/msg)</span>
+            <span className="text-[10px] text-carbon-500 font-normal">
+              (2/msg)
+            </span>
           </div>
 
           <Link
@@ -288,12 +362,19 @@ export function ResourceChat() {
           >
             <div className="bg-coral-100 border-b border-coral-500/30 px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-danger-600">
               <div className="flex items-center gap-2">
-                <Icon name="warning-outline" className="text-base text-coral-500" />
+                <Icon
+                  name="warning-outline"
+                  className="text-base text-coral-500"
+                />
                 <span>
-                  {creditError || `You need at least 2 AI credits to use this feature (Current: ${currentCredits}). Complete roadmap levels and quizzes to earn more credits!`}
+                  {creditError ||
+                    `You need at least 2 AI credits to use this feature (Current: ${currentCredits}). Complete roadmap levels and quizzes to earn more credits!`}
                 </span>
               </div>
-              <Link to="/roadmap" className="underline font-bold text-expresso ml-2 shrink-0">
+              <Link
+                to="/roadmap"
+                className="underline font-bold text-expresso ml-2 shrink-0"
+              >
                 Earn Credits
               </Link>
             </div>
@@ -312,14 +393,40 @@ export function ResourceChat() {
             >
               <motion.div
                 animate={reduce ? undefined : { y: [0, -6, 0] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 3.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
                 className="rounded-full bg-cocoa border border-border overflow-hidden"
               >
                 <Mascot variant="nosy.png" size="xl" />
               </motion.div>
               <div>
-                <h2 className="text-2xl font-extrabold text-carbon-900">What do you want to know?</h2>
-                <p className="text-sm text-carbon-500 mt-1">Ask about your sprints, notes, and references.</p>
+                <h2 className="text-2xl font-extrabold text-carbon-900">
+                  What do you want to know?
+                </h2>
+                <p className="text-sm text-carbon-500 mt-1">
+                  Ask about your sprints, notes, and references.
+                </p>
+              </div>
+              <div className="w-full max-w-3xl">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-carbon-500">
+                  Try an example
+                </p>
+                <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                  {CHAT_EXAMPLES.map((example) => (
+                    <button
+                      key={example}
+                      type="button"
+                      onClick={() => void handleSend(example)}
+                      disabled={busy || !hasSufficientCredits}
+                      className="rounded-2xl border border-border bg-surface px-4 py-3 text-left text-sm font-medium text-carbon-800 shadow-xs transition-colors hover:border-chrome-accent hover:bg-lavender-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}
@@ -327,14 +434,20 @@ export function ResourceChat() {
           {messages.map((m) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: reduce ? 0 : 12, scale: reduce ? 1 : 0.98 }}
+              initial={{
+                opacity: 0,
+                y: reduce ? 0 : 12,
+                scale: reduce ? 1 : 0.98,
+              }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 320, damping: 28 }}
               className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
             >
               {m.role === "user" ? <UserAvatar /> : <AiAvatar />}
 
-              <div className={m.role === "user" ? "max-w-[80%]" : "flex-1 min-w-0"}>
+              <div
+                className={m.role === "user" ? "max-w-[80%]" : "flex-1 min-w-0"}
+              >
                 {m.role === "user" ? (
                   <div className="rounded-3xl rounded-tr-md px-5 py-3 bg-chrome text-on-chrome leading-relaxed whitespace-pre-wrap shadow-card">
                     {m.content}
@@ -343,11 +456,16 @@ export function ResourceChat() {
                   <Processing />
                 ) : (
                   <div className="rounded-3xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-card w-fit max-w-full">
-                    <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">{m.content}</p>
+                    <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">
+                      {m.content}
+                    </p>
                     {!!m.sources?.length && (
                       <details className="mt-4 border-t border-border pt-3 group">
                         <summary className="text-xs font-bold text-carbon-500 cursor-pointer list-none flex items-center gap-2 select-none hover:text-chrome transition-colors">
-                          <Icon name="chevron-forward" className="text-base transition-transform group-open:rotate-90" />
+                          <Icon
+                            name="chevron-forward"
+                            className="text-base transition-transform group-open:rotate-90"
+                          />
                           Sources ({m.sources.length})
                         </summary>
                         <ul className="flex flex-col gap-2 mt-3">
@@ -374,7 +492,9 @@ export function ResourceChat() {
                                     {source.title}
                                   </a>
                                 ) : (
-                                  <span className="block truncate font-semibold text-carbon-900">{source.title}</span>
+                                  <span className="block truncate font-semibold text-carbon-900">
+                                    {source.title}
+                                  </span>
                                 )}
                                 <span className="block truncate text-carbon-500">
                                   {source.folder_path || source.source_type}
@@ -401,12 +521,17 @@ export function ResourceChat() {
             <ChatInput
               onSend={handleSend}
               disabled={busy || !hasSufficientCredits}
-              placeholder={hasSufficientCredits ? "Ask about your resources... (2 AI credits)" : "You need AI credits to send a message"}
+              placeholder={
+                hasSufficientCredits
+                  ? "Ask about your resources... (2 AI credits)"
+                  : "You need AI credits to send a message"
+              }
               hideTemplates={true}
             />
           </div>
           <p className="text-center text-xs text-carbon-500 mt-3 font-medium">
-            This assistant is specifically for querying and summarizing your saved notes, not for general AI conversations.
+            This assistant is specifically for querying and summarizing your
+            saved notes, not for general AI conversations.
           </p>
         </div>
       </div>

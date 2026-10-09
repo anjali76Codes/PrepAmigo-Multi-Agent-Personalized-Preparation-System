@@ -71,11 +71,16 @@ export const getFlashcardDecks = async (): Promise<FlashcardDeck[]> => {
 };
 
 /** Save a finished quiz: one answer letter (or null) per question, in order. Best effort. */
-export const submitAssessmentAttempt = async (assessmentId: string, answers: (string | null)[]): Promise<void> => {
+export const submitAssessmentAttempt = async (assessmentId: string, answers: (string | null)[]): Promise<boolean> => {
     try {
-        await apiFetch(`/api/assessments/${assessmentId}/attempt`, { method: "POST", body: JSON.stringify({ answers }) });
+        const response = await apiFetch<{ newly_awarded?: boolean }>(
+            `/api/assessments/${assessmentId}/attempt`,
+            { method: "POST", body: JSON.stringify({ answers }) },
+        );
+        return response.newly_awarded === true;
     } catch (e) {
         console.error("Failed to save the quiz attempt", e);
+        return false;
     }
 };
 

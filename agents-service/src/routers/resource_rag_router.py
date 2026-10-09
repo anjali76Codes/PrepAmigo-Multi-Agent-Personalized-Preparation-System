@@ -4,7 +4,7 @@ import hashlib
 import logging
 import os
 import re
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from dotenv import dotenv_values
@@ -49,9 +49,15 @@ class ResourceSyncRequest(BaseModel):
     deleted_source_ids: list[str] = Field(default_factory=list, max_length=2000)
 
 
+class ResourceChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=4000)
+
+
 class ResourceQueryRequest(BaseModel):
     user_id: str | None = Field(default=None, min_length=1, max_length=128)
     query: str = Field(min_length=1, max_length=2000)
+    history: list[ResourceChatMessage] = Field(default_factory=list, max_length=10)
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:
@@ -279,21 +285,40 @@ def _query_index(pc: Any, index: Any, user_id: str, query: str) -> list[dict[str
     return list(unique.values())
 
 
-def _answer(question: str, matches: list[dict[str, Any]]) -> tuple[str, list[dict[str, str]]]:
-    if not matches:
+def _answer(
+    question: str,
+    matches: list[dict[str, Any]],
+    history: list[dict[str, str]] | None = None,
+) -> tuple[str, list[dict[str, str]]]:
+    conversation = [
+        item for item in (history or [])
+        if item.get("role") in {"user", "assistant"} and item.get("content", "").strip()
+    ][-10:]
+    if not matches and not conversation:
         return "This question is out of scope! I can only answer questions related to your saved notes and preparation plan.", []
     excerpts = "\n\n".join(
         f"[{index}] {match['title']} ({match['folder_path'] or match['source_type']})\n{match['chunk_text']}"
         for index, match in enumerate(matches, start=1)
     )
+    transcript = "\n".join(
+        f"{'User' if item['role'] == 'user' else 'Assistant'}: {item['content'][:4000]}"
+        for item in conversation
+    ) or "(No earlier conversation.)"
     prompt = (
-        "Answer the question or summarize based ONLY on the provided excerpts (max 3 short lines).\n"
+        "You are a Resource Assistant. Use the conversation history to understand follow-ups and answer questions "
+        "about what was previously asked or answered. For facts about the user's saved resources, use only the "
+        "provided excerpts; conversation history is context, not a source of resource facts. Keep the answer to "
+        "at most 3 short lines.\n"
         "- Speak directly to the user (e.g., 'Your notes say...').\n"
         "- Do NOT say 'The provided text states...'.\n"
         "- Output clean plain text. Do NOT use markdown bolding (**) or bullet points.\n"
-        "- Cite facts with excerpt numbers like [1].\n"
-        "- If the question is outside the scope of the excerpts or a general chat, reply EXACTLY with: 'This question is out of scope! I can only answer questions related to your saved notes and preparation plan.'\n\n"
-        f"Question: {question}\n\nExcerpts:\n{excerpts}"
+        "- Cite resource facts with excerpt numbers like [1]. A reply about prior conversation does not need a source citation.\n"
+        "- If the user asks about resources but there are no relevant excerpts, or asks an unrelated general question "
+        "that does not refer to this conversation, reply EXACTLY with: 'This question is out of scope! I can only "
+        "answer questions related to your saved notes and preparation plan.'\n\n"
+        f"Conversation history:\n{transcript}\n\n"
+        f"Current question: {question}\n\n"
+        f"Resource excerpts:\n{excerpts or '(No matching resource excerpts.)'}"
     )
     try:
         message = _build_llm(temperature=0, max_tokens=180).invoke(prompt)
@@ -303,7 +328,7 @@ def _answer(question: str, matches: list[dict[str, Any]]) -> tuple[str, list[dic
         lines = [line.strip().replace("**", "").replace("*", "") for line in str(content).splitlines() if line.strip()]
         answer = "\n".join(lines[:3])
     except Exception as exc:
-        raise HTTPException(status_code=502, detail="Ollama could not answer from the retrieved resources.") from exc
+        raise HTTPException(status_code=502, detail="The resource assistant could not answer from the retrieved resources.") from exc
 
     cited_numbers = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
     sources = [
@@ -317,7 +342,7 @@ def _answer(question: str, matches: list[dict[str, Any]]) -> tuple[str, list[dic
         for number, match in enumerate(matches, start=1)
         if number in cited_numbers
     ]
-    if not sources:
+    if not sources and matches and not conversation:
         sources = [
             {
                 "source_id": match["source_id"],
@@ -383,9 +408,16 @@ async def query_resources(
     user_id = _validated_user_id(auth_payload, request.user_id)
     pc, index = _pinecone_client()
     try:
-        matches = await asyncio.to_thread(_query_index, pc, index, user_id, request.query)
+        history = [
+            message.model_dump() for message in request.history
+            if message.content.strip()
+        ][-10:]
+        retrieval_query = "\n".join(
+            [*(message["content"][:500] for message in history[-4:]), request.query]
+        )[-2000:]
+        matches = await asyncio.to_thread(_query_index, pc, index, user_id, retrieval_query)
         answer, sources = await asyncio.wait_for(
-            asyncio.to_thread(_answer, request.query, matches),
+            asyncio.to_thread(_answer, request.query, matches, history),
             timeout=ANSWER_TIMEOUT_SECONDS,
         )
     except asyncio.TimeoutError as exc:

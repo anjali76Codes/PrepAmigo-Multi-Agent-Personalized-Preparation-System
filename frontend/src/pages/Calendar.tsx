@@ -9,15 +9,12 @@ import { Mascot } from '../components/ui/Mascot';
 import { cn } from '../utils/utils';
 import { getAppPreferences } from '../lib/preferences';
 import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
-import { KanbanBoard } from '../components/calendar/KanbanBoard';
 import { plansApi } from '../lib/api/plans';
 import { customTasksApi } from '../lib/api/customTasks';
 import type { ISprintDay } from '../mocks/interviewPlan.mock';
 import { Logo } from '../components/ui/Logo';
 
 type Tab = 'today' | 'backlog' | 'upcoming';
-type ViewMode = 'list' | 'kanban';
-
 const dateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -122,7 +119,6 @@ export function Calendar() {
 
   const [selectedPrepId, setSelectedPrepId] = useState<string>(preps[0]?.id || '');
   const [activeTab, setActiveTab] = useState<Tab>('today');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showBanner, setShowBanner] = useState(true);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -243,20 +239,6 @@ export function Calendar() {
     } else if (isCompleting && /^[a-f0-9]{24}$/i.test(id)) {
       void plansApi.completeDay(id).then(() => refreshPreps()).catch((err) => console.warn('[Calendar] Could not mark day complete on backend:', err));
     }
-  };
-
-  const doneTasks = tasks.filter((t) => t.status === 'completed');
-  const kanbanColumns = [
-    { key: 'backlog', label: 'Backlog', dot: 'bg-coral-500', tasks: backlogTasks.filter((t) => t.status !== 'completed') },
-    { key: 'today', label: 'Today', dot: 'bg-chrome', tasks: todayTasks.filter((t) => t.status !== 'completed') },
-    { key: 'upcoming', label: 'Upcoming', dot: 'bg-lavender-500', tasks: upcomingTasks.filter((t) => t.status !== 'completed') },
-    { key: 'done', label: 'Done', dot: 'bg-chrome-accent', tasks: doneTasks },
-  ];
-  // Scheduling bucket (backlog/today/upcoming) is date-derived and fixed; the only thing
-  // dragging between columns can change is completion, i.e. a move into or out of "done".
-  const handleKanbanDrop = (taskId: string, fromColumn: string, toColumn: string) => {
-    if (fromColumn === toColumn) return;
-    if (fromColumn === 'done' || toColumn === 'done') toggleTask(taskId);
   };
 
   const handleAddTask = async (e: React.FormEvent) => {
@@ -464,66 +446,34 @@ export function Calendar() {
 
               {/* Tabs + view toggle */}
               <div className="flex items-center justify-between gap-3">
-                {viewMode === 'list' ? (
-                  <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
-                    {([
-                      ['today', 'Today', todayTasks.length],
-                      ['backlog', 'Backlog', missedCount],
-                      ['upcoming', 'Upcoming', upcomingTasks.length],
-                    ] as [Tab, string, number][]).map(([key, label, count]) => (
-                      <button
-                        key={key}
-                        onClick={() => setActiveTab(key)}
-                        className={cn(
-                          'px-4 h-8 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5',
-                          activeTab === key ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
-                        )}
-                      >
-                        {label}
-                        <span className={cn('text-[10px]', activeTab === key ? 'text-on-chrome-muted' : 'text-carbon-500')}>{count}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <h3 className="text-sm font-bold text-carbon-900 px-1">Board</h3>
-                )}
+                <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
+                  {([
+                    ['today', 'Today', todayTasks.length],
+                    ['backlog', 'Backlog', missedCount],
+                    ['upcoming', 'Upcoming', upcomingTasks.length],
+                  ] as [Tab, string, number][]).map(([key, label, count]) => (
+                    <button
+                      key={key}
+                      onClick={() => setActiveTab(key)}
+                      className={cn(
+                        'px-4 h-8 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5',
+                        activeTab === key ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
+                      )}
+                    >
+                      {label}
+                      <span className={cn('text-[10px]', activeTab === key ? 'text-on-chrome-muted' : 'text-carbon-500')}>{count}</span>
+                    </button>
+                  ))}
+                </div>
 
                 <div className="flex items-center gap-3 shrink-0">
-                  <div className="flex items-center gap-1 bg-surface border border-border rounded-full p-1">
-                    {([
-                      ['list', 'list-outline'],
-                      ['kanban', 'grid-outline'],
-                    ] as [ViewMode, string][]).map(([mode, icon]) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        aria-label={mode === 'list' ? 'List view' : 'Kanban view'}
-                        aria-pressed={viewMode === mode}
-                        onClick={() => setViewMode(mode)}
-                        className={cn(
-                          'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
-                          viewMode === mode ? 'bg-chrome text-on-chrome' : 'text-carbon-500 hover:text-carbon-900'
-                        )}
-                      >
-                        <Icon name={icon} className="text-sm" />
-                      </button>
-                    ))}
-                  </div>
                   <Link to="/dashboard/practice" className="text-xs font-bold text-chrome hover:underline flex items-center gap-1 whitespace-nowrap">
                     Whole plan <Icon name="arrow-forward" className="text-xs" />
                   </Link>
                 </div>
               </div>
 
-              {viewMode === 'kanban' ? (
-                <KanbanBoard
-                  columns={kanbanColumns}
-                  buildResources={buildResources}
-                  onToggleComplete={toggleTask}
-                  onDropTask={handleKanbanDrop}
-                />
-              ) : (
-                <div className="space-y-3">
+              <div className="space-y-3">
                   <AnimatePresence mode="popLayout" initial={false}>
                     {currentList.map((task, i) => (
                       <motion.div
@@ -578,8 +528,7 @@ export function Calendar() {
                       <Button type="submit" size="sm">Add</Button>
                     </form>
                   )}
-                </div>
-              )}
+              </div>
             </motion.div>
 
             {/* Sidebar */}

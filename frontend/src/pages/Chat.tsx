@@ -36,7 +36,7 @@ export function Chat() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [threadId] = useState<string>(() => `chat-${Date.now()}`);
+  const [threadId, setThreadId] = useState<string>(() => `chat-${crypto.randomUUID()}`);
 
   const clientRef = useRef<AgentStreamClient | null>(null);
 
@@ -296,6 +296,7 @@ export function Chat() {
                 type="button"
                 onClick={() => {
                   setMessages([]);
+                  setThreadId(`chat-${crypto.randomUUID()}`);
                   clientRef.current?.close();
                   clientRef.current = new AgentStreamClient();
                 }}
@@ -339,26 +340,13 @@ export function Chat() {
             )}
           </AnimatePresence>
 
-          <motion.div
-            layout
-            layoutId="prepamigo-input"
-            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-            className={cn('w-full relative z-20', hasStarted ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto')}
-          >
-            <ChatInput
-              onSend={handleSend}
-              disabled={isProcessing}
-              placeholder={hasStarted ? 'Message PrepAmigo...' : "Tell PrepAmigo what you're preparing for..."}
-            />
-          </motion.div>
-
           <AnimatePresence mode="popLayout">
             {!hasStarted && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mt-12"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mb-8"
               >
                 {suggestions.map((s, i) => (
                   <button
@@ -377,6 +365,20 @@ export function Chat() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          <motion.div
+            layout
+            layoutId="prepamigo-input"
+            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+            className={cn('w-full relative z-20', hasStarted ? 'max-w-3xl mx-auto' : 'max-w-2xl mx-auto')}
+          >
+            <ChatInput
+              onSend={handleSend}
+              disabled={isProcessing}
+              placeholder={hasStarted ? 'Message PrepAmigo...' : "Tell PrepAmigo what you're preparing for..."}
+            />
+          </motion.div>
+
         </div>
       </div>
 

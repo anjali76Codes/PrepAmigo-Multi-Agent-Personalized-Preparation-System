@@ -15,6 +15,9 @@ export type TreeNode = {
     children?: TreeNode[];
 };
 
+export const isNoteNode = (node: TreeNode) =>
+    node.kind === "file" && (node.isCustom || !node.url || node.url === "#");
+
 const file = (
     id: string,
     title: string,

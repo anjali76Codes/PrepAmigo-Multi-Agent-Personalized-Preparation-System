@@ -44,7 +44,11 @@ export function ResourceNoteEditor() {
   const isNew = !noteId || noteId === "new";
 
   const emptyDraft = useMemo<Draft>(
-    () => ({ title: "", content: "", parentId: searchParams.get("parent") || "root" }),
+    () => ({
+      title: searchParams.get("title") || "",
+      content: searchParams.get("content") || "",
+      parentId: searchParams.get("parent") || "root",
+    }),
     [searchParams],
   );
 
@@ -72,7 +76,12 @@ export function ResourceNoteEditor() {
       .then((items) => {
         if (!active) return;
         const folders = new Map(items.filter((item) => item.kind === "folder").map((item) => [item.id, item.title]));
-        if (!isNew && noteId) {
+        if (isNew) {
+          setSaved(emptyDraft);
+          setNote(emptyDraft);
+          setError("");
+          setSavedAt("");
+        } else if (noteId) {
           const existing = items.find((item) => item.id === noteId && item.kind === "file");
           if (!existing) {
             setError("That note could not be found in your resources.");
@@ -93,7 +102,7 @@ export function ResourceNoteEditor() {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [isNew, noteId, searchParams]);
+  }, [emptyDraft, isNew, noteId, searchParams]);
 
   // Warn before closing the tab with unsaved edits.
   useEffect(() => {

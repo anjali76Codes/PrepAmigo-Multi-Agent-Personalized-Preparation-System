@@ -11,6 +11,7 @@ import {
   pathToId,
   nodesAlong,
   domainOf,
+  isNoteNode,
   type TreeNode,
 } from "../../lib/resourceTree";
 import {
@@ -28,7 +29,7 @@ import { Button } from "../ui/Button";
 
 /* ───────────────────────── helpers ───────────────────────── */
 
-const isNote = (n: TreeNode) => n.kind === "file" && (n.isCustom || n.content !== undefined);
+const isNote = isNoteNode;
 
 const typeLabel = (n: TreeNode) => {
   if (n.kind === "folder") return "Folder";
@@ -137,7 +138,7 @@ function DetailRow({
   return (
     <div
       role="row"
-      onClick={() => (isTouch() ? onOpen() : onSelect())}
+      onClick={() => (isTouch() || isNote(node) ? onOpen() : onSelect())}
       onDoubleClick={onOpen}
       className={cn(
         "group grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_80px_32px] items-center gap-3 px-3 py-2 rounded-lg cursor-pointer select-none transition-colors",
@@ -262,7 +263,18 @@ export function ResourceDirectory() {
   };
 
   const handleOpenNote = (node: TreeNode) => {
-    if (node.isCustom) navigate(`/resource-pack/notes/${encodeURIComponent(node.id)}`);
+    if (node.isCustom) {
+      navigate(`/resource-pack/notes/${encodeURIComponent(node.id)}`);
+      return;
+    }
+    const nodePath = pathToId(tree, node.id);
+    const parentId = node.parentId || nodePath?.[nodePath.length - 2] || currentFolderId;
+    const params = new URLSearchParams({
+      title: node.title,
+      content: node.content || "",
+      parent: parentId,
+    });
+    navigate(`/resource-pack/notes/new?${params.toString()}`);
   };
 
   const openNode = (n: TreeNode) => {
@@ -522,7 +534,7 @@ export function ResourceDirectory() {
                         whileHover={reduce ? undefined : { y: -3 }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          isTouch() ? openNode(n) : setSelectedId(n.id);
+                          isTouch() || isNote(n) ? openNode(n) : setSelectedId(n.id);
                         }}
                         onDoubleClick={() => openNode(n)}
                         className={cn(

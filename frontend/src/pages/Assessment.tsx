@@ -499,6 +499,11 @@ export function Assessment() {
     const [generationError, setGenerationError] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<Feedback>(null);
     const [cardFlipped, setCardFlipped] = useState(false);
+    const rewardSprintId = activeQuiz?.sprint_id || params.get("sprintId");
+    const assessmentNumber = activeQuiz?.assessment_number || Number(params.get("level")?.match(/\d+/)?.[0]);
+    const rewardSourceKey = fromLevel && rewardSprintId && assessmentNumber
+        ? `${rewardSprintId}:assessment-${assessmentNumber}`
+        : undefined;
 
 
     // clear stale feedback whenever the session changes
@@ -582,6 +587,7 @@ export function Assessment() {
                         onLevelComplete={handleLevelComplete}
                         onFeedback={setFeedback}
                         onCardFlip={setCardFlipped}
+                        rewardSourceKey={rewardSourceKey}
                     />
                 </SessionLayout>
             );

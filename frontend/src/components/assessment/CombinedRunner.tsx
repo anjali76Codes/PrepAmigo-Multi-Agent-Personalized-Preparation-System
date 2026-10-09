@@ -12,6 +12,7 @@ import { QuestionCard, type Question } from "./QuestionCard";
 import { FlipCard, RatingButtons, type Card } from "./FlipCard";
 import { Result } from "./Result";
 import { buildFeedback, type Feedback } from "./FeedbackPanel";
+import { ASSESSMENT_CREDITS, ASSESSMENT_XP, queueReward } from "../../lib/rewards";
 
 type Item =
     | { kind: "quiz"; question: Question; idx: number }
@@ -33,10 +34,11 @@ interface Props {
     onLevelComplete: () => void;
     onFeedback: (f: Feedback) => void;
     onCardFlip?: (flipped: boolean) => void;
+    rewardSourceKey?: string;
 }
 
 /** Level flow: quiz questions and flashcards mixed into one session. */
-export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback, onCardFlip }: Props) {
+export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback, onCardFlip, rewardSourceKey }: Props) {
     const items = useMemo<Item[]>(() => {
         const quizItems = quiz.questions.map((question, idx): Item => ({ kind: "quiz", question, idx }));
         const cardItems = (deck?.cards ?? []).map((card, idx): Item => ({ kind: "card", card, idx }));
@@ -80,7 +82,14 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
         if (submitting) return;
         setSubmitting(true);
         try {
-            await submitAssessmentAttempt(quiz._id, quizAnswers);
+            const newlyAwarded = await submitAssessmentAttempt(quiz._id, quizAnswers);
+            if (newlyAwarded && rewardSourceKey) {
+                queueReward({
+                    sourceKey: rewardSourceKey,
+                    xp: ASSESSMENT_XP,
+                    credits: ASSESSMENT_CREDITS,
+                });
+            }
             if (deck) {
                 await submitFlashcardReview(deck._id, deck.cards.map((_: unknown, i: number) => ratings[i] ?? null));
             }

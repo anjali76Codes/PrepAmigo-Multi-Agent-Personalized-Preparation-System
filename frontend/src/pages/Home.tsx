@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { RevealStagger, RevealStaggerItem } from "../components/ui/Reveal";
 import { PageBackground } from "../components/ui/PageBackground";
 
@@ -13,11 +13,12 @@ import { BottomCTA } from "../components/home/BottomCTA";
 import { useAuth } from "../hooks/useAuth";
 import { featureFlags } from "../config/featureFlags";
 import { Mascot } from "../components/ui/Mascot";
+import { PlatformLoader } from "../components/ui/PlatformLoader";
 // import { Logo } from "../components/ui/Logo";
 
 export function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const { scrollY } = useScroll();
   const scale = useTransform(scrollY, [0, 500], [1, 0.9]);
@@ -41,6 +42,9 @@ export function Home() {
     // Otherwise navigate directly to chat with the initial query
     navigate("/dashboard/chat", { state: { initialQuery: trimmed } });
   };
+
+  if (featureFlags.enableAuth && loading) return <PlatformLoader />;
+  if (featureFlags.enableAuth && user) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="min-h-screen bg-bg relative overflow-x-clip text-carbon-700">

@@ -195,8 +195,50 @@ def test_answer_returns_only_cited_sources_and_caps_lines(monkeypatch):
     assert {source["source_id"] for source in sources} == {"note:a", "note:b"}
 
 
+def test_answer_uses_conversation_history_for_follow_up_without_resource_matches(monkeypatch):
+    prompts = []
+
+    class FakeModel:
+        def invoke(self, prompt):
+            prompts.append(prompt)
+            return type("Message", (), {"content": "You asked me to summarize your saved system design notes."})()
+
+    monkeypatch.setattr(rag, "_build_llm", lambda **_kwargs: FakeModel())
+    history = [
+        {"role": "user", "content": "Summarize my saved system design notes."},
+        {"role": "assistant", "content": "Your notes cover caching and database scaling [1]."},
+    ]
+
+    answer, sources = rag._answer("What did I ask you?", [], history)
+
+    assert "summarize your saved system design notes" in answer
+    assert "What did I ask you?" in prompts[0]
+    assert "Summarize my saved system design notes." in prompts[0]
+    assert sources == []
+
+
+def test_answer_does_not_attach_unrelated_resource_to_context_only_reply(monkeypatch):
+    class FakeModel:
+        def invoke(self, _prompt):
+            return type("Message", (), {"content": "You asked me to summarize your notes."})()
+
+    monkeypatch.setattr(rag, "_build_llm", lambda **_kwargs: FakeModel())
+    matches = [
+        {"source_id": "note:a", "title": "A", "source_type": "note", "folder_path": "Notes", "url": "", "chunk_text": "unrelated content"},
+    ]
+
+    answer, sources = rag._answer(
+        "What did I ask you?",
+        matches,
+        [{"role": "user", "content": "Summarize my notes."}],
+    )
+
+    assert answer == "You asked me to summarize your notes."
+    assert sources == []
+
+
 def test_answer_has_a_clear_empty_retrieval_response():
     answer, sources = rag._answer("unmatched", [])
 
-    assert "couldn't find" in answer
+    assert "out of scope" in answer
     assert sources == []

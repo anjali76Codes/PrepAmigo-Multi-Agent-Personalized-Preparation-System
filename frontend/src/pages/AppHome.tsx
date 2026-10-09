@@ -131,10 +131,10 @@ export function AppHome() {
     setGemReward(null);
   }, []);
 
-  const toggleSprint = useCallback((sprintId: string) => {
+  const toggleSprint = useCallback((sprintId: string, isCollapsed: boolean) => {
     setCollapsedSprints((prev) => ({
       ...prev,
-      [sprintId]: !prev[sprintId],
+      [sprintId]: !isCollapsed,
     }));
   }, []);
 
@@ -468,7 +468,7 @@ export function AppHome() {
 
                     const isCollapsed =
                       isSprintComplete &&
-                      collapsedSprints[sprint.id] === true;
+                      (collapsedSprints[sprint.id] ?? true);
 
                     return (
                       <Card
@@ -481,7 +481,7 @@ export function AppHome() {
                           type="button"
                           onClick={() => {
                             if (isSprintComplete) {
-                              toggleSprint(sprint.id);
+                              toggleSprint(sprint.id, isCollapsed);
                             }
                           }}
                           className={`

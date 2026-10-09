@@ -15,6 +15,7 @@ export interface DayTaskCardProps {
   title: string;
   completed: boolean;
   onToggleComplete?: () => void;
+  onOpenNote?: (item: ResourceItem) => void;
   resources: ResourceItem[];
   /** Overrides the default (full = open, compact = closed) */
   defaultOpen?: boolean;
@@ -71,6 +72,7 @@ export function DayTaskCard({
   title,
   completed,
   onToggleComplete,
+  onOpenNote,
   resources,
   defaultOpen,
 }: DayTaskCardProps) {
@@ -209,6 +211,17 @@ export function DayTaskCard({
                               >
                                 {inner}
                               </a>
+                            ) : item.type === "Note" && onOpenNote ? (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onOpenNote(item);
+                                }}
+                                className="h-8 w-full flex items-center gap-2 text-sm text-carbon-700 text-left px-2 -mx-2 rounded-lg hover:bg-lavender-50 hover:text-chrome transition-colors"
+                              >
+                                {inner}
+                              </button>
                             ) : (
                               <div className="h-8 flex items-center gap-2 text-sm text-carbon-700 px-2 -mx-2">
                                 {inner}

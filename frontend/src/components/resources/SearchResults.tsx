@@ -1,6 +1,6 @@
 import { FolderTile, FileTile } from "./FolderIcon";
 import { Icon } from "../ui/Icon";
-import { domainOf, type SearchHit, type TreeNode } from "../../lib/resourceTree";
+import { domainOf, isNoteNode, type SearchHit, type TreeNode } from "../../lib/resourceTree";
 
 export function SearchResults({
     hits,
@@ -18,7 +18,7 @@ export function SearchResults({
                 node.kind === "folder" ? (
                     <FolderTile key={node.id} title={node.title} count={node.children?.length ?? 0}
                         subtitle={trail.join(" / ")} onClick={() => onFolder(node.id)} />
-                ) : node.isCustom ? (
+                ) : isNoteNode(node) ? (
                     <button key={node.id} onClick={() => onNote(node)}
                         className="group flex flex-col items-center gap-1.5 rounded-xl p-3 text-center transition-colors hover:bg-lavender-100">
                         <Icon name={node.icon ?? "journal"} className="text-6xl text-navy-500 transition-transform group-hover:-translate-y-0.5" />

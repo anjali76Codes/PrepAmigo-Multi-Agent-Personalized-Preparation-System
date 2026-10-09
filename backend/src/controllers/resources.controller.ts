@@ -304,6 +304,11 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
   if (!userId) return;
   const query = z.string().trim().min(1).max(2000).safeParse(req.body?.query);
   if (!query.success) return invalid(res, "A non-empty query of at most 2000 characters is required.");
+  const history = z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().max(4000),
+  })).max(10).safeParse(req.body?.history ?? []);
+  if (!history.success) return invalid(res, "Conversation history must contain at most 10 valid messages.");
 
   try {
     const user = await User.findById(userId).select("ai_credits");
@@ -382,7 +387,11 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
       method: "POST",
       headers: agentsAuthHeaders(String(userId)),
       signal: AbortSignal.timeout(120_000),
-      body: JSON.stringify({ user_id: String(userId), query: query.data }),
+      body: JSON.stringify({
+        user_id: String(userId),
+        query: query.data,
+        history: history.data,
+      }),
     });
     if (!response.ok) {
       const detail = await response.text();
@@ -423,4 +432,3 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
     res.status(502).json({ success: false, error: "The resource search service could not complete the request." });
   }
 }
-
