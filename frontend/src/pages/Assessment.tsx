@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
 import { useLocation, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../components/ui/Icon";
@@ -18,6 +18,7 @@ import { findMatchingDeck, groupBySprint, type SprintGroup } from "../components
 import { useAppContext } from "../context/AppContext";
 import { Card } from "../components/ui/Card";
 import { Button as Butt } from "../components/ui/Button";
+import { FeedbackPanel, type Feedback } from "../components/assessment/FeedbackPanel";
 
 type Tab = "quizzes" | "flashcards";
 type RunMode = "standalone-quiz" | "standalone-deck" | "combined";
@@ -89,7 +90,10 @@ function AssessmentHeader({
             variant="default"
             transition={{ duration: 0.3, ease: "easeInOut" }}
             style={{ borderRadius: 24 }} // keeps rounded-3xl from distorting during the layout animation
-            className="flex flex-col gap-6 rounded-3xl bg-lavender-100 p-6 md:p-8"
+            className={cn(
+                "flex flex-col gap-6 rounded-3xl bg-lavender-100 transition-all",
+                active ? "p-4 md:px-8" : "p-6 md:p-8"
+            )}
         >
             <div className="flex flex-col gap-6 md:flex-row md:items-center">
                 {/* Title (always visible) */}
@@ -190,11 +194,11 @@ function AssessmentHeader({
                 </AnimatePresence>
 
                 {/* Mascot (always visible) */}
-                <div className="hidden shrink-0 items-center justify-center sm:flex">
+                <div className="hidden shrink-0 items-center justify-center sm:flex transition-all ease-in-out">
                     <Mascot
-                        size="lg"
+                        size={active ? "md" : "lg"}
                         variant="working.png"
-                        className="rounded-full border border-border bg-surface p-2"
+                        className={cn("rounded-full border border-border bg-surface p-2", active && "size-24")}
                     />
                 </div>
             </div>
@@ -204,9 +208,8 @@ function AssessmentHeader({
 /* ───────────── list views ───────────── */
 
 function QuizList({
-    quizzes, groups, onOpen,
+    groups, onOpen,
 }: {
-    quizzes: AssessmentSet[];
     groups: SprintGroup[];
     onOpen: (a: AssessmentSet) => void;
 }) {
@@ -457,6 +460,17 @@ function LoadingState({ generating }: { generating: boolean }) {
     );
 }
 
+function SessionLayout({ banner, children, feedback }: {
+    banner: ReactNode; children: ReactNode; feedback: Feedback;
+}) {
+    return (
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[auto_minmax(0,1fr)_20rem] lg:gap-8">
+            {banner}
+            <main className="flex min-w-0 justify-center">{children}</main>
+            <FeedbackPanel feedback={feedback} />
+        </div>
+    );
+}
 /* ───────────── main page ───────────── */
 
 export function Assessment() {
@@ -477,6 +491,11 @@ export function Assessment() {
     const [runMode, setRunMode] = useState<RunMode>("standalone-quiz");
     const [generating, setGenerating] = useState(false);
     const [generationError, setGenerationError] = useState<string | null>(null);
+    const [feedback, setFeedback] = useState<Feedback>(null);
+
+    // clear stale feedback whenever the session changes
+    useEffect(() => { setFeedback(null); }, [activeQuiz?._id, activeDeck?._id]);
+
 
     const refresh = useCallback(() => {
         getAssessments().then(setQuizzes);
@@ -540,30 +559,28 @@ export function Assessment() {
     const renderBody = () => {
         if (showCombined) {
             return (
-                <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
-                    <SprintBanner assessment={activeQuiz!} note="Quiz + flashcards" />
-                    <main className="flex w-full min-w-0 flex-1 justify-center">
-                        <CombinedRunner
-                            quiz={activeQuiz!}
-                            deck={matchedDeck}
-                            onExit={handleExit}
-                            onLevelComplete={handleLevelComplete}
-                        />
-                    </main>
-                </div>
+                <SessionLayout
+                    banner={<SprintBanner assessment={activeQuiz!} note="Quiz + flashcards" />}
+                    feedback={feedback}
+                >
+                    <CombinedRunner
+                        quiz={activeQuiz!}
+                        deck={matchedDeck}
+                        onExit={handleExit}
+                        onLevelComplete={handleLevelComplete}
+                        onFeedback={setFeedback}
+                    />
+                </SessionLayout>
             );
         }
 
         if (tab === "quizzes") {
             return activeQuiz ? (
-                <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
-                    <SprintBanner assessment={activeQuiz} />
-                    <main className="flex w-full min-w-0 flex-1 justify-center">
-                        <QuizRunner quiz={activeQuiz} onExit={handleExit} />
-                    </main>
-                </div>
+                <SessionLayout banner={<SprintBanner assessment={activeQuiz} />} feedback={feedback}>
+                    <QuizRunner quiz={activeQuiz} onExit={handleExit} onFeedback={setFeedback} />
+                </SessionLayout>
             ) : (
-                <QuizList quizzes={quizzes!} groups={groups} onOpen={openQuiz} />
+                <QuizList groups={groups} onOpen={openQuiz} />
             );
         }
 

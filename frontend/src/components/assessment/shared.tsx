@@ -27,7 +27,7 @@ export function Panel({ children, className }: { children: ReactNode; className?
     return (
         <motion.div
             {...fade}
-            className={cn("bg-surface border border-border/80 rounded-3xl p-6 sm:p-8 shadow-card space-y-6", className)}
+            className={cn("bg-forest-emerald border border-border/80 rounded-3xl p-6 sm:p-8 shadow-card space-y-6", className)}
         >
             {children}
         </motion.div>
@@ -105,7 +105,7 @@ export function CardHeader({ badge, tag, hint }: { badge: ReactNode; tag?: React
                     </span>
                 )}
             </div>
-            <span className="text-xs font-medium text-rosewood">{hint}</span>
+            <span className="text-xs font-medium text-on-chrome">{hint}</span>
         </div>
     );
 }
