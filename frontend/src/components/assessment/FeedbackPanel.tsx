@@ -44,12 +44,13 @@ const mascotSwap = {
     exit: { opacity: 0, scale: 0.85, transition: { duration: 0.12 } },
 };
 
-export function FeedbackPanel({ feedback }: { feedback: Feedback }) {
+export function FeedbackPanel({ feedback, cardFlipped = false }: { feedback: Feedback; cardFlipped?: boolean }) {
     const key = !feedback ? "idle" : feedback.correct ? "right" : "wrong";
     const mascot =
         key === "right" ? "Celebration.png"
             : key === "wrong" ? "dissapointed.png"
-                : "Motivated.png";
+                : cardFlipped ? "OK.png"
+                    : "Thinking.png";
 
     return (
         <aside className="w-full shrink-0 self-start lg:sticky lg:top-6 lg:w-80">

@@ -23,11 +23,28 @@ export const RATINGS = [
 /* ───────────── building blocks ───────────── */
 
 /** The white rounded card every runner puts its content in. */
-export function Panel({ children, className }: { children: ReactNode; className?: string }) {
+const PANEL_TONES = {
+    emerald: "bg-forest-emerald",
+    plain: "bg-chrome-accent",
+};
+
+export function Panel({
+    children,
+    className,
+    tone = "emerald",
+}: {
+    children: ReactNode;
+    className?: string;
+    tone?: keyof typeof PANEL_TONES;
+}) {
     return (
         <motion.div
             {...fade}
-            className={cn("bg-forest-emerald border border-border/80 rounded-3xl p-6 sm:p-8 shadow-card space-y-6", className)}
+            className={cn(
+                "border border-border/80 rounded-3xl p-6 sm:p-8 shadow-card space-y-6",
+                PANEL_TONES[tone],
+                className
+            )}
         >
             {children}
         </motion.div>
@@ -94,7 +111,11 @@ export function Button({ variant = "primary", className, ...props }: ButtonProps
 }
 
 /** Top row of a quiz question or flashcard: badge + tag on the left, hint on the right. */
-export function CardHeader({ badge, tag, hint }: { badge: ReactNode; tag?: ReactNode; hint: string }) {
+export function CardHeader({
+    badge, tag, hint, tone = "emerald",
+}: {
+    badge: ReactNode; tag?: ReactNode; hint: string; tone?: "emerald" | "plain";
+}) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-4">
             <div className="flex items-center gap-2">
@@ -105,7 +126,9 @@ export function CardHeader({ badge, tag, hint }: { badge: ReactNode; tag?: React
                     </span>
                 )}
             </div>
-            <span className="text-xs font-medium text-on-chrome">{hint}</span>
+            <span className={cn("text-xs font-medium", tone === "plain" ? "text-carbon-500" : "text-on-chrome")}>
+                {hint}
+            </span>
         </div>
     );
 }

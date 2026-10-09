@@ -460,14 +460,14 @@ function LoadingState({ generating }: { generating: boolean }) {
     );
 }
 
-function SessionLayout({ banner, children, feedback }: {
-    banner: ReactNode; children: ReactNode; feedback: Feedback;
+function SessionLayout({ banner, children, feedback, cardFlipped }: {
+    banner: ReactNode; children: ReactNode; feedback: Feedback; cardFlipped?: boolean;
 }) {
     return (
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[auto_minmax(0,1fr)_20rem] lg:gap-8">
             {banner}
             <main className="flex min-w-0 justify-center">{children}</main>
-            <FeedbackPanel feedback={feedback} />
+            <FeedbackPanel feedback={feedback} cardFlipped={cardFlipped} />
         </div>
     );
 }
@@ -492,9 +492,14 @@ export function Assessment() {
     const [generating, setGenerating] = useState(false);
     const [generationError, setGenerationError] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<Feedback>(null);
+    const [cardFlipped, setCardFlipped] = useState(false);
+
 
     // clear stale feedback whenever the session changes
-    useEffect(() => { setFeedback(null); }, [activeQuiz?._id, activeDeck?._id]);
+    useEffect(() => {
+        setFeedback(null);
+        setCardFlipped(false);
+    }, [activeQuiz?._id, activeDeck?._id]);
 
 
     const refresh = useCallback(() => {
@@ -562,6 +567,7 @@ export function Assessment() {
                 <SessionLayout
                     banner={<SprintBanner assessment={activeQuiz!} note="Quiz + flashcards" />}
                     feedback={feedback}
+                    cardFlipped={cardFlipped}
                 >
                     <CombinedRunner
                         quiz={activeQuiz!}
@@ -569,6 +575,7 @@ export function Assessment() {
                         onExit={handleExit}
                         onLevelComplete={handleLevelComplete}
                         onFeedback={setFeedback}
+                        onCardFlip={setCardFlipped}
                     />
                 </SessionLayout>
             );

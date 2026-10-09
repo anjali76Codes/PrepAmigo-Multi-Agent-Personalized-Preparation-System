@@ -32,10 +32,11 @@ interface Props {
     onExit: () => void;
     onLevelComplete: () => void;
     onFeedback: (f: Feedback) => void;
+    onCardFlip?: (flipped: boolean) => void;
 }
 
 /** Level flow: quiz questions and flashcards mixed into one session. */
-export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback }: Props) {
+export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback, onCardFlip }: Props) {
     const items = useMemo<Item[]>(() => {
         const quizItems = quiz.questions.map((question, idx): Item => ({ kind: "quiz", question, idx }));
         const cardItems = (deck?.cards ?? []).map((card, idx): Item => ({ kind: "card", card, idx }));
@@ -92,6 +93,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
     // ratings are passed in so the very last card's rating is not lost to stale state
     const advance = (ratings = deckRatings) => {
         onFeedback(null);
+        onCardFlip?.(false);
         if (isLast) return void finish(ratings);
         setPos(pos + 1);
         setFlipped(false);
@@ -117,6 +119,12 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
         advance(next);
     };
 
+    const toggleFlip = () => {
+        const next = !flipped;
+        setFlipped(next);
+        onCardFlip?.(next);
+    };
+
     return (
         <div className="w-full max-w-3xl space-y-6 py-2">
             <RunnerHeader
@@ -128,7 +136,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
             />
 
             <AnimatePresence mode="wait">
-                <Panel key={pos}>
+                <Panel key={pos} tone={item.kind === "quiz" ? "emerald" : "plain"}>
                     {item.kind === "quiz" ? (
                         <QuestionCard
                             question={item.question}
@@ -145,12 +153,13 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
                                 badge={item.card.category}
                                 tag="Flashcard review"
                                 hint="Flip to reveal"
+                                tone="plain"
                             />
 
                             <FlipCard
                                 card={item.card}
                                 flipped={flipped}
-                                onFlip={() => setFlipped((f) => !f)}
+                                onFlip={toggleFlip}
                                 size="md"
                             />
 
