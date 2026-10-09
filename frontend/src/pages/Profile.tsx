@@ -303,7 +303,6 @@ export function Profile() {
             </div>
           </div>
 
-          ```
           {/* Danger Zone */}
           <div className="rounded-[1.5rem] border border-danger-600/20 bg-surface p-6 md:p-7 shadow-card">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
@@ -323,8 +322,8 @@ export function Profile() {
               </div>
 
               <Button
-                variant="outline"
-                className="rounded-xl font-semibold px-5 border-danger-600/40 text-danger-600 hover:bg-danger-100 shrink-0"
+                variant="primary"
+                className="rounded-xl font-semibold px-5 bg-red-600 text-white hover:bg-red-700 border border-red-600 shadow-sm shrink-0"
                 onClick={() => {
                   setDeleteConfirmText('');
                   setDeleteError(null);
@@ -335,7 +334,6 @@ export function Profile() {
               </Button>
             </div>
           </div>
-          ```
 
         </motion.div>
       </div>
