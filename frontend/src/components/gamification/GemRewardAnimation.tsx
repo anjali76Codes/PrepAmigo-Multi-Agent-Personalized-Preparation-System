@@ -209,7 +209,7 @@ function FlyingGem({
 
     return (
         <motion.img
-            src="/assets/Mascot/star.png"
+            src="/assets/icons/star.png"
             alt=""
             aria-hidden="true"
             className="absolute object-contain drop-shadow-[0_0_12px_rgba(195,149,91,0.8)]"
@@ -424,7 +424,7 @@ export default function GemRewardAnimation({
                 >
                     <div className="flex flex-col items-center gap-1">
                         <img
-                            src="/assets/Mascot/star.png"
+                            src="/assets/icons/star.png"
                             alt=""
                             className="w-10 h-10 object-contain drop-shadow-[0_0_12px_rgba(195,149,91,0.8)]"
                         />
@@ -444,7 +444,7 @@ export default function GemRewardAnimation({
                     return (
                         <motion.img
                             key={`dust-${index}`}
-                            src="/assets/Mascot/star.png"
+                            src="/assets/icons/star.png"
                             alt=""
                             aria-hidden="true"
                             className="absolute w-3 h-3 object-contain"
@@ -538,7 +538,7 @@ export default function GemRewardAnimation({
                             return (
                                 <motion.img
                                     key={`target-star-${index}`}
-                                    src="/assets/Mascot/star.png"
+                                    src="/assets/icons/star.png"
                                     alt=""
                                     aria-hidden="true"
                                     className="fixed w-3 h-3 object-contain pointer-events-none z-[10003]"

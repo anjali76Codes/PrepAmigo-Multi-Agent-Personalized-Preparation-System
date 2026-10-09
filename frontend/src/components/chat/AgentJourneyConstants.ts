@@ -38,11 +38,11 @@ export const JOURNEY_PRESETS: Record<JourneyVariant, JourneyConfig> = {
         nodeSize: 80,
         labelSize: 11,
         showMascot: true,
-        mascotSize: 90,
+        mascotSize: 100,
         showBubble: true,
         interactive: false,
         maxHeight: '60vh',
-        padding: 'pb-2 pt-10',
+        padding: 'pb-2 pt-15',
         strokeWidth: 8,
         strokeColor: '#14532d',
         strokeTrackColor: 'rgba(20, 83, 45, 0.2)',
@@ -72,10 +72,10 @@ export const JOURNEY_PRESETS: Record<JourneyVariant, JourneyConfig> = {
 
 export const MASCOT_VARIANTS = [
     "Chilling.png",
-    "Chilling.png",
+    "Running.png",
     "thinking.gif",
+    "Chilling.png",
     "working.gif",
-    "Thinking.png",
     "Motivated.png"
 ] as const;
 

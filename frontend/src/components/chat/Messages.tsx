@@ -8,6 +8,7 @@ import { FlashcardDeck } from '../practice/FlashcardDeck';
 import { ChatJourney, type JourneyStep } from './AgentJourney';
 import type { FlashcardDeck as FlashcardDeckType } from '../../data/mockData';
 import { useAppContext } from '../../context/AppContext';
+import { Mascot } from '../ui/Mascot';
 
 export interface Message {
   id: string;
@@ -34,9 +35,22 @@ export function Messages({ messages, onJourneyComplete }: MessagesProps) {
           animate={{ opacity: 1, y: 0 }}
           className={`flex gap-4 max-w-5xl mx-auto ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
         >
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user' ? 'bg-soft-rose text-expresso' : 'bg-carbon-900 text-white'
-            }`}>
-            <Icon name={msg.sender === 'user' ? 'person' : 'chatbubbles-outline'} />
+          <div
+            className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user'
+              ? 'bg-soft-rose text-expresso'
+              : 'bg-expresso rounded-full overflow-hidden'
+              }`}
+          >
+            {msg.sender === 'user' ? (
+              <Icon name="person" />
+            ) : (
+              <Mascot
+                variant="nosy.png"
+                size="sm"
+                alt="PrepAmigo"
+                className="w-full h-full object-contain"
+              />
+            )}
           </div>
 
           <div className={`space-y-4 ${msg.sender === 'user' ? 'items-end flex flex-col' : 'flex-1'}`}>

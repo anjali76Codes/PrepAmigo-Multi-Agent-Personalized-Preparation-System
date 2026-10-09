@@ -174,10 +174,10 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-[2rem] shadow-2xl border border-border w-full max-w-2xl overflow-hidden my-8"
+          className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden my-6"
         >
           {/* Header Banner */}
-          <div className="bg-deep-emerald text-white p-6 md:p-8 relative overflow-hidden">
+          <div className="bg-deep-emerald text-white p-4 md:py-6 md:px-8 relative overflow-hidden">
             <div className="relative z-10 flex items-center justify-between">
               <div>
                 <span className="text-xs uppercase font-extrabold tracking-wider text-chrome-accent">
@@ -191,7 +191,7 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
                 </p>
               </div>
               <div className="hidden sm:block shrink-0">
-                <Mascot variant="Celebration.png" size="md" />
+                <Mascot variant="Chilling.png" size="lg" />
               </div>
             </div>
           </div>
@@ -390,7 +390,7 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
               variant="primary"
               onClick={handleSave}
               disabled={isSaving || !targetRole.trim()}
-              className="px-6 rounded-xl font-bold"
+              className="px-6 font-bold"
             >
               {isSaving ? "Saving..." : "Save & Start Prepping"}
             </Button>

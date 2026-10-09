@@ -2,218 +2,218 @@
 
 @theme {
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      BASE
      ───────────────────────────────────────────── */
 
-   --color-bg: #F9EDF0;
-   /* Blush */
-   --color-surface: #FFF9F5;
-   /* Warm Ivory */
-   --color-surface-muted: #F3E3DA;
-   /* Champagne Mist */
-   --color-border: #E6C8B7;
-   /* Champagne */
+  --color-bg: #F9EDF0;
+  /* Blush */
+  --color-surface: #FFF9F5;
+  /* Warm Ivory */
+  --color-surface-muted: #F3E3DA;
+  /* Champagne Mist */
+  --color-border: #E6C8B7;
+  /* Champagne */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      PRIMARY / BRAND
      ───────────────────────────────────────────── */
 
-   --color-deep-emerald: #1c3934;
-   /* Deep Emerald */
-   --color-forest-emerald: #205447;
-   /* Forest Emerald */
-   --color-expresso: #3A2420;
-   /* Espresso */
-   --color-cocoa: #6B4A40;
-   /* Cocoa */
-   --color-rosewood: #A06E63;
-   /* Rosewood */
-   --color-soft-rose: #F1E2DE;
-   /* Soft Rose */
+  --color-deep-emerald: #1c3934;
+  /* Deep Emerald */
+  --color-forest-emerald: #205447;
+  /* Forest Emerald */
+  --color-expresso: #3A2420;
+  /* Espresso */
+  --color-cocoa: #6B4A40;
+  /* Cocoa */
+  --color-rosewood: #A06E63;
+  /* Rosewood */
+  --color-soft-rose: #F1E2DE;
+  /* Soft Rose */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      GOLD / CHAMPAGNE
      ───────────────────────────────────────────── */
 
-   --color-beige-600: #A8753E;
-   /* Cognac Gold */
-   --color-beige-100: #F7E8D8;
-   /* Champagne Cream */
+  --color-beige-600: #A8753E;
+  /* Cognac Gold */
+  --color-beige-100: #F7E8D8;
+  /* Champagne Cream */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      DANGER
      ───────────────────────────────────────────── */
 
-   --color-danger-600: #A6534A;
-   /* Muted Terracotta */
-   --color-danger-100: #F7DFDB;
-   /* Soft Blush Red */
+  --color-danger-600: #A6534A;
+  /* Muted Terracotta */
+  --color-danger-100: #F7DFDB;
+  /* Soft Blush Red */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      CARBON
      ───────────────────────────────────────────── */
 
-   --color-carbon-900: #241613;
-   /* Deep Espresso */
-   --color-carbon-700: #3A2420;
-   /* Espresso */
-   --color-carbon-500: #5A3D35;
-   /* Coffee */
+  --color-carbon-900: #241613;
+  /* Deep Espresso */
+  --color-carbon-700: #3A2420;
+  /* Espresso */
+  --color-carbon-500: #5A3D35;
+  /* Coffee */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      GOLD ACCENT
      ───────────────────────────────────────────── */
 
-   --color-beige-500: #C3955B;
-   /* Cognac */
+  --color-beige-500: #C3955B;
+  /* Cognac */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      CORAL / ORANGE
      ───────────────────────────────────────────── */
 
-   --color-coral-500: #FFBB73;
-   /* Light Orange */
-   --color-coral-100: #FFF0DF;
-   /* Soft Peach */
+  --color-coral-500: #A6534A;
+  /* Light Orange */
+  --color-coral-100: #FFF0DF;
+  /* Soft Peach */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      EMERALD
      ───────────────────────────────────────────── */
 
-   --color-sky-500: #2F6F5E;
-   /* Emerald */
-   --color-sky-100: #E1F0EB;
-   /* Soft Emerald */
+  --color-sky-500: #2F6F5E;
+  /* Emerald */
+  --color-sky-100: #E1F0EB;
+  /* Soft Emerald */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      CHROME
      ───────────────────────────────────────────── */
 
-   --color-chrome: #173F35;
-   /* Deep Emerald */
-   --color-chrome-hover: #205447;
-   /* Forest Emerald */
-   --color-chrome-border: #46796B;
-   /* Muted Emerald */
+  --color-chrome: #173F35;
+  /* Deep Emerald */
+  --color-chrome-hover: #205447;
+  /* Forest Emerald */
+  --color-chrome-border: #46796B;
+  /* Muted Emerald */
 
-   --color-on-chrome: #FFF9F5;
-   /* Warm Ivory */
-   --color-on-chrome-muted: #BFD5CE;
-   /* Pale Emerald */
-   --color-chrome-accent: #E6C8B7;
-   /* Champagne */
+  --color-on-chrome: #FFF9F5;
+  /* Warm Ivory */
+  --color-on-chrome-muted: #BFD5CE;
+  /* Pale Emerald */
+  --color-chrome-accent: #E6C8B7;
+  /* Champagne */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      LIGHT WARM TONES
      ───────────────────────────────────────────── */
 
-   --color-lavender-100: #F3E3E0;
-   /* Dusty Rose */
-   --color-lavender-50: #FBF3F1;
-   /* Soft Rose White */
+  --color-lavender-100: #F3E3E0;
+  /* Dusty Rose */
+  --color-lavender-50: #FBF3F1;
+  /* Soft Rose White */
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      RADII
      ───────────────────────────────────────────── */
 
-   --radius-control: 0.5rem;
-   --radius-card: 1rem;
-   --radius-badge: 9999px;
+  --radius-control: 0.5rem;
+  --radius-card: 1rem;
+  --radius-badge: 9999px;
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      SHADOWS
      ───────────────────────────────────────────── */
 
-   --shadow-card:
-      0 4px 6px -1px rgba(43, 26, 23, 0.05),
-      0 2px 4px -2px rgba(43, 26, 23, 0.05);
+  --shadow-card:
+    0 4px 6px -1px rgba(43, 26, 23, 0.05),
+    0 2px 4px -2px rgba(43, 26, 23, 0.05);
 
-   --shadow-pop:
-      0 10px 15px -3px rgba(43, 26, 23, 0.12),
-      0 4px 6px -4px rgba(43, 26, 23, 0.06);
+  --shadow-pop:
+    0 10px 15px -3px rgba(43, 26, 23, 0.12),
+    0 4px 6px -4px rgba(43, 26, 23, 0.06);
 
 
-   /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────
      TYPOGRAPHY
      ───────────────────────────────────────────── */
 
-   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
 
-   :root {
+  :root {
 
-      /* default preset is now the 'soft' style */
+    /* default preset is now the 'soft' style */
 
-      --radius-control: 1rem;
-      --radius-card: 1.5rem;
-      --border-width: 0px;
+    --radius-control: 1rem;
+    --radius-card: 1.5rem;
+    --border-width: 0px;
 
-      --shadow-card:
-         0 10px 15px -3px rgba(43, 26, 23, 0.10);
-   }
-
-
-   html[data-style="solid"] {
-
-      /* previous default preset */
-
-      --radius-control: 0.5rem;
-      --radius-card: 1rem;
-      --border-width: 1px;
-
-      --shadow-card:
-         0 4px 6px -1px rgba(43, 26, 23, 0.06);
-   }
+    --shadow-card:
+      0 10px 15px -3px rgba(43, 26, 23, 0.10);
+  }
 
 
-   html[data-style="outlined"] {
+  html[data-style="solid"] {
 
-      --radius-control: 0.5rem;
-      --radius-card: 0.75rem;
-      --border-width: 1.5px;
+    /* previous default preset */
 
-      --shadow-card: none;
+    --radius-control: 0.5rem;
+    --radius-card: 1rem;
+    --border-width: 1px;
 
-      --color-border: #E6C8B7;
-      /* Champagne */
-   }
-
-
-   html[data-style="crisp"] {
-
-      --radius-control: 0.25rem;
-      --radius-card: 0.25rem;
-      --border-width: 1px;
-
-      --shadow-card: none;
-   }
+    --shadow-card:
+      0 4px 6px -1px rgba(43, 26, 23, 0.06);
+  }
 
 
-   body {
+  html[data-style="outlined"] {
 
-      background-color: var(--color-bg);
-      color: var(--color-expresso);
-      font-family: var(--font-sans);
-   }
+    --radius-control: 0.5rem;
+    --radius-card: 0.75rem;
+    --border-width: 1.5px;
+
+    --shadow-card: none;
+
+    --color-border: #E6C8B7;
+    /* Champagne */
+  }
 
 
-   *:focus-visible {
+  html[data-style="crisp"] {
 
-      outline: 2px solid var(--color-expresso);
-      outline-offset: 2px;
-   }
+    --radius-control: 0.25rem;
+    --radius-card: 0.25rem;
+    --border-width: 1px;
+
+    --shadow-card: none;
+  }
+
+
+  body {
+
+    background-color: var(--color-bg);
+    color: var(--color-expresso);
+    font-family: var(--font-sans);
+  }
+
+
+  *:focus-visible {
+
+    outline: 2px solid var(--color-expresso);
+    outline-offset: 2px;
+  }
 }

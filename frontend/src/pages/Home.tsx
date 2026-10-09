@@ -13,6 +13,7 @@ import { BottomCTA } from "../components/home/BottomCTA";
 import { useAuth } from "../hooks/useAuth";
 import { featureFlags } from "../config/featureFlags";
 import { Mascot } from "../components/ui/Mascot";
+// import { Logo } from "../components/ui/Logo";
 
 export function Home() {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export function Home() {
       >
         <RevealStagger className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center space-y-5 my-auto">
           <RevealStaggerItem>
+            <Mascot variant="nosy.png" size="lg" className="bg-cocoa rounded-full overflow-hidden my-5" />
             <p className="text-sm sm:text-base md:text-lg text-carbon-300 max-w-xl mx-auto leading-relaxed">
               PrepAmigo builds your preparation roadmap in seconds.
             </p>
@@ -66,7 +68,7 @@ export function Home() {
           </RevealStaggerItem>
 
 
-          <Mascot variant="hi.png" className="absolute left-10 bottom-0 mx-auto" style={{ height: "500px", width: "auto" }} />
+          <Mascot variant="hi.png" className="absolute left-10 bottom-0 mx-auto" style={{ height: "50vh", width: "auto" }} />
         </RevealStagger>
       </motion.section>
 

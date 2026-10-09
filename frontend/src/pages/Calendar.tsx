@@ -12,6 +12,7 @@ import { DayTaskCard, type ResourceItem } from '../components/ui/DayTaskCard';
 import { KanbanBoard } from '../components/calendar/KanbanBoard';
 import { plansApi } from '../lib/api/plans';
 import type { ISprintDay } from '../mocks/interviewPlan.mock';
+import { Logo } from '../components/ui/Logo';
 
 type Tab = 'today' | 'backlog' | 'upcoming';
 type ViewMode = 'list' | 'kanban';
@@ -361,7 +362,7 @@ export function Calendar() {
           </motion.div>
 
           {/* Content: 7xl */}
-          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="max-w-8xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             {/* Main column */}
             <motion.div initial={{ opacity: 0, y: motionY }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="lg:col-span-8 space-y-4">
@@ -523,7 +524,7 @@ export function Calendar() {
             <motion.div initial={{ opacity: 0, y: motionY }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-4 space-y-4">
 
               {/* Keep it up */}
-              <div className="bg-chrome-accent text-deep-emerald rounded-card p-5 flex items-center gap-4">
+              <div className="bg-coral-500/20 text-deep-emerald rounded-card p-5 flex items-center gap-4">
                 <div className="flex-1">
                   <h4 className="font-bold text-lg leading-tight mb-1">Keep it up!</h4>
                   <p className="text-xs text-deep-emerald/70 font-medium leading-relaxed">
@@ -532,8 +533,8 @@ export function Calendar() {
                       : 'Every plan starts with one tick. Your mascot is cheering for you!'}
                   </p>
                 </div>
-                <div className="w-16 h-16 shrink-0 bg-surface rounded-full flex items-center justify-center">
-                  <Mascot variant="hi.png" size="md" />
+                <div className="w-20 h-20 shrink-0 bg-surface rounded-full flex items-center justify-center">
+                  <Logo compact />
                 </div>
               </div>
 
@@ -582,7 +583,7 @@ export function Calendar() {
                           isToday
                             ? "bg-chrome text-on-chrome border-chrome shadow-sm"
                             : missed
-                              ? "bg-coral-500/10 text-coral-700 border-coral-500/30"
+                              ? "bg-coral-500/80 text-on-chrome border-coral-500/30"
                               : allDone
                                 ? "bg-chrome-accent text-deep-emerald border-chrome-accent"
                                 : info
@@ -597,17 +598,17 @@ export function Calendar() {
                         {info && preferences.showCalendarTaskCounts && (
                           <span
                             className={cn(
-                              "text-[9px] leading-none mt-0.5 font-bold",
+                              "w-2 h-2 rounded-full",
                               isToday
-                                ? "text-on-chrome-muted"
+                                ? "bg-on-chrome-muted"
                                 : missed
-                                  ? "text-coral-700"
+                                  ? "bg-coral-700"
                                   : allDone
-                                    ? "text-deep-emerald/70"
-                                    : "text-carbon-500"
+                                    ? "bg-deep-emerald/70"
+                                    : "bg-carbon-500"
                             )}
                           >
-                            {info.done}/{info.total}
+                            {/* {info.done}/{info.total} */}
                           </span>
                         )}
                       </button>
@@ -632,7 +633,7 @@ export function Calendar() {
                   </span>
 
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-coral-500/10 border border-coral-500/30" />
+                    <span className="w-3 h-3 rounded bg-coral-500/80 border border-coral-500/30" />
                     missed
                   </span>
                 </div>

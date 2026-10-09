@@ -1,5 +1,6 @@
+import { motion } from 'framer-motion';
 import { Card } from '../ui/Card';
-import { Icon } from '../ui/Icon';
+import { Logo } from '../ui/Logo';
 
 interface ProgressStatsProps {
   stats: {
@@ -17,77 +18,291 @@ interface ProgressStatsProps {
 export function ProgressStats({ stats }: ProgressStatsProps) {
   const levelProgress = ((stats.xp % 1000) / 1000) * 100;
   const aiCredits = stats.aiCredits ?? Math.floor(stats.xp / 10);
-  const nextLevel = stats.nextLevelXp ?? (1000 - (stats.xp % 1000));
+
   const badgeCount = Array.isArray(stats.badges)
     ? stats.badges.filter((b) => b.unlocked !== false).length
     : 0;
 
   return (
-    <Card variant="default" className="p-6 md:p-8">
-      <div className="flex flex-col md:flex-row items-center gap-8">
-        {/* Level Ring */}
-        <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="45" className="fill-none stroke-bg stroke-[8]" />
-            <circle
-              cx="50"
-              cy="50"
-              r="45"
-              className="fill-none stroke-chrome stroke-[8] transition-all duration-1000"
-              strokeDasharray="283"
-              style={{ strokeDashoffset: 283 - (283 * levelProgress) / 100 }}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-black text-carbon-900">{stats.level}</span>
-            <span className="text-[10px] font-bold text-carbon-500 uppercase tracking-widest">
-              Level
-            </span>
+    <Card
+      variant="default"
+      className="p-5 md:p-6 rounded-3xl"
+    >
+      <div className="flex flex-col lg:flex-row gap-5">
+
+        {/* Level Progress */}
+        <div className="flex items-center gap-5 lg:w-1/3 shrink-0">
+
+          <div className="relative w-24 h-24 shrink-0">
+            <svg
+              className="w-full h-full -rotate-90"
+              viewBox="0 0 100 100"
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="43"
+                className="fill-none stroke-lavender-100 stroke-[8]"
+              />
+
+              <motion.circle
+                cx="50"
+                cy="50"
+                r="43"
+                className="fill-none stroke-chrome stroke-[8]"
+                strokeDasharray="270"
+                strokeLinecap="round"
+                initial={{ strokeDashoffset: 270 }}
+                animate={{
+                  strokeDashoffset:
+                    270 - (270 * levelProgress) / 100,
+                }}
+                transition={{
+                  duration: 0.8,
+                  ease: 'easeOut',
+                }}
+              />
+            </svg>
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-extrabold text-carbon-900">
+                {stats.level}
+              </span>
+
+              <span className="text-[10px] font-bold tracking-wide text-carbon-500">
+                LEVEL
+              </span>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-cocoa">
+              Current level
+            </p>
+
+            <h2 className="text-xl font-extrabold text-deep-emerald mt-0.5">
+              Level {stats.level}
+            </h2>
+
+            <div className="mt-3 w-full max-w-48">
+              <div className="h-2 rounded-full bg-lavender-100 overflow-hidden">
+                <motion.div
+                  className="h-full bg-chrome rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${levelProgress}%` }}
+                  transition={{
+                    duration: 0.8,
+                    ease: 'easeOut',
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-6 w-full">
-          <div className="bg-bg/50 p-3.5 rounded-2xl border border-border/60">
-            <div className="text-xs font-semibold text-carbon-500 flex items-center gap-1.5 mb-1">
-              <Icon name="star" className="text-yellow-500" /> Total XP
+        {/* Stats */}
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+
+          {/* XP */}
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2 }}
+            className="
+              relative overflow-hidden
+              bg-coral-100
+              rounded-2xl
+              p-4
+              border border-chrome-accent/40
+            "
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-lg font-bold text-cocoa">
+                XP
+              </span>
+
+              <motion.img
+                src="/assets/icons/star.png"
+                alt=""
+                className="w-20 h-20 absolute right-1"
+                animate={{
+                  y: [0, -5, 0],
+                  rotate: [-4, 4, -4],
+                }}
+                transition={{
+                  duration: 3.5,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
             </div>
-            <div className="text-2xl font-black text-carbon-900">
+
+            <div className="mt-2 text-2xl font-extrabold text-deep-emerald">
               {stats.xp.toLocaleString()}
             </div>
-            <span className="text-[10px] text-green-600 font-bold">+20 per topic, +30 per quiz</span>
-          </div>
+          </motion.div>
 
-          <div className="bg-bg/50 p-3.5 rounded-2xl border border-border/60">
-            <div className="text-xs font-semibold text-carbon-500 flex items-center gap-1.5 mb-1">
-              <Icon name="sparkles" className="text-purple-600" /> AI Credits
+          {/* AI Credits */}
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2 }}
+            className="
+              relative overflow-hidden
+              bg-cocoa
+              text-white
+              rounded-2xl
+              p-4
+              border border-chrome
+            "
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-lg font-bold text-white/75">
+                AI Credits
+              </span>
+
+              <motion.img
+                src="/assets/icons/creds.png"
+                alt=""
+                className="w-20 h-20 absolute right-1"
+                animate={{
+                  y: [0, -5, 0],
+                  rotate: [3, -3, 3],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
             </div>
-            <div className="text-2xl font-black text-purple-700">
+
+            <div className="mt-2 text-2xl font-extrabold text-white">
               {aiCredits.toLocaleString()}
             </div>
-            <span className="text-[10px] text-purple-600/80 font-medium">10 XP = 1 AI Credit</span>
-          </div>
+          </motion.div>
 
-          <div className="bg-bg/50 p-3.5 rounded-2xl border border-border/60">
-            <div className="text-xs font-semibold text-carbon-500 flex items-center gap-1.5 mb-1">
-              <Icon name="flame" className="text-amber-500" /> Day Streak
-            </div>
-            <div className="text-2xl font-black text-carbon-900">{stats.streak}</div>
-            <span className="text-[10px] text-amber-600 font-bold">
-              {stats.streak > 0 ? "🔥 Streak Active" : "Start today's topic"}
-            </span>
-          </div>
+          {/* Streak */}
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2 }}
+            className="
+              relative overflow-hidden
+              bg-beige-100
+              rounded-2xl
+              p-4
+              border border-beige-600/20
+            "
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-bold text-cocoa">
+                Streak
+              </span>
 
-          <div className="bg-bg/50 p-3.5 rounded-2xl border border-border/60">
-            <div className="text-xs font-semibold text-carbon-500 flex items-center gap-1.5 mb-1">
-              <Icon name="medal-outline" className="text-chrome" /> Badges Earned
+              <motion.div
+                className="
+                  flex items-center justify-center
+                  w-9 h-9
+                  rounded-full
+                  bg-surface
+                  text-beige-600
+                  font-extrabold
+                "
+                animate={{
+                  scale: [1, 1.08, 1],
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              >
+                <Logo compact />
+              </motion.div>
             </div>
-            <div className="text-2xl font-black text-carbon-900">{badgeCount}</div>
-            <span className="text-[10px] text-carbon-500 font-medium">
-              Next level in {nextLevel} XP
-            </span>
-          </div>
+
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className="text-2xl font-extrabold text-deep-emerald">
+                {stats.streak}
+              </span>
+
+              <span className="text-xs font-semibold text-cocoa">
+                days
+              </span>
+            </div>
+
+            <div className="mt-3 flex gap-1">
+              {Array.from({ length: 7 }).map((_, index) => (
+                <motion.span
+                  key={index}
+                  className={`h-1.5 flex-1 rounded-full ${index < Math.min(stats.streak, 7)
+                    ? 'bg-beige-600'
+                    : 'bg-white/70'
+                    }`}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{
+                    delay: index * 0.04,
+                    duration: 0.2,
+                  }}
+                />
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Badges */}
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2 }}
+            className="
+              relative overflow-hidden
+              bg-deep-emerald
+              text-white
+              rounded-2xl
+              p-4
+              border border-deep-emerald
+            "
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white/75">
+                Badges
+              </span>
+
+              <motion.img
+                src="/assets/icons/badge1.png"
+                alt="badge"
+                className="w-20 h-20 absolute right-1 top-5"
+                animate={{
+                  y: [0, -5, 0],
+                  rotate: [3, -3, 3],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+            </div>
+
+            <div className="mt-2 text-2xl font-extrabold">
+              {badgeCount}
+            </div>
+
+            <div className="mt-3 flex gap-1.5">
+              {Array.from({
+                length: Math.min(Math.max(badgeCount, 1), 5),
+              }).map((_, index) => (
+                <motion.span
+                  key={index}
+                  className="w-2 h-2 rounded-full bg-chrome-accent"
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: index * 0.08,
+                  }}
+                />
+              ))}
+            </div>
+          </motion.div>
+
         </div>
       </div>
     </Card>

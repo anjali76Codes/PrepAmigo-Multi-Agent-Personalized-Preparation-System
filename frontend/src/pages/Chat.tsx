@@ -13,6 +13,7 @@ import { featureFlags } from '../config/featureFlags';
 import { AgentStreamClient } from '../lib/agentStream/agentStreamClient';
 import type { AgentStreamEvent } from '../lib/agentStream/types';
 import { toolCallText } from '../lib/agentStream/toolCall';
+import { Mascot } from '../components/ui/Mascot';
 
 const PIPELINE_STEPS: JourneyStep[] = [
   { agent: 'Supervisor', text: 'Analyzing your goal and routing…' },
@@ -289,11 +290,8 @@ export function Chat() {
 
         {hasStarted && (
           <>
-            <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-white/70 backdrop-blur-xs shrink-0 z-20">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-bold text-deep-emerald uppercase tracking-wider">Preparation Agent</span>
-              </div>
+            <div className="flex items-center justify-between px-6 py-2 border-b border-border bg-forest-emerald backdrop-blur-xs shrink-0 z-20">
+              <Mascot variant='nosy.png' size='sm' className='mb-1 bg-cocoa rounded-full overflow-hidden' />
               <button
                 type="button"
                 onClick={() => {
@@ -335,6 +333,7 @@ export function Chat() {
                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                 className="flex flex-col items-center w-full mb-12 mt-10"
               >
+                <Mascot variant='nosy.png' size='lg' className='bg-deep-emerald rounded-full overflow-hidden mb-6' />
                 <h2 className="text-4xl font-extrabold text-carbon-900 tracking-tight">How can PrepAmigo help?</h2>
               </motion.div>
             )}
