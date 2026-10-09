@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Icon } from "../components/ui/Icon";
 import { ChatInput } from "../components/chat/ChatInput";
 import { Mascot } from "../components/ui/Mascot";
-import { SUGGESTED_QUESTIONS } from "../data/mockNotes";
 import { apiFetch } from "../lib/api/client";
+import { useAuth } from "../hooks/useAuth";
+import { useAppContext } from "../context/AppContext";
+import { chatSessionsApi } from "../lib/api/chatSessions";
 
 interface ResourceSource {
   source_id: string;
@@ -24,7 +26,7 @@ interface Message {
 
 interface ResourceSearchResponse {
   success: boolean;
-  data: { answer: string; sources: ResourceSource[] };
+  data: { answer: string; sources: ResourceSource[]; ai_credits?: number };
 }
 
 const STEPS = [
@@ -102,26 +104,81 @@ function Processing() {
 export function ResourceChat() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { chatId } = useParams<{ chatId?: string }>();
+  const { user, refreshUser } = useAuth();
+  const { refreshPreps } = useAppContext();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(chatId);
+  const [creditError, setCreditError] = useState<string | null>(null);
+
   const endRef = useRef<HTMLDivElement>(null);
   const consumed = useRef(false);
   const counter = useRef(0);
   const nextId = () => `m-${++counter.current}`;
 
+  const currentCredits = user?.ai_credits ?? 30;
+  const hasSufficientCredits = currentCredits >= 2;
+
+  // Load existing session if chatId is in URL
+  useEffect(() => {
+    if (chatId) {
+      chatSessionsApi.get(chatId).then((res) => {
+        if (res.data?.messages) {
+          setMessages(res.data.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            sources: m.sources,
+          })));
+          setSessionId(chatId);
+        }
+      }).catch((err) => console.warn("[ResourceChat] Could not load chat session:", err));
+    }
+  }, [chatId]);
+
   const handleSend = async (text: string) => {
     const question = text.trim();
     if (!question || busy) return;
+
+    if (currentCredits < 2) {
+      setCreditError("You need at least 2 AI credits to use this feature. Complete levels or quizzes to earn more credits!");
+      return;
+    }
+    setCreditError(null);
+
+    const uId = nextId();
     const aId = nextId();
-    setMessages((p) => [
-      ...p,
-      { id: nextId(), role: "user", content: question },
-      { id: aId, role: "assistant", content: "", thinking: true },
-    ]);
+    const userMsg: Message = { id: uId, role: "user", content: question };
+    const thinkingMsg: Message = { id: aId, role: "assistant", content: "", thinking: true };
+
+    const newMessagesList = [...messages, userMsg];
+    setMessages((p) => [...p, userMsg, thinkingMsg]);
     setBusy(true);
-    const finishWith = (content: string, sources: ResourceSource[] = []) => {
+
+    const finishWith = async (content: string, sources: ResourceSource[] = []) => {
+      const assistantMsg: Message = { id: aId, role: "assistant", content, sources };
       setMessages((p) => p.map((m) => (m.id === aId ? { ...m, thinking: false, content, sources } : m)));
       setBusy(false);
+
+      // Save to chat session in backend
+      const fullSessionMessages = [...newMessagesList, assistantMsg];
+      try {
+        const sessionRes = await chatSessionsApi.save({
+          sessionId,
+          messages: fullSessionMessages,
+        });
+        if (sessionRes.data?.id && !sessionId) {
+          setSessionId(sessionRes.data.id);
+        }
+      } catch (err) {
+        console.warn("[ResourceChat] Could not persist chat session:", err);
+      }
+
+      // Refresh credits in both auth context and app context
+      void refreshUser();
+      void refreshPreps();
     };
 
     try {
@@ -129,14 +186,17 @@ export function ResourceChat() {
         method: "POST",
         body: JSON.stringify({ query: question }),
       });
-      finishWith(response.data.answer, response.data.sources);
-    } catch (error) {
-      finishWith(error instanceof Error ? error.message : "The resource assistant could not answer. Please try again.");
+      await finishWith(response.data.answer, response.data.sources);
+    } catch (error: any) {
+      const msg = error instanceof Error ? error.message : "The resource assistant could not answer. Please try again.";
+      if (msg.toLowerCase().includes("credit")) {
+        setCreditError(msg);
+      }
+      await finishWith(msg);
     }
   };
 
   // Send the message passed from the home page exactly once.
-  // No cleanup here: StrictMode's fake unmount would kill the pending answer timer.
   useEffect(() => {
     const msg = location.state?.initialMessage;
     if (msg && !consumed.current) {
@@ -158,12 +218,40 @@ export function ResourceChat() {
           <Link to="/resource-pack" className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-carbon-500 hover:bg-lavender-100 transition-colors">
             <Icon name="arrow-back" />
           </Link>
-          <h1 className="font-extrabold text-carbon-900">Resource Assistant</h1>
+          <div>
+            <h1 className="font-extrabold text-carbon-900 leading-tight">Resource Assistant</h1>
+            <p className="text-[11px] font-semibold text-carbon-500">RAG-powered workspace search</p>
+          </div>
         </div>
-        <Link to="/resource-pack/chat/history" className="px-3 py-1.5 text-xs font-bold border border-border text-chrome rounded-lg hover:bg-lavender-100 transition-colors">
-          History
-        </Link>
+
+        <div className="flex items-center gap-3">
+          {/* AI Credits Badge */}
+          <div className="flex items-center gap-1.5 bg-lavender-50 border border-chrome/20 px-3 py-1 rounded-full text-xs font-bold text-carbon-800">
+            <img src="/assets/icons/creds.png" alt="" className="w-4 h-4 object-contain" />
+            <span>{currentCredits} Credits</span>
+            <span className="text-[10px] text-carbon-500 font-normal">(2/msg)</span>
+          </div>
+
+          <Link to="/resource-pack/chat/history" className="px-3 py-1.5 text-xs font-bold border border-border text-chrome rounded-lg hover:bg-lavender-100 transition-colors">
+            History
+          </Link>
+        </div>
       </header>
+
+      {/* Credit Warning Banner if 0 or < 2 credits */}
+      {(!hasSufficientCredits || creditError) && (
+        <div className="bg-coral-50 border-b border-coral-200 px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-coral-800">
+          <div className="flex items-center gap-2">
+            <Icon name="warning-outline" className="text-base text-coral-600" />
+            <span>
+              {creditError || `You need at least 2 AI credits to use this feature (Current: ${currentCredits}). Complete roadmap levels and quizzes to earn more credits!`}
+            </span>
+          </div>
+          <Link to="/roadmap" className="underline font-bold text-coral-900 ml-2 shrink-0">
+            Earn Credits
+          </Link>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 space-y-6">
@@ -173,14 +261,6 @@ export function ResourceChat() {
               <div>
                 <h2 className="text-2xl font-extrabold text-carbon-900">What do you want to know?</h2>
                 <p className="text-sm text-carbon-500 mt-1">Ask about your sprints, notes, and references.</p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2 max-w-xl">
-                {SUGGESTED_QUESTIONS.map((q) => (
-                  <button key={q} onClick={() => handleSend(q)}
-                    className="px-4 py-2 bg-white border border-border rounded-full text-xs font-bold text-chrome hover:bg-lavender-100 transition-colors">
-                    {q}
-                  </button>
-                ))}
               </div>
             </div>
           )}
@@ -235,9 +315,13 @@ export function ResourceChat() {
       {/* Floating Chat Input at the bottom */}
       <div className="bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-5 pt-3 shrink-0">
         <div className="max-w-4xl mx-auto shadow-lg rounded-3xl">
-          <ChatInput onSend={handleSend} disabled={busy} placeholder="Ask about your resources..." />
+          <ChatInput
+            onSend={handleSend}
+            disabled={busy || !hasSufficientCredits}
+            placeholder={hasSufficientCredits ? "Ask about your resources... (2 AI credits)" : "You need AI credits to send a message"}
+          />
         </div>
       </div>
     </div>
   );
-}
+}

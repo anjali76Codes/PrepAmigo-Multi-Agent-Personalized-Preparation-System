@@ -93,6 +93,12 @@ export function AppHome() {
 
       sessionStorage.removeItem('prep-amigo:xp-reward');
 
+      // Uncollapse sprint if collapsed so the reward node is in the DOM
+      const [sprintId] = (reward.sourceKey || '').split(':');
+      if (sprintId) {
+        setCollapsedSprints((prev) => ({ ...prev, [sprintId]: false }));
+      }
+
       // Start the header at the old XP total while the reward animation plays.
       setPendingXp(reward.xp);
       setGemReward(reward);
@@ -100,6 +106,7 @@ export function AppHome() {
       sessionStorage.removeItem('prep-amigo:xp-reward');
     }
   }, []);
+
 
   useEffect(() => {
     getAssessments().then(setAssessments);

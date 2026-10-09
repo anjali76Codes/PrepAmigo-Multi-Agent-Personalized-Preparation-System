@@ -4,13 +4,10 @@ import { Icon } from "../components/ui/Icon";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Mascot } from "../components/ui/Mascot";
-import { ChatInput } from "../components/chat/ChatInput";
-import { DirectorySearch } from "../components/resources/DirectorySearch";
 import { FolderTile } from "../components/resources/FolderIcon";
 import { buildTree, filterTree } from "../lib/resourceTree";
 import { getCustomItems, type CustomResourceItem } from "../lib/customResources";
 import { useAppContext } from "../context/AppContext";
-import { SUGGESTED_QUESTIONS } from "../data/mockNotes";
 
 const PREVIEW_COUNT = 4;
 
@@ -29,14 +26,10 @@ export function ResourcePackHome() {
     return () => { active = false; };
   }, []);
   const tree = useMemo(() => buildTree(activePrep, customItems), [activePrep, customItems]);
-  const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
-  const matches = useMemo(() => filterTree(tree, q), [tree, q]);
-  const folders = matches.filter((n) => n.kind === "folder");
-  const shown = q ? folders : folders.slice(0, PREVIEW_COUNT);
+  const folders = useMemo(() => filterTree(tree, ""), [tree]).filter((n) => n.kind === "folder");
+  const shown = folders.slice(0, PREVIEW_COUNT);
 
   const openFolder = (id: string) => navigate(`/resource-pack/notes?open=${id}`);
-  const handleSend = (msg: string) => navigate("/resource-pack/chat", { state: { initialMessage: msg } });
 
   return (
     <div className="flex-1 flex flex-col bg-bg h-full overflow-hidden text-carbon-700">
@@ -62,7 +55,6 @@ export function ResourcePackHome() {
               <Icon name="folder-open" className="text-chrome" /> Resource Directory
             </h2>
 
-            <DirectorySearch value={query} onChange={setQuery} />
             {resourceError && (
               <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {resourceError}
@@ -70,7 +62,7 @@ export function ResourcePackHome() {
             )}
 
             {shown.length === 0 ? (
-              <div className="text-center py-10 text-carbon-500">No results found.</div>
+              <div className="text-center py-10 text-carbon-500">No resources yet.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {shown.map((f) => (
@@ -79,39 +71,29 @@ export function ResourcePackHome() {
               </div>
             )}
 
-            {!q && (
-              <div className="flex justify-center">
-                <Link to="/resource-pack/notes">
-                  <Button variant="outline" className="border gap-2">
-                    View more <Icon name="arrow-forward" />
-                  </Button>
-                </Link>
-              </div>
-            )}
+            <div className="flex justify-center gap-3">
+              <Link to="/resource-pack/notes">
+                <Button variant="outline" className="border gap-2">
+                  View more <Icon name="arrow-forward" />
+                </Button>
+              </Link>
+            </div>
           </section>
 
-          {/* Ask header & suggestions */}
+          {/* Ask your Resources */}
           <section className="space-y-4 pt-2">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-extrabold text-carbon-900">Ask your Resources</h2>
               <p className="text-sm font-medium text-carbon-500">Ask anything about your sprints, notes, and references.</p>
             </div>
-            <div className="flex flex-wrap gap-2 justify-center max-w-3xl mx-auto">
-              {SUGGESTED_QUESTIONS.map((s) => (
-                <button key={s} onClick={() => handleSend(s)}
-                  className="px-4 py-2 bg-surface border border-border rounded-full text-xs font-bold text-chrome hover:bg-lavender-100 transition-colors">
-                  {s}
-                </button>
-              ))}
+            <div className="flex justify-center">
+              <Link to="/resource-pack/chat">
+                <Button variant="primary" className="gap-2 px-6">
+                  <Icon name="chatbubbles-outline" /> Go to Chat
+                </Button>
+              </Link>
             </div>
           </section>
-        </div>
-      </div>
-
-      {/* Floating Chat Input at the bottom */}
-      <div className="pointer-events-none sticky bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-5 pt-2 bg-gradient-to-t from-bg via-bg/90 to-transparent">
-        <div className="max-w-2xl mx-auto w-full pointer-events-auto shadow-xl rounded-3xl">
-          <ChatInput onSend={handleSend} placeholder="Search topics, explain concepts, or find links..." />
         </div>
       </div>
     </div>

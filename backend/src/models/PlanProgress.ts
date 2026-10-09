@@ -20,6 +20,7 @@ export interface IPlanProgress extends Document {
   plan_id: Types.ObjectId;
   xp_points: number;
   completed_day_ids: Types.ObjectId[];
+  completed_assessment_ids: Types.ObjectId[];
   completed_day_count: number;
   completed_day_dates: string[];
   weekly_bonus_count: number;
@@ -56,6 +57,7 @@ const planProgressSchema = new Schema<IPlanProgress>(
     },
     xp_points: { type: Number, default: 0, min: 0 },
     completed_day_ids: [{ type: Schema.Types.ObjectId, ref: "SprintDay" }],
+    completed_assessment_ids: [{ type: Schema.Types.ObjectId, ref: "Assessment" }],
     completed_day_count: { type: Number, default: 0, min: 0 },
     completed_day_dates: { type: [String], default: [] },
     weekly_bonus_count: { type: Number, default: 0, min: 0 },

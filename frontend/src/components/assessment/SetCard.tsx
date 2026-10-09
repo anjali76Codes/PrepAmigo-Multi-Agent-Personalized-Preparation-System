@@ -9,11 +9,12 @@ interface Props {
     badge: string;
     icon: string;
     index: number;
+    score?: number | null;
     onClick?: () => void;
     locked?: boolean;
 }
 
-export function SetCard({ title, meta, badge, icon, index, onClick, locked }: Props) {
+export function SetCard({ title, meta, badge, icon, index, score, onClick, locked }: Props) {
     const completed = badge.toLowerCase().includes("completed");
 
     return (
@@ -34,15 +35,19 @@ export function SetCard({ title, meta, badge, icon, index, onClick, locked }: Pr
             <div className="flex items-start justify-between gap-3">
                 <div
                     className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors font-extrabold text-sm",
                         locked
                             ? "bg-surface-muted text-rosewood"
                             : completed
-                                ? "bg-sky-100 text-sky-500"
+                                ? "bg-sky-100 text-sky-700 border border-sky-200"
                                 : "bg-lavender-100 text-chrome group-hover:bg-chrome group-hover:text-on-chrome"
                     )}
                 >
-                    <Icon name={icon} className="text-xl" />
+                    {completed && score !== undefined && score !== null ? (
+                        <span>{score}%</span>
+                    ) : (
+                        <Icon name={icon} className="text-xl" />
+                    )}
                 </div>
                 <Badge>{badge}</Badge>
             </div>
@@ -58,4 +63,4 @@ export function SetCard({ title, meta, badge, icon, index, onClick, locked }: Pr
             </div>
         </motion.button>
     );
-}
+}

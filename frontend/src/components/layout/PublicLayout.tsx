@@ -41,7 +41,19 @@ export function PublicLayout() {
           ? 'max-w-4xl h-16 px-6 rounded-full border border-border bg-surface/90 backdrop-blur-xl shadow-pop text-carbon-700'
           : 'max-w-7xl h-18 md:h-20 px-6 md:px-8 rounded-2xl md:rounded-full border border-white/15 bg-carbon-900/90 backdrop-blur-xl shadow-2xl text-white'
           }`}>
-          <Link to="/" className="flex items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-expresso rounded-control">
+          <Link
+            to="/"
+            onClick={(e) => {
+              if (pathname === '/') {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                setIsMobileMenuOpen(false);
+                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+              }
+            }}
+            className="flex items-center gap-2 group outline-none focus-visible:ring-2 focus-visible:ring-expresso rounded-control cursor-pointer"
+          >
             <Logo tone={isScrolled ? "default" : "inverse"} />
           </Link>
 

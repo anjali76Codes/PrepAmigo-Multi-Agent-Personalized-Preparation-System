@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
@@ -6,8 +7,9 @@ import { useAuth, type ExperienceLevel } from '../hooks/useAuth';
 import { extractTextFromFile } from '../lib/resumeParser';
 
 export function Profile() {
+  const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, deleteAccount } = useAuth();
 
   const [targetRole, setTargetRole] = useState('');
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('fresher');
@@ -20,6 +22,12 @@ export function Profile() {
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -294,8 +302,105 @@ export function Profile() {
               </Button>
             </div>
           </div>
+
+          {/* Danger Zone: Delete Account */}
+          <div className="bg-white rounded-[2rem] p-8 border border-red-200 shadow-sm space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <Icon name="warning-outline" className="text-2xl text-red-500" />
+              <h3 className="text-2xl font-bold text-red-600">Danger Zone</h3>
+            </div>
+            <p className="text-sm text-carbon-500">
+              Permanently delete your account and all associated roadmap plans, sprints, assessments, notes, chat history, and study progress. This action is irreversible.
+            </p>
+            <div className="pt-2">
+              <Button
+                variant="primary"
+                className="rounded-xl font-bold px-6 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  setDeleteConfirmText('');
+                  setDeleteError(null);
+                  setShowDeleteModal(true);
+                }}
+              >
+                <Icon name="trash-outline" className="mr-2" /> Delete Account
+              </Button>
+            </div>
+          </div>
         </motion.div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-carbon-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-surface border border-border rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-5"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Icon name="trash" className="text-2xl" />
+              </div>
+              <div>
+                <h3 className="text-xl font-extrabold text-carbon-900">Delete Account</h3>
+                <p className="text-xs text-carbon-500 mt-0.5">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-carbon-700 leading-relaxed">
+              All your active preps, study materials, quiz history, AI credits, and progress will be erased permanently for audit and compliance.
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-carbon-700 uppercase tracking-wider">
+                Type <span className="text-red-600 font-extrabold">delete</span> to confirm:
+              </label>
+              <input
+                type="text"
+                placeholder="delete"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-sm font-bold text-carbon-900 focus:outline-none focus:border-red-500 transition-colors"
+                autoFocus
+              />
+              {deleteError && (
+                <p className="text-xs font-bold text-red-500 mt-1">{deleteError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                disabled={deleteConfirmText.trim().toLowerCase() !== 'delete' || isDeleting}
+                className="rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                onClick={async () => {
+                  setIsDeleting(true);
+                  setDeleteError(null);
+                  const res = await deleteAccount(deleteConfirmText.trim());
+                  setIsDeleting(false);
+                  if (res.success) {
+                    setShowDeleteModal(false);
+                    navigate('/', { replace: true });
+                  } else {
+                    setDeleteError(res.error || 'Failed to delete account.');
+                  }
+                }}
+              >
+                {isDeleting ? 'Deleting...' : 'Confirm Deletion'}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
+

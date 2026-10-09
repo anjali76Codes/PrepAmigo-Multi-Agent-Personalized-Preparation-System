@@ -159,6 +159,17 @@ export function LevelDetail() {
   const [pop, setPop] = useState<Pop>(null);
   const completionSaveRef = useRef<Promise<void> | null>(null);
 
+  const states = levelStates(allLevels.map((l) => l.days.every((d: any) => completedTaskIds.has(d._id))));
+  const levelIndex = allLevels.findIndex((l) => l.id === levelId);
+  const level = allLevels[levelIndex];
+  const locked = levelIndex >= 0 && states[levelIndex] === "locked";
+  const currentIndex = Math.max(0, states.indexOf("current"));
+  const nextLevel = allLevels[levelIndex + 1];
+
+  const initiallyCompletedRef = useRef<boolean>(
+    level ? level.days.every((d: any) => d.status === "completed") : false
+  );
+
   // small "task done" popup closes itself
   useEffect(() => {
     if (pop?.kind !== "task") return;
@@ -175,13 +186,6 @@ export function LevelDetail() {
       stopConfetti();
     };
   }, [pop]);
-
-  const states = levelStates(allLevels.map((l) => l.days.every((d: any) => completedTaskIds.has(d._id))));
-  const levelIndex = allLevels.findIndex((l) => l.id === levelId);
-  const level = allLevels[levelIndex];
-  const locked = levelIndex >= 0 && states[levelIndex] === "locked";
-  const currentIndex = Math.max(0, states.indexOf("current"));
-  const nextLevel = allLevels[levelIndex + 1];
 
   const toggleTask = (taskId: string) => {
     if (!level) return;
@@ -204,6 +208,7 @@ export function LevelDetail() {
       setPop({ kind: level.days.every((d: any) => next.has(d._id)) ? "level" : "task" });
     }
   };
+
 
   if (!activePrep || !sprint || !level) {
     return (
@@ -436,22 +441,30 @@ export function LevelDetail() {
         onClose={() => setPop(null)}
         mascot="Celebration.png"
         title="Level complete!"
-        description={`${level.title} is complete. Your progress is saved.`}
+        description={
+          !initiallyCompletedRef.current
+            ? `${level.title} is complete! You earned +${level.days.length * 20} XP & +${level.days.length * 2} AI Credits.`
+            : `${level.title} is complete. Your progress is saved.`
+        }
       >
         <Button
           onClick={async () => {
+            const isFirstTime = !initiallyCompletedRef.current;
             setPop(null);
 
             await completionSaveRef.current;
             await refreshPreps();
 
-            sessionStorage.setItem(
-              "prep-amigo:xp-reward",
-              JSON.stringify({
-                sourceKey: `${sprintId}:${level.id}`,
-                xp: level.days.length * 20,
-              }),
-            );
+            if (isFirstTime) {
+              initiallyCompletedRef.current = true;
+              sessionStorage.setItem(
+                "prep-amigo:xp-reward",
+                JSON.stringify({
+                  sourceKey: `${sprintId}:${level.id}`,
+                  xp: level.days.length * 20,
+                }),
+              );
+            }
 
             navigate("/dashboard");
           }}
@@ -461,4 +474,4 @@ export function LevelDetail() {
       </Modal>
     </div>
   );
-}
+}

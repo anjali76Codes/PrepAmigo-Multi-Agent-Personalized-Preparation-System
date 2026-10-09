@@ -150,6 +150,7 @@ export interface Title {
 
 export interface ProgressStats {
   xp: number;
+  ai_credits?: number;
   streak: number;
   level: number;
   badges: Badge[];

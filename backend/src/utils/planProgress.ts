@@ -3,7 +3,7 @@ import { Plan, PlanStatus } from "../models/Plan.js";
 import { PlanProgress, IPlanProgress } from "../models/PlanProgress.js";
 import { Sprint, SprintStatus } from "../models/Sprint.js";
 import { SprintDay } from "../models/SprintDay.js";
-import { ensureStudyMaterialInBackground, nextSprintId } from "../services/studyMaterial.js";
+import { User } from "../models/User.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -15,15 +15,11 @@ export async function syncSprintAndPlan(sprintId: Types.ObjectId, planId: Types.
   const sprintStatus: SprintStatus = totalSprintDays > 0 && completedSprintDays >= totalSprintDays
     ? "completed"
     : completedSprintDays > 0 ? "in_progress" : "pending";
-  const before = await Sprint.findOneAndUpdate(
+  await Sprint.updateOne(
     { _id: sprintId },
     { $set: { completion_percent: sprintPercent, status: sprintStatus } },
-  ).select("status");
-  if (sprintStatus === "completed" && before?.status !== "completed") {
-    // the next sprint's quiz and flashcards, generated with what this one taught
-    const next = await nextSprintId(sprintId);
-    if (next) ensureStudyMaterialInBackground(next);
-  }
+  );
+
 
   const [plan, sprints] = await Promise.all([
     Plan.findById(planId).select("total_days"),
@@ -166,6 +162,10 @@ export async function claimDayCompletion(
     },
   );
 
+  if (newlyAwarded) {
+    await User.findByIdAndUpdate(userId, { $inc: { ai_credits: 2 } });
+  }
+
   // Each group of seven distinct completed SprintDays earns one 100 XP bonus.
   const weeklyTarget = Math.floor(currentProgress.completed_day_count / 7);
   while (currentProgress.weekly_bonus_count < weeklyTarget) {
@@ -177,6 +177,7 @@ export async function claimDayCompletion(
     );
     if (bonusProgress) {
       currentProgress = bonusProgress;
+      await User.findByIdAndUpdate(userId, { $inc: { ai_credits: 10 } });
     } else {
       const latest: IPlanProgress | null = await PlanProgress.findById(currentProgress._id);
       if (!latest) throw new Error("Plan progress disappeared while applying a weekly bonus.");
@@ -202,29 +203,59 @@ export async function awardTrophy(
 export async function claimAssessmentCompletion(
   userId: Types.ObjectId,
   planId: Types.ObjectId,
+  assessmentId: Types.ObjectId,
   completedDate: string = utcDateKey(),
-): Promise<IPlanProgress | null> {
-  const progress = await PlanProgress.findOneAndUpdate(
-    { user_id: userId, plan_id: planId },
-    {
-      $addToSet: { completed_day_dates: completedDate },
-      $inc: { xp_points: 30 },
-    },
-    { returnDocument: "after", upsert: true, setDefaultsOnInsert: true, runValidators: true }
-  );
-  if (progress) {
-    const streak = calculateStreakSummary(progress.completed_day_dates, completedDate);
-    await PlanProgress.updateOne(
-      { _id: progress._id },
+): Promise<{ progress: IPlanProgress; newlyAwarded: boolean }> {
+  let newlyAwarded = true;
+  let progress: IPlanProgress | null = null;
+
+  try {
+    progress = await PlanProgress.findOneAndUpdate(
       {
-        $set: {
-          streak_count: streak.current_streak,
-          longest_streak: Math.max(progress.longest_streak, streak.longest_streak),
-          last_completed_date: streak.last_completed_date,
+        user_id: userId,
+        plan_id: planId,
+        completed_assessment_ids: { $ne: assessmentId },
+      },
+      {
+        $addToSet: {
+          completed_assessment_ids: assessmentId,
+          completed_day_dates: completedDate
         },
-      }
+        $inc: { xp_points: 30 },
+      },
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true, runValidators: true }
     );
-    return await PlanProgress.findById(progress._id);
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) throw error;
+    newlyAwarded = false;
+    progress = await PlanProgress.findOne({ user_id: userId, plan_id: planId });
   }
-  return progress;
+
+  if (!progress) {
+    progress = await PlanProgress.findOne({ user_id: userId, plan_id: planId });
+  }
+  if (!progress) throw new Error("Could not load plan progress after recording assessment completion.");
+
+  // Award 3 AI Credits for first assessment completion
+  if (newlyAwarded) {
+    await User.findByIdAndUpdate(userId, { $inc: { ai_credits: 3 } });
+  }
+
+  const streak = calculateStreakSummary(progress.completed_day_dates, completedDate);
+  await PlanProgress.updateOne(
+    { _id: progress._id },
+    {
+      $set: {
+        streak_count: streak.current_streak,
+        longest_streak: Math.max(progress.longest_streak, streak.longest_streak),
+        last_completed_date: streak.last_completed_date,
+      },
+    }
+  );
+  
+  const refreshed = await PlanProgress.findById(progress._id);
+  if (refreshed) progress = refreshed;
+  
+  return { progress, newlyAwarded };
 }
+

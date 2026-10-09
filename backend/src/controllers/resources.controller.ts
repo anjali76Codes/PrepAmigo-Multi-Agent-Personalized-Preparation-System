@@ -9,6 +9,7 @@ import { Plan } from "../models/Plan.js";
 import { RagSource } from "../models/RagSource.js";
 import { Sprint } from "../models/Sprint.js";
 import { UserResource } from "../models/UserResource.js";
+import { User } from "../models/User.js";
 import { agentsAuthHeaders } from "../services/studyMaterial.js";
 import { getUserId, handleFailure, routeParam } from "../utils/planApi.js";
 import { logger } from "../utils/logger.js";
@@ -305,6 +306,18 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
   if (!query.success) return invalid(res, "A non-empty query of at most 2000 characters is required.");
 
   try {
+    const user = await User.findById(userId).select("ai_credits");
+    const currentCredits = user?.ai_credits ?? 0;
+    if (currentCredits < 2) {
+      res.status(403).json({
+        success: false,
+        error: "You need at least 2 AI credits to use this feature. Complete levels or quizzes to earn more credits!",
+        credits_needed: 2,
+        current_credits: currentCredits,
+      });
+      return;
+    }
+
     const documents = await collectRagDocuments(userId);
     const indexed = await RagSource.find({ user_id: userId }).lean();
     const indexedHashes = new Map(indexed.map((source) => [source.source_id, source.content_hash]));
@@ -393,12 +406,21 @@ export async function searchResourcesHandler(req: AuthenticatedRequest, res: Res
       return;
     }
 
+    // Deduct 2 AI Credits for the query
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { ai_credits: -2 } },
+      { returnDocument: "after" }
+    );
+
     res.status(200).json({ success: true, data: {
       answer: result.data.answer,
       sources: result.data.sources ?? [],
+      ai_credits: updatedUser?.ai_credits ?? 0,
     } });
   } catch (error) {
     logger.error("Search resources failed", { error });
     res.status(502).json({ success: false, error: "The resource search service could not complete the request." });
   }
 }
+

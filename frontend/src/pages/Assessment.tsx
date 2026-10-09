@@ -69,6 +69,7 @@ function QuizList({ quizzes, groups, onOpen }: {
                                             ? "Complete earlier levels first"
                                             : `${a.questions.length} questions · ~${Math.max(3, Math.round(a.questions.length * 1.5))} mins`}
                                         badge={a.is_completed ? "Completed" : locked ? "Locked" : "Not started"}
+                                        score={a.score}
                                         onClick={() => onOpen(a)}
                                     />
                                 ))}

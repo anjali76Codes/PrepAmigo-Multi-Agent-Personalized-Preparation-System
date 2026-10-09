@@ -71,7 +71,8 @@ export function computeGamification(
   // Base XP from progress or computed: 20 XP per day topic + 30 XP per assessment
   const calculatedXp = (completedDays * 20) + (completedAssessments * 30);
   const xp = Math.max(globalProgress?.xp_points || 0, calculatedXp);
-  const aiCredits = Math.floor(xp / 10);
+  // Use real ai_credits from backend if available, otherwise fallback to formula
+  const aiCredits = globalProgress?.ai_credits ?? Math.floor(xp / 10);
   const level = Math.floor(xp / 1000) + 1;
   const nextLevelXp = 1000 - (xp % 1000);
 

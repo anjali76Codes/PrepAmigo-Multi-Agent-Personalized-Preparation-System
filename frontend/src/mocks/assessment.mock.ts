@@ -7,6 +7,7 @@ export type Assessment = {
     sprint_number?: number;
     level?: string;
     level_number?: number;
+    assessment_number?: number;
     sprint_context?: {
         sprint_id?: string;
         sprint_name?: string;
