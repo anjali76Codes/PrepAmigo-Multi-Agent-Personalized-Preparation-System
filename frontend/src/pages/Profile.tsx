@@ -245,8 +245,8 @@ export function Profile() {
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${resumeFilename
-                    ? "border-green-500 bg-green-50/40"
-                    : "border-border bg-bg hover:border-chrome"
+                  ? "border-green-500 bg-green-50/40"
+                  : "border-border bg-bg hover:border-chrome"
                   }`}
               >
                 {isUploadingResume ? (
@@ -303,29 +303,40 @@ export function Profile() {
             </div>
           </div>
 
-          {/* Danger Zone: Delete Account */}
-          <div className="bg-white rounded-[2rem] p-8 border border-red-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-3 text-red-600">
-              <Icon name="warning-outline" className="text-2xl text-red-500" />
-              <h3 className="text-2xl font-bold text-red-600">Danger Zone</h3>
-            </div>
-            <p className="text-sm text-carbon-500">
-              Permanently delete your account and all associated roadmap plans, sprints, assessments, notes, chat history, and study progress. This action is irreversible.
-            </p>
-            <div className="pt-2">
+          ```
+          {/* Danger Zone */}
+          <div className="rounded-[1.5rem] border border-danger-600/20 bg-surface p-6 md:p-7 shadow-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <div className="w-11 h-11 shrink-0 rounded-xl bg-danger-100 text-danger-600 flex items-center justify-center">
+                  <Icon name="trash-outline" className="text-xl" />
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-carbon-900">
+                    Delete account
+                  </h3>
+                  <p className="text-sm text-carbon-500 mt-1 max-w-md">
+                    Permanently remove your account and all your data. This can't be undone.
+                  </p>
+                </div>
+              </div>
+
               <Button
-                variant="primary"
-                className="rounded-xl font-bold px-6 bg-red-600 hover:bg-red-700 text-white"
+                variant="outline"
+                className="rounded-xl font-semibold px-5 border-danger-600/40 text-danger-600 hover:bg-danger-100 shrink-0"
                 onClick={() => {
                   setDeleteConfirmText('');
                   setDeleteError(null);
                   setShowDeleteModal(true);
                 }}
               >
-                <Icon name="trash-outline" className="mr-2" /> Delete Account
+                Delete account
               </Button>
             </div>
           </div>
+          ```
+
         </motion.div>
       </div>
 

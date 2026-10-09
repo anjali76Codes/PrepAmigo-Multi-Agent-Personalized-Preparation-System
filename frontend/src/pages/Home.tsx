@@ -53,7 +53,8 @@ export function Home() {
       >
         <RevealStagger className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center space-y-5 my-auto">
           <RevealStaggerItem>
-            <Mascot variant="nosy.png" size="lg" className="bg-cocoa rounded-full overflow-hidden my-5" />
+            {/* <Mascot variant="nosy.png" size="lg" className="bg-cocoa rounded-full overflow-hidden my-5" /> */}
+
             <p className="text-sm sm:text-base md:text-lg text-carbon-300 max-w-xl mx-auto leading-relaxed">
               PrepAmigo builds your preparation roadmap in seconds.
             </p>
