@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 import { Icon } from "../ui/Icon";
 import { DirectorySearch } from "./DirectorySearch";
 import { FolderTile } from "./FolderIcon";
@@ -9,9 +8,9 @@ import {
   buildTree,
   filterTree,
   searchTree,
-  allFolderIds,
   pathToId,
   nodesAlong,
+  domainOf,
   type TreeNode,
 } from "../../lib/resourceTree";
 import {
@@ -27,117 +26,90 @@ import { cn } from "../../utils/utils";
 import { useAppContext } from "../../context/AppContext";
 import { Button } from "../ui/Button";
 
-function ListNode({
+/* ───────────────────────── helpers ───────────────────────── */
+
+const isNote = (n: TreeNode) => n.kind === "file" && (n.isCustom || n.content !== undefined);
+
+const typeLabel = (n: TreeNode) => {
+  if (n.kind === "folder") return "Folder";
+  if (isNote(n)) return "Note";
+  return domainOf(n.url) || "Link";
+};
+
+const isTouch = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+
+/* ───────────────────────── sidebar tree ───────────────────────── */
+
+function SidebarRow({
   node,
   depth,
+  activeId,
   open,
-  toggle,
-  onOpenNote,
-  onDeleteCustom,
+  onToggle,
+  onGo,
 }: {
   node: TreeNode;
   depth: number;
+  activeId: string | null;
   open: Set<string>;
-  toggle: (id: string) => void;
-  onOpenNote: (node: TreeNode) => void;
-  onDeleteCustom: (id: string, e: React.MouseEvent) => void;
+  onToggle: (id: string) => void;
+  onGo: (id: string) => void;
 }) {
-  if (node.kind === "file") {
-    if (node.isCustom || node.content !== undefined) {
-      return (
-        <div className="flex items-center justify-between py-1.5 px-3 rounded-xl text-carbon-700 hover:bg-lavender-100 transition-colors group">
-          <button
-            onClick={() => onOpenNote(node)}
-            className="flex items-center gap-2 flex-1 text-left truncate"
-          >
-            <Icon name={node.icon ?? "document-text"} className="text-base text-cocoa" />
-            <span className="truncate">{node.title}</span>
-            <span className="text-[10px] bg-lavender-200 text-chrome font-bold px-1.5 py-0.5 rounded">
-              Note
-            </span>
-          </button>
-          {node.isCustom && (
-            <button
-              onClick={(e) => onDeleteCustom(node.id, e)}
-              className="text-carbon-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Delete note"
-            >
-              <Icon name="trash-outline" className="text-sm" />
-            </button>
-          )}
-        </div>
-      );
-    }
-    return (
-      <a
-        href={node.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 py-1.5 px-3 rounded-xl text-carbon-700 hover:bg-lavender-100 transition-colors"
-      >
-        <Icon name={node.icon ?? "link"} className="text-base text-cocoa" />
-        <span className="truncate">{node.title}</span>
-      </a>
-    );
-  }
+  const subfolders = (node.children ?? []).filter((c) => c.kind === "folder");
+  const expanded = open.has(node.id);
+  const active = activeId === node.id;
 
-  const isOpen = open.has(node.id);
   return (
     <div>
-      <div className="flex items-center justify-between group rounded-xl hover:bg-lavender-100 transition-colors">
+      <div
+        className={cn(
+          "group flex items-center rounded-lg transition-colors",
+          active ? "bg-chrome text-on-chrome" : "text-carbon-800 hover:bg-lavender-100"
+        )}
+        style={{ paddingLeft: depth * 12 }}
+      >
         <button
-          onClick={() => toggle(node.id)}
-          className={cn(
-            "flex-1 flex items-center gap-2 py-2 px-3 text-left text-carbon-900 truncate",
-            depth === 0 ? "font-bold" : "font-semibold"
-          )}
+          onClick={() => onToggle(node.id)}
+          aria-label={expanded ? "Collapse" : "Expand"}
+          className={cn("p-1.5 shrink-0", subfolders.length ? "" : "invisible")}
+        >
+          <motion.span animate={{ rotate: expanded ? 90 : 0 }} transition={{ duration: 0.18 }} className="block">
+            <Icon name="chevron-forward" className="text-xs" />
+          </motion.span>
+        </button>
+        <button
+          onClick={() => onGo(node.id)}
+          className="flex-1 flex items-center gap-2 py-1.5 pr-2 text-left text-sm font-semibold truncate"
         >
           <Icon
-            name={isOpen ? "folder-open" : "folder"}
-            className={cn(depth === 0 ? "text-2xl" : "text-xl", "text-chrome")}
+            name={expanded || active ? "folder-open" : "folder"}
+            className={cn("text-base shrink-0", active ? "text-chrome-accent" : "text-chrome")}
           />
           <span className="truncate">{node.title}</span>
-          {node.isCustom && (
-            <span className="text-[10px] bg-surface-muted text-carbon-500 font-medium px-1.5 py-0.5 rounded">
-              Custom
-            </span>
-          )}
         </button>
-        {node.isCustom && (
-          <button
-            onClick={(e) => onDeleteCustom(node.id, e)}
-            className="text-carbon-400 hover:text-red-500 p-2 mr-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Delete folder"
-          >
-            <Icon name="trash-outline" className="text-sm" />
-          </button>
-        )}
       </div>
+
       <AnimatePresence initial={false}>
-        {isOpen && (
+        {expanded && subfolders.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="ml-5 pl-4 border-l border-border space-y-0.5 my-1">
-              {node.children?.length ? (
-                node.children.map((c) => (
-                  <ListNode
-                    key={c.id}
-                    node={c}
-                    depth={depth + 1}
-                    open={open}
-                    toggle={toggle}
-                    onOpenNote={onOpenNote}
-                    onDeleteCustom={onDeleteCustom}
-                  />
-                ))
-              ) : (
-                <div className="py-1 px-3 text-xs italic text-rosewood">Empty</div>
-              )}
-            </div>
+            {subfolders.map((c) => (
+              <SidebarRow
+                key={c.id}
+                node={c}
+                depth={depth + 1}
+                activeId={activeId}
+                open={open}
+                onToggle={onToggle}
+                onGo={onGo}
+              />
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -145,9 +117,67 @@ function ListNode({
   );
 }
 
+/* ───────────────────────── details-view row ───────────────────────── */
+
+function DetailRow({
+  node,
+  selected,
+  onSelect,
+  onOpen,
+  onDelete,
+}: {
+  node: TreeNode;
+  selected: boolean;
+  onSelect: () => void;
+  onOpen: () => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
+}) {
+  const iconName =
+    node.kind === "folder" ? "folder" : node.icon ?? (isNote(node) ? "journal" : "document-text");
+  return (
+    <div
+      role="row"
+      onClick={() => (isTouch() ? onOpen() : onSelect())}
+      onDoubleClick={onOpen}
+      className={cn(
+        "group grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_120px_80px_32px] items-center gap-3 px-3 py-2 rounded-lg cursor-pointer select-none transition-colors",
+        selected ? "bg-chrome/10 ring-1 ring-chrome-border" : "hover:bg-lavender-100"
+      )}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Icon name={iconName} className={cn("text-xl shrink-0", node.kind === "folder" ? "text-chrome" : "text-cocoa")} />
+        <span className="truncate text-sm font-semibold text-carbon-900">{node.title}</span>
+        {node.isCustom && (
+          <span className="hidden md:inline text-[10px] font-medium bg-surface-muted text-carbon-500 px-1.5 py-0.5 rounded">
+            Custom
+          </span>
+        )}
+      </div>
+      <span className="hidden sm:block text-xs font-medium text-carbon-500 truncate">{typeLabel(node)}</span>
+      <span className="hidden sm:block text-xs font-medium text-carbon-500 text-right">
+        {node.kind === "folder" ? `${node.children?.length ?? 0} items` : ""}
+      </span>
+      <span className="flex justify-end">
+        {node.isCustom && (
+          <button
+            onClick={(e) => onDelete(node.id, e)}
+            title={node.kind === "folder" ? "Delete folder" : "Delete note"}
+            className="p-1 text-carbon-400 hover:text-danger-600 sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+          >
+            <Icon name="trash-outline" className="text-sm" />
+          </button>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/* ───────────────────────── main component ───────────────────────── */
+
 export function ResourceDirectory() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
   const { activePrep } = useAppContext();
   const [customItems, setCustomItems] = useState<CustomResourceItem[]>([]);
   const [legacyCount, setLegacyCount] = useState(0);
@@ -157,10 +187,12 @@ export function ResourceDirectory() {
   const tree = useMemo(() => buildTree(activePrep, customItems), [activePrep, customItems]);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [path, setPath] = useState<string[]>(() => {
     const id = params.get("open");
     return (id && pathToId(tree, id)) || [];
   });
+  // sidebar expansion
   const [open, setOpen] = useState<Set<string>>(() => new Set(path));
 
   useEffect(() => {
@@ -169,11 +201,16 @@ export function ResourceDirectory() {
     const nextPath = pathToId(tree, id);
     if (nextPath) {
       setPath(nextPath);
-      setOpen(new Set(nextPath));
+      setOpen((p) => new Set([...p, ...nextPath]));
     }
   }, [params, tree]);
 
-  // Modal states
+  // keep the sidebar expanded along the current path, clear selection on navigation
+  useEffect(() => {
+    setOpen((p) => new Set([...p, ...path]));
+    setSelectedId(null);
+  }, [path]);
+
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
@@ -192,6 +229,13 @@ export function ResourceDirectory() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!showFolderModal) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowFolderModal(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showFolderModal]);
+
   const q = query.trim().toLowerCase();
   const filtered = useMemo(() => filterTree(tree, q), [tree, q]);
   const hits = useMemo(() => (q ? searchTree(tree, q) : []), [tree, q]);
@@ -203,18 +247,29 @@ export function ResourceDirectory() {
   const currentFolder = crumbs.length ? crumbs[crumbs.length - 1] : null;
   const currentFolderId = currentFolder ? currentFolder.id : "root";
   const items = currentFolder ? currentFolder.children ?? [] : filtered;
-  const openSet = open;
+  const selected = items.find((n) => n.id === selectedId) ?? null;
 
-  useEffect(() => {
-    if (q) setOpen(new Set(allFolderIds(filtered)));
-  }, [q, filtered]);
-
-  const toggle = (id: string) =>
+  const goUp = () => setPath((p) => p.slice(0, -1));
+  const toggleOpen = (id: string) =>
     setOpen((p) => {
       const n = new Set(p);
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
+  const goToFolder = (id: string) => {
+    setQuery("");
+    setPath(pathToId(tree, id) ?? []);
+  };
+
+  const handleOpenNote = (node: TreeNode) => {
+    if (node.isCustom) navigate(`/resource-pack/notes/${encodeURIComponent(node.id)}`);
+  };
+
+  const openNode = (n: TreeNode) => {
+    if (n.kind === "folder") setPath([...path, n.id]);
+    else if (isNote(n)) handleOpenNote(n);
+    else if (n.url && n.url !== "#") window.open(n.url, "_blank", "noopener,noreferrer");
+  };
 
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,77 +353,26 @@ export function ResourceDirectory() {
     }
   };
 
-  const handleOpenNote = (node: TreeNode) => {
-    if (node.isCustom) navigate(`/resource-pack/notes/${encodeURIComponent(node.id)}`);
+  /* ── motion ── */
+  const pane: Variants = {
+    hidden: { opacity: 0, y: reduce ? 0 : 8 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.18, staggerChildren: reduce ? 0 : 0.03 } },
+    exit: { opacity: 0, transition: { duration: 0.1 } },
+  };
+  const item: Variants = {
+    hidden: { opacity: 0, scale: reduce ? 1 : 0.94, y: reduce ? 0 : 6 },
+    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 380, damping: 28 } },
   };
 
+  const paneKey = `${path.join("/")}|${view}|${q ? "search" : "browse"}`;
+  const itemCount = q ? hits.length : items.length;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <DirectorySearch value={query} onChange={(v) => { setQuery(v); setPath([]); }} />
 
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-sm font-semibold flex-wrap">
-          <button
-            onClick={() => setPath([])}
-            className={crumbs.length ? "text-chrome hover:underline" : "text-carbon-900"}
-          >
-            Directory
-          </button>
-          {crumbs.map((c, i) => (
-            <span key={c.id} className="flex items-center gap-2">
-              <span className="text-rosewood">/</span>
-              <button
-                onClick={() => setPath(path.slice(0, i + 1))}
-                className={i === crumbs.length - 1 ? "text-carbon-900" : "text-chrome hover:underline"}
-              >
-                {c.title}
-              </button>
-            </span>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Action buttons */}
-          <button
-            onClick={() => navigate(`/resource-pack/notes/new?parent=${encodeURIComponent(currentFolderId)}`)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-chrome text-white text-xs font-bold rounded-lg hover:bg-chrome/90 transition-colors shadow-2xs"
-          >
-            <Icon name="add" className="text-sm" />
-            New Note
-          </button>
-          <button
-            onClick={() => {
-              setNewFolderName("");
-              setShowFolderModal(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border text-carbon-800 text-xs font-bold rounded-lg hover:bg-lavender-100 transition-colors shadow-2xs"
-          >
-            <Icon name="folder-outline" className="text-sm text-chrome" />
-            New Folder
-          </button>
-
-          <div className="flex gap-1 bg-lavender-100 p-1 rounded-lg border border-border">
-            {(["grid", "list"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setView(m)}
-                aria-label={`${m} view`}
-                className={cn(
-                  "p-1.5 rounded-md transition-colors",
-                  view === m
-                    ? "bg-white shadow-xs text-chrome"
-                    : "text-carbon-500 hover:text-carbon-900"
-                )}
-              >
-                <Icon name={m} className="text-sm" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {loadError && (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p role="alert" className="rounded-xl border border-danger-600/30 bg-danger-100 px-4 py-3 text-sm text-danger-600">
           {loadError}
         </p>
       )}
@@ -383,160 +387,319 @@ export function ResourceDirectory() {
         </div>
       )}
 
-      {view === "grid" ? (
-        q ? (
-          <SearchResults hits={hits} onFolder={jumpTo} onNote={handleOpenNote} />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {items.map((n) =>
-              n.kind === "folder" ? (
-                <div key={n.id} className="relative group">
-                  <FolderTile
-                    title={n.title}
-                    count={n.children?.length ?? 0}
-                    onClick={() => setPath([...path, n.id])}
-                  />
-                  {n.isCustom && (
-                    <button
-                      onClick={(e) => handleDeleteCustom(n.id, e)}
-                      className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-red-50 text-carbon-400 hover:text-red-500 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete folder"
-                    >
-                      <Icon name="trash-outline" className="text-xs" />
-                    </button>
-                  )}
-                </div>
-              ) : n.isCustom || n.content !== undefined ? (
-                <div key={n.id} className="relative group">
-                  <button
-                    onClick={() => handleOpenNote(n)}
-                    className="w-full flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-lavender-100 transition-colors text-left"
-                  >
-                    <Icon
-                      name={n.icon ?? "journal"}
-                      className="text-6xl text-chrome group-hover:-translate-y-0.5 transition-transform"
-                    />
-                    <span className="text-xs font-semibold text-carbon-900 text-center line-clamp-2">
-                      {n.title}
-                    </span>
-                    <span className="text-[10px] bg-lavender-200 text-chrome font-bold px-1.5 py-0.5 rounded">
-                      Note
-                    </span>
-                  </button>
-                  {n.isCustom && (
-                    <button
-                      onClick={(e) => handleDeleteCustom(n.id, e)}
-                      className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-red-50 text-carbon-400 hover:text-red-500 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete note"
-                    >
-                      <Icon name="trash-outline" className="text-xs" />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <a
-                  key={n.id}
-                  href={n.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-lavender-100 transition-colors"
+      {/* ── Explorer window ── */}
+      <div className="rounded-3xl border border-border bg-surface overflow-hidden shadow-card">
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-surface-muted border-b border-border flex-wrap">
+          <button
+            onClick={goUp}
+            disabled={path.length === 0}
+            aria-label="Go up one level"
+            className="p-2 rounded-lg text-chrome hover:bg-lavender-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          >
+            <Icon name="arrow-up" className="text-base" />
+          </button>
+
+          {/* Address bar */}
+          <nav
+            aria-label="Breadcrumb"
+            className="flex-1 min-w-[160px] flex items-center gap-1 rounded-xl bg-surface border border-border px-3 py-1.5 overflow-x-auto text-sm font-semibold whitespace-nowrap"
+          >
+            <button
+              onClick={() => setPath([])}
+              className={cn("flex items-center gap-1.5 hover:underline", crumbs.length ? "text-chrome" : "text-carbon-900")}
+            >
+              <Icon name="home-outline" className="text-sm" /> Directory
+            </button>
+            <AnimatePresence initial={false}>
+              {crumbs.map((c, i) => (
+                <motion.span
+                  key={c.id}
+                  initial={{ opacity: 0, x: reduce ? 0 : -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: reduce ? 0 : -8 }}
+                  transition={{ duration: 0.16 }}
+                  className="flex items-center gap-1"
                 >
-                  <Icon
-                    name={n.icon ?? "document-text"}
-                    className="text-6xl text-cocoa hover:-translate-y-0.5 transition-transform"
+                  <Icon name="chevron-forward" className="text-xs text-rosewood" />
+                  <button
+                    onClick={() => setPath(path.slice(0, i + 1))}
+                    className={i === crumbs.length - 1 ? "text-carbon-900" : "text-chrome hover:underline"}
+                  >
+                    {c.title}
+                  </button>
+                </motion.span>
+              ))}
+            </AnimatePresence>
+          </nav>
+
+          {/* Actions */}
+          <motion.button
+            whileTap={reduce ? undefined : { scale: 0.95 }}
+            onClick={() => navigate(`/resource-pack/notes/new?parent=${encodeURIComponent(currentFolderId)}`)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-chrome text-on-chrome text-xs font-bold rounded-lg hover:bg-chrome-hover transition-colors"
+          >
+            <Icon name="add" className="text-sm" />
+            New note
+          </motion.button>
+          <motion.button
+            whileTap={reduce ? undefined : { scale: 0.95 }}
+            onClick={() => {
+              setNewFolderName("");
+              setShowFolderModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border text-carbon-800 text-xs font-bold rounded-lg hover:bg-lavender-100 transition-colors"
+          >
+            <Icon name="folder-outline" className="text-sm text-chrome" />
+            New folder
+          </motion.button>
+
+          {/* View switch with sliding pill */}
+          <div className="relative flex gap-1 bg-lavender-100 p-1 rounded-lg border border-border">
+            {(["grid", "list"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setView(m)}
+                aria-label={`${m} view`}
+                aria-pressed={view === m}
+                className={cn(
+                  "relative p-1.5 rounded-md transition-colors",
+                  view === m ? "text-chrome" : "text-carbon-500 hover:text-carbon-900"
+                )}
+              >
+                {view === m && (
+                  <motion.span
+                    layoutId="view-pill"
+                    className="absolute inset-0 rounded-md bg-surface shadow-xs"
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
-                  <span className="text-xs font-semibold text-carbon-900 text-center line-clamp-2">
-                    {n.title}
-                  </span>
-                </a>
-              )
-            )}
-            {items.length === 0 && (
-              <div className="col-span-full text-center py-12 text-carbon-400">
-                <Icon name="folder-open-outline" className="text-4xl mx-auto mb-2 text-carbon-300" />
-                <p className="text-sm font-semibold">This folder is empty</p>
-                <p className="text-xs text-carbon-400 mt-1">
-                  Create a new note or folder using the buttons above.
-                </p>
-              </div>
-            )}
+                )}
+                <Icon name={m} className="relative text-sm" />
+              </button>
+            ))}
           </div>
-        )
-      ) : (
-        <div className="bg-white border border-border rounded-2xl p-3 md:p-5 shadow-xs text-sm">
-          {items.length === 0 && (
-            <div className="text-center py-6 text-rosewood">
-              {q ? "No results found." : "This folder is empty."}
-            </div>
-          )}
-          {items.map((n) => (
-            <ListNode
-              key={n.id}
-              node={n}
-              depth={0}
-              open={openSet}
-              toggle={toggle}
-              onOpenNote={handleOpenNote}
-              onDeleteCustom={handleDeleteCustom}
-            />
-          ))}
         </div>
-      )}
+
+        <div className="flex">
+          {/* Sidebar */}
+          <aside className="hidden md:block w-60 shrink-0 border-r border-border bg-lavender-50 p-2 max-h-[60vh] overflow-y-auto">
+            <button
+              onClick={() => setPath([])}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-1.5 mb-1 rounded-lg text-sm font-bold text-left transition-colors",
+                path.length === 0 ? "bg-chrome text-on-chrome" : "text-carbon-900 hover:bg-lavender-100"
+              )}
+            >
+              <Icon name="home-outline" className="text-base" /> Directory
+            </button>
+            {tree
+              .filter((n) => n.kind === "folder")
+              .map((n) => (
+                <SidebarRow
+                  key={n.id}
+                  node={n}
+                  depth={0}
+                  activeId={path[path.length - 1] ?? null}
+                  open={open}
+                  onToggle={toggleOpen}
+                  onGo={goToFolder}
+                />
+              ))}
+          </aside>
+
+          {/* Content pane */}
+          <div className="flex-1 min-w-0 min-h-[320px] max-h-[60vh] overflow-y-auto p-3 md:p-4" onClick={() => setSelectedId(null)}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={paneKey} variants={pane} initial="hidden" animate="show" exit="exit">
+                {q ? (
+                  <SearchResults hits={hits} onFolder={jumpTo} onNote={handleOpenNote} />
+                ) : view === "grid" ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {items.map((n) => (
+                      <motion.div
+                        key={n.id}
+                        variants={item}
+                        whileHover={reduce ? undefined : { y: -3 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          isTouch() ? openNode(n) : setSelectedId(n.id);
+                        }}
+                        onDoubleClick={() => openNode(n)}
+                        className={cn(
+                          "relative group rounded-2xl cursor-pointer select-none transition-shadow",
+                          selectedId === n.id && "ring-2 ring-chrome-border bg-chrome/5"
+                        )}
+                      >
+                        {n.kind === "folder" ? (
+                          // click is handled by the wrapper (select / double-click to open)
+                          <div className="pointer-events-none">
+                            <FolderTile title={n.title} count={n.children?.length ?? 0} onClick={() => { }} />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 p-3">
+                            <Icon
+                              name={n.icon ?? (isNote(n) ? "journal" : "document-text")}
+                              className={cn("text-6xl", isNote(n) ? "text-chrome" : "text-cocoa")}
+                            />
+                            <span className="text-xs font-semibold text-carbon-900 text-center line-clamp-2">
+                              {n.title}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                                isNote(n) ? "bg-lavender-100 text-chrome" : "bg-surface-muted text-carbon-500"
+                              )}
+                            >
+                              {typeLabel(n)}
+                            </span>
+                          </div>
+                        )}
+                        {n.isCustom && (
+                          <button
+                            onClick={(e) => handleDeleteCustom(n.id, e)}
+                            title={n.kind === "folder" ? "Delete folder" : "Delete note"}
+                            className="absolute top-2 right-2 p-1.5 bg-surface/90 hover:bg-danger-100 text-carbon-400 hover:text-danger-600 rounded-md shadow-xs sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                          >
+                            <Icon name="trash-outline" className="text-xs" />
+                          </button>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div role="table" className="text-sm">
+                    <div
+                      role="row"
+                      className="hidden sm:grid grid-cols-[1fr_120px_80px_32px] gap-3 px-3 pb-2 mb-1 border-b border-border text-xs font-bold text-carbon-500"
+                    >
+                      <span>Name</span>
+                      <span>Type</span>
+                      <span className="text-right">Contents</span>
+                      <span />
+                    </div>
+                    {items.map((n) => (
+                      <motion.div key={n.id} variants={item}>
+                        <DetailRow
+                          node={n}
+                          selected={selectedId === n.id}
+                          onSelect={() => setSelectedId(n.id)}
+                          onOpen={() => openNode(n)}
+                          onDelete={handleDeleteCustom}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {!q && items.length === 0 && (
+                  <div className="text-center py-14 text-carbon-500">
+                    <motion.div
+                      animate={reduce ? undefined : { y: [0, -4, 0] }}
+                      transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <Icon name="folder-open-outline" className="text-5xl mx-auto mb-2 text-rosewood" />
+                    </motion.div>
+                    <p className="text-sm font-semibold text-carbon-900">This folder is empty</p>
+                    <p className="text-xs mt-1">Use New note or New folder above to add something.</p>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Status bar */}
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-surface-muted border-t border-border text-xs font-semibold text-cocoa">
+          <span>
+            {itemCount} {q ? (itemCount === 1 ? "result" : "results") : itemCount === 1 ? "item" : "items"}
+          </span>
+          <AnimatePresence mode="wait" initial={false}>
+            {selected && (
+              <motion.span
+                key={selected.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                className="truncate"
+              >
+                {selected.title} · {typeLabel(selected)} · double-click to open
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
 
       {/* New Folder Modal */}
-      {showFolderModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-border shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-2">
-                <Icon name="folder" className="text-chrome" />
-                Create New Folder
-              </h3>
-              <button
-                onClick={() => setShowFolderModal(false)}
-                className="text-carbon-400 hover:text-carbon-700"
-              >
-                <Icon name="close" className="text-lg" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateFolder} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-carbon-700 uppercase tracking-wider mb-1">
-                  Folder Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  placeholder="e.g. System Design Notes"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-carbon-900 text-sm font-medium focus:outline-none focus:border-chrome"
-                />
-              </div>
-              <p className="text-xs text-carbon-500">
-                Will be created inside:{" "}
-                <span className="font-semibold text-carbon-800">
-                  {currentFolder?.title || "Root Directory"}
-                </span>
-              </p>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
+      <AnimatePresence>
+        {showFolderModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={() => setShowFolderModal(false)}
+            className="fixed inset-0 bg-expresso/40 backdrop-blur-xs flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Create new folder"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: reduce ? 1 : 0.94, y: reduce ? 0 : 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: reduce ? 1 : 0.96 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              className="bg-surface rounded-3xl p-6 max-w-md w-full border border-border shadow-pop space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-carbon-900 flex items-center gap-2">
+                  <Icon name="folder" className="text-chrome" />
+                  Create new folder
+                </h3>
+                <button
                   onClick={() => setShowFolderModal(false)}
+                  aria-label="Close"
+                  className="text-carbon-400 hover:text-carbon-700"
                 >
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary">
-                  Create Folder
-                </Button>
+                  <Icon name="close" className="text-lg" />
+                </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+              <form onSubmit={handleCreateFolder} className="space-y-4">
+                <div>
+                  <label htmlFor="new-folder-name" className="block text-xs font-bold text-carbon-700 mb-1">
+                    Folder name
+                  </label>
+                  <input
+                    id="new-folder-name"
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="e.g. System Design Notes"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-carbon-900 text-sm font-medium focus:outline-none focus:border-chrome"
+                  />
+                </div>
+                <p className="text-xs text-carbon-500">
+                  Will be created inside:{" "}
+                  <span className="font-semibold text-carbon-800">
+                    {currentFolder?.title || "Directory"}
+                  </span>
+                </p>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setShowFolderModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary">
+                    Create folder
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -69,7 +69,7 @@ export function ResourceChatHistory() {
           </div>
         </div>
 
-        <Link to="/resource-pack/chat" className="px-4 py-2 bg-chrome text-on-chrome text-xs font-bold rounded-xl hover:opacity-90 transition-opacity">
+        <Link to="/resource-pack/chat" className="px-4 py-2 bg-chrome text-on-chrome text-xs font-bold rounded-full hover:opacity-90 transition-opacity">
           + New Chat
         </Link>
       </header>
@@ -86,7 +86,7 @@ export function ResourceChatHistory() {
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Mascot variant="sad.png" size="xl" />
               <p className="font-bold text-lg text-carbon-500">No chat history yet.</p>
-              <Link to="/resource-pack/chat" className="px-4 py-2 bg-chrome text-on-chrome text-sm font-bold rounded-xl">
+              <Link to="/resource-pack/chat" className="px-4 py-2 bg-chrome text-on-chrome text-sm font-bold rounded-full">
                 Start a Conversation
               </Link>
             </div>
@@ -116,7 +116,7 @@ export function ResourceChatHistory() {
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
                     to={`/resource-pack/chat/${chat.id || chat._id}`}
-                    className="px-4 py-2 bg-lavender-100 text-chrome text-xs font-bold rounded-xl hover:bg-chrome hover:text-on-chrome transition-colors"
+                    className="px-4 py-2 bg-lavender-100 text-chrome text-xs font-bold rounded-full hover:bg-chrome hover:text-on-chrome transition-colors"
                   >
                     Open Chat
                   </Link>
@@ -126,7 +126,7 @@ export function ResourceChatHistory() {
                     title="Delete Chat"
                     onClick={(e) => handleDelete(e, chat.id || chat._id)}
                     disabled={deletingId === (chat.id || chat._id)}
-                    className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-carbon-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
+                    className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-carbon-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
                   >
                     <Icon name="trash-outline" className="text-base" />
                   </button>

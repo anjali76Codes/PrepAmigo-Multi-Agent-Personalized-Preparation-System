@@ -4,7 +4,7 @@ export function DirectorySearch({ value, onChange, placeholder = "Search folders
     value: string; onChange: (v: string) => void; placeholder?: string;
 }) {
     return (
-        <div className="bg-white border border-border rounded-2xl px-4 py-3 shadow-xs flex items-center gap-3 focus-within:border-chrome-accent transition-colors">
+        <div className="bg-white border border-border rounded-full px-4 py-3 shadow-xs flex items-center gap-3 focus-within:border-chrome-accent transition-colors">
             <Icon name="search" className="text-carbon-400 text-lg" />
             <input
                 type="text"
