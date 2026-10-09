@@ -204,6 +204,7 @@ export interface ChatInputProps {
   placeholder?: string;
   className?: string;
   showOptions?: boolean;
+  hideTemplates?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -213,6 +214,7 @@ export function ChatInput({
   disabled = false,
   placeholder = "Message PrepAmigo...",
   className,
+  hideTemplates = false,
 }: ChatInputProps) {
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -419,7 +421,7 @@ export function ChatInput({
     autoResize();
 
     // Show template picker when the only character is "/"
-    if (val === "/") {
+    if (val === "/" && !hideTemplates) {
       setShowTemplates(true);
       setActiveTemplateIndex(0);
     } else {
@@ -586,25 +588,29 @@ export function ChatInput({
             </span>
           ) : (
             /* "/" hint — visible whenever the chatbox is empty and not recording */
-            <button
-              type="button"
-              onClick={() => {
-                setText("/");
-                setShowTemplates(true);
-                setActiveTemplateIndex(0);
-                textareaRef.current?.focus();
-              }}
-              className={cn(
-                "flex items-center gap-2 text-sm font-medium py-2 px-4 rounded-full transition-all duration-150 select-none cursor-pointer active:scale-95",
-                MUTED_BTN,
-                !text ? "opacity-100" : "opacity-0 pointer-events-none"
-              )}
-              title="Click or type / for templates"
-            >
-              <Icon name="flash-outline" className="text-base" />
-              Templates
-              <span className="font-mono text-[11px] font-medium w-4 h-4 rounded bg-white border border-border flex items-center justify-center">/</span>
-            </button>
+            !hideTemplates ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setText("/");
+                  setShowTemplates(true);
+                  setActiveTemplateIndex(0);
+                  textareaRef.current?.focus();
+                }}
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium py-2 px-4 rounded-full transition-all duration-150 select-none cursor-pointer active:scale-95",
+                  MUTED_BTN,
+                  !text ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                title="Click or type / for templates"
+              >
+                <Icon name="flash-outline" className="text-base" />
+                Templates
+                <span className="font-mono text-[11px] font-medium w-4 h-4 rounded bg-white border border-border flex items-center justify-center">/</span>
+              </button>
+            ) : (
+              <div />
+            )
           )}
 
           {/* Dynamic action buttons (Paperclip / Mic / Square / Send) */}

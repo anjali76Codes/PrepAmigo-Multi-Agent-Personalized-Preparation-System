@@ -238,22 +238,35 @@ def _query_index(pc: Any, index: Any, user_id: str, query: str) -> list[dict[str
     )
 
     matches = []
-    for match in result.get("matches", []):
-        score = float(match.get("score", 0))
-        if score < MIN_SCORE:
-            continue
+    raw_matches = result.get("matches", [])
+    
+    def extract_match(match):
         metadata = match.get("metadata", {}) or {}
         if metadata.get("user_id") != user_id:
-            continue
-        matches.append({
+            return None
+        return {
             "source_id": str(metadata.get("source_id", "")),
             "title": str(metadata.get("title", "Resource")),
             "source_type": str(metadata.get("source_type", "resource")),
             "folder_path": str(metadata.get("folder_path", "")),
             "url": str(metadata.get("url", "")),
             "chunk_text": str(metadata.get("text", "")),
-            "score": score,
-        })
+            "score": float(match.get("score", 0)),
+        }
+
+    for match in raw_matches:
+        if float(match.get("score", 0)) < MIN_SCORE:
+            continue
+        extracted = extract_match(match)
+        if extracted:
+            matches.append(extracted)
+            
+    # Fallback for general queries like "summarize my notes" that have low semantic overlap
+    if not matches and raw_matches:
+        for match in raw_matches:
+            extracted = extract_match(match)
+            if extracted:
+                matches.append(extracted)
 
     # Merge chunks from the same source, highest score wins the slot
     unique: dict[str, dict[str, Any]] = {}
@@ -268,23 +281,26 @@ def _query_index(pc: Any, index: Any, user_id: str, query: str) -> list[dict[str
 
 def _answer(question: str, matches: list[dict[str, Any]]) -> tuple[str, list[dict[str, str]]]:
     if not matches:
-        return "I couldn't find a relevant answer in your saved resources.", []
+        return "This question is out of scope! I can only answer questions related to your saved notes and preparation plan.", []
     excerpts = "\n\n".join(
         f"[{index}] {match['title']} ({match['folder_path'] or match['source_type']})\n{match['chunk_text']}"
         for index, match in enumerate(matches, start=1)
     )
     prompt = (
-        "Answer the user's question using only the provided resource excerpts. "
-        "Write at most 3 short lines. Cite each factual claim with the excerpt number, like [1]. "
-        "If the excerpts do not contain the answer, say that clearly and do not guess.\n\n"
-        f"Question: {question}\n\nResource excerpts:\n{excerpts}"
+        "Answer the question or summarize based ONLY on the provided excerpts (max 3 short lines).\n"
+        "- Speak directly to the user (e.g., 'Your notes say...').\n"
+        "- Do NOT say 'The provided text states...'.\n"
+        "- Output clean plain text. Do NOT use markdown bolding (**) or bullet points.\n"
+        "- Cite facts with excerpt numbers like [1].\n"
+        "- If the question is outside the scope of the excerpts or a general chat, reply EXACTLY with: 'This question is out of scope! I can only answer questions related to your saved notes and preparation plan.'\n\n"
+        f"Question: {question}\n\nExcerpts:\n{excerpts}"
     )
     try:
         message = _build_llm(temperature=0, max_tokens=180).invoke(prompt)
         content = getattr(message, "content", message)
         if isinstance(content, list):
             content = " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
-        lines = [line.strip() for line in str(content).splitlines() if line.strip()]
+        lines = [line.strip().replace("**", "").replace("*", "") for line in str(content).splitlines() if line.strip()]
         answer = "\n".join(lines[:3])
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Ollama could not answer from the retrieved resources.") from exc
@@ -312,9 +328,9 @@ def _answer(question: str, matches: list[dict[str, Any]]) -> tuple[str, list[dic
             }
             for match in matches[:3]
         ]
-        answer = f"{answer.rstrip()} [1]" if answer.strip() else "I couldn't find a supported answer in your resources."
+        answer = f"{answer.rstrip()} [1]" if answer.strip() else "This question is out of scope! I can only answer questions related to your saved notes and preparation plan."
         sources = sources[:1]
-    return answer or "I couldn't find a supported answer in your resources.", sources
+    return answer or "This question is out of scope! I can only answer questions related to your saved notes and preparation plan.", sources
 
 
 def _validated_user_id(auth_payload: Any, requested_user_id: str | None) -> str:

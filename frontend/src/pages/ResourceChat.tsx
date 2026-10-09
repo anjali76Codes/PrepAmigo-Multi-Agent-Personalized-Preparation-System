@@ -285,9 +285,12 @@ export function ResourceChat() {
                   <div className="rounded-2xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-xs w-fit max-w-full">
                     <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">{m.content}</p>
                     {!!m.sources?.length && (
-                      <div className="mt-4 border-t border-border pt-3">
-                        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-carbon-500">Sources</p>
-                        <ul className="space-y-2">
+                      <details className="mt-4 border-t border-border pt-3 group">
+                        <summary className="text-[11px] font-bold uppercase tracking-wider text-carbon-500 cursor-pointer list-none flex items-center gap-2 select-none hover:text-carbon-700 transition-colors">
+                          <Icon name="chevron-forward" className="text-base transition-transform group-open:rotate-90" />
+                          View Sources ({m.sources.length})
+                        </summary>
+                        <ul className="space-y-2 mt-3 pl-6 border-l-2 border-border/50 ml-1">
                           {m.sources.map((source) => (
                             <li key={source.source_id} className="text-xs">
                               {source.url ? (
@@ -301,7 +304,7 @@ export function ResourceChat() {
                             </li>
                           ))}
                         </ul>
-                      </div>
+                      </details>
                     )}
                   </div>
                 )}
@@ -314,12 +317,18 @@ export function ResourceChat() {
 
       {/* Floating Chat Input at the bottom */}
       <div className="bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-5 pt-3 shrink-0">
-        <div className="max-w-4xl mx-auto shadow-lg rounded-3xl">
-          <ChatInput
-            onSend={handleSend}
-            disabled={busy || !hasSufficientCredits}
-            placeholder={hasSufficientCredits ? "Ask about your resources... (2 AI credits)" : "You need AI credits to send a message"}
-          />
+        <div className="max-w-4xl mx-auto">
+          <div className="shadow-lg rounded-3xl">
+            <ChatInput
+              onSend={handleSend}
+              disabled={busy || !hasSufficientCredits}
+              placeholder={hasSufficientCredits ? "Ask about your resources... (2 AI credits)" : "You need AI credits to send a message"}
+              hideTemplates={true}
+            />
+          </div>
+          <p className="text-center text-xs text-carbon-500 mt-3 font-medium">
+            This assistant is specifically for querying and summarizing your saved notes, not for general AI conversations.
+          </p>
         </div>
       </div>
     </div>
