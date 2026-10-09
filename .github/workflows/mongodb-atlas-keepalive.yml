@@ -1,0 +1,38 @@
+name: Keep MongoDB Atlas active
+
+on:
+  schedule:
+    # Twice each month is comfortably inside Atlas Free's 30-day inactivity window.
+    - cron: "0 3 1,15 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # A missing secret means this repository is not configured to manage Atlas.
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Skip when Atlas is not configured
+        if: ${{ env.MONGODB_URI == '' }}
+        run: echo "MONGODB_URI is not configured; skipping Atlas keep-alive."
+      - if: ${{ env.MONGODB_URI != '' }}
+        uses: actions/checkout@v4
+      - if: ${{ env.MONGODB_URI != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - if: ${{ env.MONGODB_URI != '' }}
+        run: npm ci --omit=dev
+      - name: Send MongoDB ping
+        if: ${{ env.MONGODB_URI != '' }}
+        run: node scripts/keepaliveMongo.mjs
