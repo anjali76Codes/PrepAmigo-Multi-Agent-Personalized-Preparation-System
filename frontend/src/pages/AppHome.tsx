@@ -79,6 +79,7 @@ export function AppHome() {
   // XP that has been earned but whose gems haven't landed yet.
   // It is subtracted from the displayed total, then drained as each gem arrives.
   const [pendingXp, setPendingXp] = useState(0);
+  const [pendingCredits, setPendingCredits] = useState(0);
 
   // Completed sprints can be collapsed.
   const [collapsedSprints, setCollapsedSprints] = useState<Record<string, boolean>>({});
@@ -100,7 +101,9 @@ export function AppHome() {
       }
 
       // Start the header at the old XP total while the reward animation plays.
+      // Start the header at the old totals while the reward animation plays.
       setPendingXp(reward.xp);
+      setPendingCredits(reward.credits ?? 0);
       setGemReward(reward);
     } catch {
       sessionStorage.removeItem('prep-amigo:xp-reward');
@@ -118,8 +121,13 @@ export function AppHome() {
     setPendingXp((prev) => Math.max(0, prev - amount));
   }, []);
 
+  const handleCreditGemLand = useCallback((amount: number) => {
+    setPendingCredits((prev) => Math.max(0, prev - amount));
+  }, []);
+
   const handleRewardComplete = useCallback(() => {
     setPendingXp(0);
+    setPendingCredits(0);
     setGemReward(null);
   }, []);
 
@@ -186,6 +194,11 @@ export function AppHome() {
   const displayedXp = Math.max(
     0,
     Math.round(gamification.xp - pendingXp)
+  );
+
+  const displayedCredits = Math.max(
+    0,
+    Math.round(gamification.aiCredits - pendingCredits)
   );
 
   const allDays = (activePrep?.roadmap?.sprints || []).flatMap(
@@ -354,19 +367,28 @@ export function AppHome() {
                   </div>
 
                   {/* AI Credits */}
-                  <Stat
-                    label="AI Credits"
-                    value={gamification.aiCredits.toLocaleString()}
-                    icon={
-                      <div className="flex items-center justify-center w-8 h-8">
-                        <img
-                          src="/assets/icons/creds.png"
-                          alt=""
-                          className="w-7 h-7 object-contain"
-                        />
-                      </div>
-                    }
-                  />
+                  <div data-credits-target>
+                    <Stat
+                      label="AI Credits"
+                      value={displayedCredits.toLocaleString()}
+                      icon={
+                        <div
+                          data-credits-icon
+                          className="relative flex items-center justify-center w-8 h-8"
+                        >
+                          <div
+                            data-credits-icon-glow
+                            className="absolute inset-0 rounded-full bg-[#9BC9E1]/60 blur-md opacity-0 pointer-events-none"
+                          />
+                          <img
+                            src="/assets/icons/creds.png"
+                            alt=""
+                            className="relative z-10 w-7 h-7 object-contain drop-shadow-[0_0_6px_rgba(155,201,225,0.5)]"
+                          />
+                        </div>
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-surface border border-border rounded-2xl px-4 py-3 flex items-center gap-2">
@@ -642,6 +664,7 @@ export function AppHome() {
           <GemRewardAnimation
             reward={gemReward}
             onGemLand={handleGemLand}
+            onCreditGemLand={handleCreditGemLand}
             onComplete={handleRewardComplete}
           />
         </RevealStagger>

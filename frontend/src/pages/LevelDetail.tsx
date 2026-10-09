@@ -14,6 +14,11 @@ import { plansApi } from "../lib/api/plans";
 import { levelStates } from "../lib/levels";
 import { cn } from "../utils/utils";
 import { buildSprintLevelNodes } from "../lib/sprintLevels";
+import {
+  CREDITS_PER_LEVEL_DAY,
+  XP_PER_LEVEL_DAY,
+  queueReward,
+} from "../lib/rewards";
 
 function formatReferenceType(type?: string): string {
   if (!type) return "Article";
@@ -457,13 +462,11 @@ export function LevelDetail() {
 
             if (isFirstTime) {
               initiallyCompletedRef.current = true;
-              sessionStorage.setItem(
-                "prep-amigo:xp-reward",
-                JSON.stringify({
-                  sourceKey: `${sprintId}:${level.id}`,
-                  xp: level.days.length * 20,
-                }),
-              );
+              queueReward({
+                sourceKey: `${sprint.id}:${level.id}`,
+                xp: level.days.length * XP_PER_LEVEL_DAY,
+                credits: level.days.length * CREDITS_PER_LEVEL_DAY,
+              });
             }
 
             navigate("/dashboard");
@@ -474,4 +477,4 @@ export function LevelDetail() {
       </Modal>
     </div>
   );
-}
+}

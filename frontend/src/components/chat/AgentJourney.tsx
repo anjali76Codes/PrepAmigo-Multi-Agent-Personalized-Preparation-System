@@ -227,6 +227,7 @@ export function AgentJourney(props: AgentJourneyProps) {
     const bubbleSide: 'left' | 'right' = mp.x > 50 ? 'left' : 'right';
 
     const isHappy = mascotHover || (hoverIdx !== null && hoverIdx === mascotIndex);
+
     const currentMascotVariant = isHappy
         ? "Motivated.png"
         : (MASCOT_VARIANTS[mascotIndex % MASCOT_VARIANTS.length] || "OK.png");
@@ -345,7 +346,7 @@ export function AgentJourney(props: AgentJourneyProps) {
                 )}
 
                 {viewBox && waypoints.map((w, i) => (
-                    <span
+                    <div
                         key={i}
                         className={cn(
                             'absolute w-2.5 h-2.5 rounded-full -translate-x-1/2 -translate-y-1/2 border-2 transition-colors duration-500',
@@ -519,11 +520,30 @@ export function AgentJourney(props: AgentJourneyProps) {
                         onMouseLeave={() => setMascotHover(false)}
                     >
                         <motion.div
-                            animate={finished ? { y: [0, -4, 0] } : { rotate: [-2, 2, -2] }}
-                            transition={{ duration: finished ? 1.5 : 3, repeat: Infinity, ease: 'easeInOut' }}
-                            className="w-full h-full flex justify-center items-center"
+                            animate={finished ? { y: [0, -3, 0] } : { rotate: [-1, 1, -1] }}
+                            transition={{
+                                duration: finished ? 2 : 4,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                            }}
+                            className="relative h-full w-full flex items-center justify-center"
                         >
-                            <Mascot size="md" variant={currentMascotVariant} style={{ width: mascotSize, height: mascotSize }} />
+                            <AnimatePresence initial={false} mode="sync">
+                                <motion.div
+                                    key={currentMascotVariant}
+                                    className="absolute inset-0 flex items-center justify-center"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.18, ease: "linear" }}
+                                >
+                                    <Mascot
+                                        size="md"
+                                        variant={currentMascotVariant}
+                                        style={{ width: mascotSize, height: mascotSize }}
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
                         </motion.div>
 
                         <AnimatePresence mode="wait">
