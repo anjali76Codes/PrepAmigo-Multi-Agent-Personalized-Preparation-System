@@ -1,169 +1,204 @@
+<div align="center">
+
+  <p align="center">
+    <img src="frontend/public/assets/Mascot/hi.png" alt="PrepAmigo Mascot" height="85" valign="middle" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=48&pause=1000&color=E88D43&center=false&vCenter=true&width=300&lines=PrepAmigo" alt="PrepAmigo Text" valign="middle" />
+  </p>
+
+  <p><strong>Make every day count before interview day.</strong></p>
+  <p>Company-aware interview preparation, shaped around your role, skills, and available time.</p>
+
+  <p>
+    <a href="YOUR_LIVE_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
+    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
+  </p>
+
+  <p>
+    <a href="#quick-start"><strong>🚀 Quick start</strong></a>
+    &nbsp;·&nbsp;
+    <a href="#why-prepamigo">Why PrepAmigo?</a>
+    &nbsp;·&nbsp;
+    <a href="#documentation">Documentation</a>
+  </p>
+
+</div>
 <p align="center">
-  <a href="#">
-    <img src="./frontend/public/assets/Mascot/hi.png" alt="PrepAmigo Mascot" height="96" style="vertical-align: middle; margin-right: 1px;" />
-    <span style="font-size: 52px; font-weight: 800; color: #E88D43; vertical-align: middle; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">PrepAmigo</span>
-  </a>
+  <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
+  <img src="https://img.shields.io/badge/Agents-LangGraph-6B46C1" alt="LangGraph agents" />
+  <img src="https://img.shields.io/badge/Project-In%20development-F08C46" alt="Project in development" />
 </p>
 
 <p align="center">
-  <strong>Personalized interview preparation, coordinated by specialized multi AI agents.</strong>
+  <img src="frontend/public/assets/Mascot/thinking.gif" alt="PrepAmigo thinking through your interview preparation" width="150" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/assets/Mascot/working.gif" alt="PrepAmigo working on your preparation plan" width="150" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/assets/Mascot/Celebration.png" alt="PrepAmigo celebrating progress" width="100" />
 </p>
 
----
+> [!TIP]
+> **The idea:** less time figuring out what to study, more time getting interview-ready. Start with your [local quick start](#quick-start) or jump to the [product overview](docs/PrepAmigo.md).
 
-PrepAmigo brings company and role research, skill-gap analysis, curated learning resources, and a day-by-day study plan into one preparation workspace. The repository contains a React frontend, an Express API, and a Python/FastAPI LangGraph agent service.
+## Features & capabilities
 
-> **Project status:** This is an actively developed project. Some screens still use local demo data; backend-backed plans, notifications, authentication, and agent workflows are available where configured. Review the setup notes below before expecting every screen to use live data.
+<table>
+  <tr>
+    <td width="33%" align="center"><h3>🎯 Prepare with context</h3><p>Bring your target company, role, resume, and timeline into one preparation journey.</p></td>
+    <td width="33%" align="center"><h3>🔎 Research the opportunity</h3><p>Gather company context, role requirements, job-market signals, and reported interview patterns.</p></td>
+    <td width="33%" align="center"><h3>🧭 Find your focus</h3><p>Compare role needs with your background to identify and prioritize skill gaps.</p></td>
+  </tr>
+  <tr>
+    <td width="33%" align="center"><h3>🗓️ Get a roadmap</h3><p>Organize priorities into sprints and day-by-day learning tasks around your timeframe.</p></td>
+    <td width="33%" align="center"><h3>📚 Learn and practice</h3><p>Find relevant docs, books, papers, and videos; generate plan-aligned quizzes and flashcards.</p></td>
+    <td width="33%" align="center"><h3>✨ Track what you know</h3><p>Stream agent progress and record learning topics, skill gaps, and assessment evidence.</p></td>
+  </tr>
+</table>
 
-[Architecture](#architecture) · [Getting started](#getting-started) · [Documentation](#documentation) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+> [!NOTE]
+> PrepAmigo is actively being built. Agent workflows and plan-generation capabilities are implemented, while some frontend screens still contain demo data. Live research and persistent learning memory depend on their optional providers.
 
-## What PrepAmigo does
+## Why PrepAmigo
 
-- Builds interview preparation around a target company, role, candidate profile, and available time.
-- Uses specialist agents for company research, job intelligence, interview intelligence, skill-gap analysis, learning research, planning, and assessments.
-- Streams agent activity and results to the application through the backend.
-- Tracks study plans, sprints, daily tasks, assessments, notifications, and progress.
-- Supports local model development with Ollama and optional external search/model providers.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    Browser["React + TypeScript frontend"]
-    API["Express API gateway"]
-    Agents["FastAPI + LangGraph agents"]
-    Mongo[("MongoDB")]
-    Redis[("Redis")]
-    Search["SerpApi (optional)"]
-    Models["Ollama / configured model providers"]
-
-    Browser -->|"HTTP, cookies, SSE"| API
-    API --> Mongo
-    API --> Redis
-    API -->|"agent and workflow requests"| Agents
-    Agents --> Redis
-    Agents --> Search
-    Agents --> Models
-```
-
-The browser is served by Vite during development. The Express service owns application APIs, authentication, and persisted user plans. The Python service runs the LangGraph agent workflows. Redis is used for background agent event delivery and replay; MongoDB stores application data.
-
-## Repository layout
-
-| Path | Purpose |
+| Generic prep | PrepAmigo |
 | --- | --- |
-| [`frontend/`](frontend/README.md) | React 19, TypeScript, and Vite application |
-| [`backend/`](backend/) | Express/TypeScript API, MongoDB models, auth, and application services |
-| [`agents-service/`](agents-service/README.md) | FastAPI service, LangGraph agents, streaming, and CLI |
-| [`docs/`](docs/README.md) | Architecture, API references, setup guides, and workflow documentation |
-| [`prepamigo-apis-bruno/`](prepamigo-apis-bruno/) | Bruno API collection and local example environment |
+| One-size-fits-all checklists | Preparation informed by your role, background, and timeline |
+| Search results without a next step | Research organized into focused priorities and tasks |
+| Scattered notes and progress | A connected roadmap, learning resources, and progress view |
 
-## Getting started
+<p align="center">
+  <img src="frontend/public/assets/Mascot/working.png" alt="" width="68" />
+  <strong>Not another link dump—a clearer answer to “what should I do next?”</strong>
+</p>
 
-### Prerequisites
+## The agents behind your prep
 
-- Node.js and npm (use a current Node.js LTS release).
-- Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
-- MongoDB for the Express API.
-- Redis for background agent streaming and event replay.
-- [Ollama](https://ollama.com/) and a locally available model for the default Python agent setup. An API key is needed only for optional hosted providers and live SerpApi search.
+PrepAmigo uses a LangGraph workflow and focused agents rather than asking one general chatbot to do every job.
 
-Install and start MongoDB, Redis, and Ollama using your preferred local setup. The application services are run separately in the following steps. Run each service in its own PowerShell terminal.
+| Agent / workflow | What it does |
+| --- | --- |
+| **Interview Prep Orchestrator** | Runs company research and job intelligence in parallel, coordinates the next stages, handles missing details, and assembles the preparation workflow. |
+| **Company Research** | Collects company facts, products, technology context, and recent news. |
+| **Job Intelligence** | Searches job listings and extracts recurring skills, seniority, responsibilities, and qualifications; broadens the search if company-specific listings are sparse. |
+| **Skill Gap** | Compares the candidate's resume and current knowledge with role requirements and ranks focus areas. |
+| **Content Research** | Finds relevant documentation, books, papers, videos, and transcripts, then synthesizes a learning module from selected sources. |
+| **Planner** | Turns priority gaps and available days into a structured plan with sprints and daily tasks. |
+| **Interview Intelligence** | Researches reported interview rounds, candidate experiences, questions, and process updates. |
+| **Chat / Supervisor** | Routes general questions to the right specialist and keeps conversation context. |
+| **Assessment & Flashcards** | Generates plan-aligned quizzes and revision cards from sprint topics. |
 
-### 1. Configure and start the API
+The workflow can request clarification when company, role, or location details are missing, and can resume on the same checkpoint thread when the candidate answers.
+
+## How we use SerpApi efficiently
+
+SerpApi powers live web, news, jobs, and video discovery. Each agent uses the search source suited to its task:
+
+| Research task | Sources |
+| --- | --- |
+| Company context | Google Search and Google News |
+| Role requirements | Google Jobs; falls back to a broader role search when company-specific listings are sparse |
+| Interview patterns | Web results, related questions, videos, news, and optional Google AI Overview |
+| Learning resources | Web results for technical material and YouTube videos; Google Scholar is an optional paper source |
+
+For books and papers, the default integrations use Open Library and arXiv instead of spending SerpApi credits. YouTube transcripts are fetched separately with `youtube-transcript-api`. The Python research agents share one SerpApi client and response cache; the Node.js job-intelligence service also caches analyzed job profiles and enforces a per-user external-search rate limit.
+
+- **Cache before calling:** exact-parameter search responses are cached for 7 days by default; fast-changing job and news results use a 1-day cache. Analyzed job profiles have their own MongoDB cache. Cache hits avoid another live request and don't count against the job-search rate limit.
+- **Research only what fits:** skill-gap research is limited to the highest-priority gaps that can fit the planned schedule, with a configurable cap. Lower-priority gaps do not automatically trigger more paid searches.
+- **Avoid paying twice for slow requests:** searches use SerpApi's asynchronous mode by default and retrieve completed results from its Search Archive; archive reads don't consume another search credit.
+- **Bound concurrency and retries:** live-search concurrency is capped (4 by default); timeouts and retries are configurable. Account-level quota/key errors pause further live web searches temporarily.
+- **Keep results focused:** routine Google web lookups suppress the slower AI Overview unless a workflow specifically needs it. Learning searches filter unsuitable sources, cap result counts, and run in parallel.
+- **Develop without live-search spend:** disable SerpApi to use JSON fixtures or built-in mock results. Book catalog and paper searches can use Open Library and arXiv, and YouTube transcripts are fetched without SerpApi credits.
+
+Live searches need `SERPAPI_API_KEY`. See the [agent service guide](agents-service/README.md) and [environment configuration](docs/guides/ENVIRONMENT_CONFIGURATION.md) for settings and offline fixture options.
+
+## Your prep journey
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="frontend/public/assets/Mascot/hi.png" alt="" width="68" /><br /><strong>01 · Set your goal</strong><br /><sub>Company, role, and timeline</sub></td>
+    <td align="center" width="25%"><img src="frontend/public/assets/Mascot/Thinking.png" alt="" width="68" /><br /><strong>02 · Find priorities</strong><br /><sub>Research the role and skill focus</sub></td>
+    <td align="center" width="25%"><img src="frontend/public/assets/Mascot/working.png" alt="" width="68" /><br /><strong>03 · Get a roadmap</strong><br /><sub>Organize study and practice</sub></td>
+    <td align="center" width="25%"><img src="frontend/public/assets/Mascot/Celebration.png" alt="" width="68" /><br /><strong>04 · Make progress</strong><br /><sub>Complete tasks and track milestones</sub></td>
+  </tr>
+</table>
+
+## Built with
+
+| Tool / service | How PrepAmigo uses it |
+| --- | --- |
+| **React 19 · TypeScript · Vite · Tailwind CSS · Framer Motion** | Interactive web application and animated interface. |
+| **Node.js · Express · MongoDB · Mongoose** | Application API, persistent application data, and job-intelligence profiles. |
+| **Python · FastAPI · LangGraph · LangChain** | Agent APIs, specialist routing, and coordinated interview-prep workflows. |
+| **Redis** | Relays agent progress between services and stores short-lived event history for server-sent-event (SSE) replay. |
+| **Neo4j (optional)** | Persists the user knowledge graph: skills, topics, proficiency, learning state, and assessment evidence. In-memory/local storage is available without Neo4j. |
+| **Ollama · OpenAI-compatible models (optional)** | Ollama is the default LLM provider; an optional fast-model endpoint can route smaller calls to another compatible provider. |
+| **Mem0 (optional) · YouTube Transcript API** | Optional cross-session user memory; retrieve video transcripts without SerpApi search credits. |
+
+> **Data note:** MongoDB stores app/API data; Redis is used for run coordination and streaming, not as the learning-plan database. Neo4j is an optional knowledge-graph backend and gracefully falls back when it is unavailable.
+
+## Quick start
+
+> [!IMPORTANT]
+> PrepAmigo is under active development. Some screens use demo data, and complete local workflows need supporting services and model configuration. Follow the service guides for setup details.
+
+**Prerequisites:** Node.js/npm, Python 3.11+ with `uv`, MongoDB, Redis, Ollama, and an Ollama model such as `llama3.1`.
+
+Run each service in its **own terminal**. Configure the `.env` files using each service's `.env.example` first.
+
+<details>
+  <summary><strong>1 · Start the backend API</strong></summary>
 
 ```powershell
 cd backend
 Copy-Item .env.example .env
-```
-
-Edit `backend/.env` and set `MONGODB_URI`. Set `JWT_SECRET` before enabling authentication or running in production. The local API defaults to `http://localhost:3000`.
-
-```powershell
+# Set MONGODB_URI in .env
 npm install
 npm run dev
 ```
 
-Check that it is responding at [`http://localhost:3000/health`](http://localhost:3000/health).
+API: <http://localhost:3000> · Health: <http://localhost:3000/health>
+</details>
 
-### 2. Configure and start the agent service
-
-In another terminal:
+<details>
+  <summary><strong>2 · Start the agent service</strong></summary>
 
 ```powershell
 cd agents-service
 Copy-Item .env.example .env
-```
-
-The default agent provider is local Ollama. Install the configured model if it is not already available:
-
-```powershell
 ollama pull llama3.1
-```
-
-Then install Python dependencies and start FastAPI:
-
-```powershell
 uv sync --dev
 uv run uvicorn --app-dir src main:app --reload
 ```
 
-The agent API listens on port `8000` by default. Live web research requires a SerpApi key; fixture mode is available for development without live search. See the [agent service guide](agents-service/README.md) for provider, streaming, and workflow details.
+Agent API: <http://localhost:8000>. Live search is optional and requires a SerpApi key.
+</details>
 
-### 3. Configure and start the frontend
-
-In a third terminal:
+<details>
+  <summary><strong>3 · Start the web app</strong></summary>
 
 ```powershell
 cd frontend
 Copy-Item .env.example .env
-```
-
-The example configures `VITE_API_URL=http://localhost:3000`, matching the backend's local port. Adjust it if your API is listening elsewhere.
-
-```powershell
 npm install
 npm run dev
 ```
 
-Open the Vite URL printed in the terminal (normally [`http://localhost:5173`](http://localhost:5173)).
-
-### Local configuration notes
-
-- Keep credentials in each service's ignored `.env` file. Never commit populated environment files.
-- Authentication is disabled by default for local development. Production always requires a valid JWT on protected backend routes.
-- Set the same JWT secret in the backend and agent service if you enable token verification for both.
-- `VITE_ENABLE_AUTH` and `VITE_ENABLE_SERPAPI` are frontend feature flags; backend/provider configuration is controlled separately.
-- See [environment configuration](docs/guides/ENVIRONMENT_CONFIGURATION.md) and the three committed templates: [`backend/.env.example`](backend/.env.example), [`agents-service/.env.example`](agents-service/.env.example), and [`frontend/.env.example`](frontend/.env.example).
-
-## Tests and checks
-
-Run these from the relevant service directory:
-
-| Service | Command | Purpose |
-| --- | --- | --- |
-| Frontend | `npm run lint` | ESLint checks |
-| Frontend | `npm run build` | TypeScript project build and Vite production build |
-| Backend | `npm run build` | TypeScript compilation |
-| Agents | `uv run pytest` | Python test suite |
-
-For interactive agent workflow checks and examples, see the [CLI testing guide](docs/guides/CLI_TESTING_GUIDE.md).
-
-## API and request examples
-
-- [Plans and progress API](docs/api-docs/PLAN_PROGRESS_API.md)
-- [Company research API](docs/api-docs/Company-Research-Agent-API-Reference.md)
-- [Bruno collection](prepamigo-apis-bruno/) — import the collection and use `environments/local.example.yml` as a starting point for local requests.
-- FastAPI interactive API docs are available at [`http://localhost:8000/docs`](http://localhost:8000/docs) while the agent service is running.
+Open the Vite URL shown in your terminal (usually <http://localhost:5173>).
+</details>
 
 ## Documentation
 
-Start at the [documentation index](docs/README.md). It links the product overview, agent architecture, APIs, configuration, and operating guides.
+<p align="center">
+  <a href="docs/PrepAmigo.md">Product overview</a> &nbsp;·&nbsp;
+  <a href="agents-service/README.md">Agent service setup</a> &nbsp;·&nbsp;
+  <a href="docs/agents/ORCHESTRATION_WORKFLOW.md">Agent workflow</a> &nbsp;·&nbsp;
+  <a href="docs/api-docs/PLAN_PROGRESS_API.md">Plans API</a>
+</p>
 
-## Contributing
-
-Bug reports, documentation improvements, and focused pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes. Use the issue forms in GitHub to report bugs or propose features.
-
-## License
-
-There is currently no top-level `LICENSE` file in this repository. The `ISC` value in the backend package manifest applies to that package's metadata and does not establish a license for the complete repository. Please contact the maintainers before redistributing or using this project where a license grant is required.
+<p align="center">
+  <a href="docs/guides/ENVIRONMENT_CONFIGURATION.md">Environment guide</a> &nbsp;·&nbsp;
+  <a href="docs/agents/SSE_STREAMING_GUIDE.md">Streaming guide</a> &nbsp;·&nbsp;
+  <a href="prepamigo-apis-bruno/">Bruno API collection</a>
+</p>

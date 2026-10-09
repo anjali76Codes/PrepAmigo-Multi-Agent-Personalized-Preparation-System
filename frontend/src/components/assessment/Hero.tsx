@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Mascot, type MascotVariant } from "../ui/Mascot";
+import type { MascotVariant } from "../ui/Mascot";
 import { Icon } from "../ui/Icon";
 
 interface Props {
@@ -9,7 +10,17 @@ interface Props {
     items: number;
 }
 
-const COPY = {
+const COPY: Record<
+    "flashcards" | "quizzes",
+    {
+        icon: string;
+        mascot: MascotVariant;
+        kicker: string;
+        title: string;
+        text: string;
+        unit: string;
+    }
+> = {
     flashcards: {
         icon: "albums",
         mascot: "Thinking.png",
