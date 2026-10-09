@@ -1,55 +1,66 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { Mascot } from "./Mascot";
 import { cn } from "../../utils/utils";
 
 interface LoaderProps {
+  /** cover the whole screen (default). Pass false to just fill the parent. */
   fullScreen?: boolean;
   message?: string;
   submessage?: string;
+  className?: string;
 }
 
-export function PlatformLoader({ 
-  fullScreen = false, 
+const RUN = { repeat: Infinity, duration: 1, ease: "easeInOut" as const };
+
+export function PlatformLoader({
+  fullScreen = true,
   message = "Loading...",
-  submessage = "Getting things ready"
+  submessage = "Getting things ready",
+  className,
 }: LoaderProps = {}) {
+  const reduce = useReducedMotion();
+
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-50",
-      fullScreen ? "fixed inset-0" : "absolute inset-0 rounded-[inherit]"
-    )}>
-      <div className="flex flex-col items-center gap-6">
-        {/* Placeholder for the mascot running animation */}
-        <div className="relative w-32 h-32 flex items-center justify-center bg-surface-muted rounded-full shadow-sm border border-border">
-          {/* Replace this div or img with the actual Lottie or Gif mascot animation */}
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "flex items-center justify-center bg-bg p-6",
+        fullScreen ? "fixed inset-0 z-50" : "h-full w-full flex-1 min-h-[50vh]",
+        className
+      )}
+    >
+      <div className="flex flex-col items-center gap-5">
+        <div className="relative flex flex-col items-center">
           <motion.div
-            animate={{ y: [0, -15, 0] }}
-            transition={{ repeat: Infinity, duration: 0.6, ease: "easeInOut" }}
-            className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xs border border-border"
+            animate={reduce ? undefined : { y: [0, -14, 0], rotate: [-3, 3, -3] }}
+            transition={RUN}
           >
-            <span className="text-3xl"></span>
+            <Mascot
+              variant="Running.png"
+              size="xl"
+              style={{ width: 150, height: 150 }}
+              className="object-contain drop-shadow-md"
+            />
           </motion.div>
-          
-          {/* Floor shadow effect */}
-          <motion.div 
-            animate={{ scale: [1, 0.8, 1], opacity: [0.15, 0.05, 0.15] }}
-            transition={{ repeat: Infinity, duration: 0.6, ease: "easeInOut" }}
-            className="absolute -bottom-4 w-20 h-2 bg-carbon-900 rounded-full blur-sm" 
+
+          {/* floor shadow: shrinks and fades as the mascot jumps */}
+          <motion.div
+            className="mt-1 h-2.5 w-20 rounded-full bg-carbon-900/20 blur-[2px]"
+            animate={reduce ? undefined : { scaleX: [1, 0.7, 1], opacity: [0.9, 0.45, 0.9] }}
+            transition={RUN}
           />
         </div>
 
-        <div className="text-center space-y-1">
-          <motion.h3 
-            animate={{ opacity: [0.5, 1, 0.5] }}
+        <div className="space-y-1 text-center">
+          <motion.h3
+            animate={reduce ? undefined : { opacity: [0.55, 1, 0.55] }}
             transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-            className="text-lg font-bold text-carbon-900 tracking-tight"
+            className="text-lg font-extrabold tracking-tight text-carbon-900"
           >
             {message}
           </motion.h3>
-          {submessage && (
-            <p className="text-xs text-carbon-500 font-medium">
-              {submessage}
-            </p>
-          )}
+          {submessage && <p className="text-xs font-medium text-carbon-500">{submessage}</p>}
         </div>
       </div>
     </div>

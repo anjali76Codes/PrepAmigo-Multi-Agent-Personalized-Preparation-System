@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { submitAssessmentAttempt, type Assessment } from "../../mocks/assessment.mock";
 import { Panel } from "./shared";
 import { RunnerHeader } from "./RunnerHead";
 import { QuestionCard } from "./QuestionCard";
 import { Result } from "./Result";
+import { buildFeedback, type Feedback } from "./FeedbackPanel";
 
-export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => void }) {
+export function QuizRunner({ quiz, onExit, onFeedback }: {
+    quiz: Assessment; onExit: () => void; onFeedback: (f: Feedback) => void;
+}) {
     const [idx, setIdx] = useState(0);
     const [answers, setAnswers] = useState<(string | null)[]>([]);
     const [done, setDone] = useState(false);
@@ -16,18 +19,28 @@ export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => v
     const picked = answers[idx] ?? null;
     const isLast = idx + 1 >= total;
 
-    const restart = () => { setIdx(0); setAnswers([]); setDone(false); };
+    const restart = () => { setIdx(0); setAnswers([]); setDone(false); onFeedback(null); };
 
     const pick = (letter: string) => {
         if (picked) return;
         setAnswers((a) => { const copy = [...a]; copy[idx] = letter; return copy; });
+        onFeedback(buildFeedback(
+            qn,
+            letter,
+            isLast ? "View summary" : "Next question",
+            () => nextRef.current()
+        ));
     };
 
     const next = () => {
+        onFeedback(null);
         if (!isLast) return setIdx(idx + 1);
         setDone(true);
         submitAssessmentAttempt(quiz._id, quiz.questions.map((_: unknown, i: number) => answers[i] ?? null));
     };
+
+    const nextRef = useRef(next);
+    nextRef.current = next;
 
     if (done) {
         const score = quiz.questions.filter((q, i) => answers[i] === q.correct_answer).length;
@@ -46,7 +59,7 @@ export function QuizRunner({ quiz, onExit }: { quiz: Assessment; onExit: () => v
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6 py-2">
+        <div className="max-w-3xl mx-auto space-y-6 py-2">
             <RunnerHeader
                 backLabel="Exit quiz"
                 onBack={onExit}
