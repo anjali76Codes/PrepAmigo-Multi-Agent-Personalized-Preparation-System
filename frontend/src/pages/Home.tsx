@@ -13,7 +13,7 @@ import { BottomCTA } from "../components/home/BottomCTA";
 import { useAuth } from "../hooks/useAuth";
 import { featureFlags } from "../config/featureFlags";
 import { Mascot } from "../components/ui/Mascot";
-import { Logo } from "../components/ui/Logo";
+// import { Logo } from "../components/ui/Logo";
 
 export function Home() {
   const navigate = useNavigate();
