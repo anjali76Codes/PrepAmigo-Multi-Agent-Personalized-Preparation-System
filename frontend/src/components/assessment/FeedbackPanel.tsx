@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Mascot } from "../ui/Mascot";
+import { Mascot, type MascotVariant } from "../ui/Mascot";
 import { Icon } from "../ui/Icon";
 import { cn } from "../../utils/utils";
 import type { Question } from "./QuestionCard";
@@ -12,7 +12,12 @@ export type Feedback = {
     explanation: string;
     nextLabel: string;
     onNext: () => void;
+    /** which mascot to show when the answer is wrong (alternates) */
+    wrongMascot: MascotVariant;
 } | null;
+
+const WRONG_MASCOTS: MascotVariant[] = ["dissapointed.png", "Embarassment.png"];
+let wrongCounter = 0;
 
 export function buildFeedback(
     qn: Question,
@@ -20,13 +25,20 @@ export function buildFeedback(
     nextLabel: string,
     onNext: () => void
 ): Feedback {
+    const correct = picked === qn.correct_answer;
+
+    // only advance the alternation on wrong answers
+    const wrongMascot = WRONG_MASCOTS[wrongCounter % WRONG_MASCOTS.length];
+    if (!correct) wrongCounter++;
+
     return {
-        correct: picked === qn.correct_answer,
+        correct,
         letter: qn.correct_answer,
         answerText: qn.options[LETTERS.indexOf(qn.correct_answer)] ?? "",
         explanation: qn.explanation,
         nextLabel,
         onNext,
+        wrongMascot,
     };
 }
 
@@ -46,9 +58,10 @@ const mascotSwap = {
 
 export function FeedbackPanel({ feedback, cardFlipped = false }: { feedback: Feedback; cardFlipped?: boolean }) {
     const key = !feedback ? "idle" : feedback.correct ? "right" : "wrong";
-    const mascot =
+
+    const mascot: MascotVariant =
         key === "right" ? "Celebration.png"
-            : key === "wrong" ? "dissapointed.png"
+            : key === "wrong" ? feedback!.wrongMascot
                 : cardFlipped ? "OK.png"
                     : "Thinking.png";
 

@@ -1,54 +1,65 @@
+import React, { useState, useEffect, Suspense } from "react";
 import { useOutlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "../ui/Logo";
 import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { PageBackground } from "../ui/PageBackground";
+import { Mascot, type MascotVariant } from "../ui/Mascot";
+import { PageStatus } from "../ui/PageStatus";
 import { SearchBar } from "./SearchBar";
-import React from "react";
-import { Mascot } from "../ui/Mascot";
-import { ErrorState } from "../ui/ErrorState";
+import { useAuth } from "../../hooks/useAuth";
+import { featureFlags } from "../../config/featureFlags";
+import { Modal } from "../ui/Modal";
+import { Button } from "../ui/Button";
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode; resetKey?: string }, { hasError: boolean, error: Error | null }> {
-  constructor(props: { children: React.ReactNode; resetKey?: string }) {
+type BoundaryProps = { children: React.ReactNode; resetKey?: string };
+type BoundaryState = { hasError: boolean; error: Error | null };
+
+class ErrorBoundary extends React.Component<BoundaryProps, BoundaryState> {
+  constructor(props: BoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
+
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
-  componentDidUpdate(prevProps: { resetKey?: string }) {
+
+  componentDidUpdate(prevProps: BoundaryProps) {
     if (this.props.resetKey !== prevProps.resetKey && this.state.hasError) {
       this.setState({ hasError: false, error: null });
     }
   }
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center w-full h-full p-4 gap-6 overflow-y-auto">
-          <Mascot size="lg" variant="sad.png" />
-          <ErrorState
-            title="Oops! Something went wrong."
-            description={this.state.error?.message || "An unexpected error occurred."}
-            onRetry={() => this.setState({ hasError: false, error: null })}
-          />
-        </div>
+        <PageStatus
+          kind="generic"
+          description={this.state.error?.message || "An unexpected error occurred."}
+          onRetry={() => this.setState({ hasError: false, error: null })}
+        />
       );
     }
     return this.props.children;
   }
 }
 
-
-import { useAuth } from "../../hooks/useAuth";
-import { featureFlags } from "../../config/featureFlags";
-
 export function AppLayout() {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const outlet = useOutlet();
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const LOGOUT_MASCOTS: MascotVariant[] = ["sad.png", "dissapointed.png"];
+  const pickLogoutMascot = () =>
+    LOGOUT_MASCOTS[Math.floor(Math.random() * LOGOUT_MASCOTS.length)];
+
+  const [logoutMascot, setLogoutMascot] = useState<MascotVariant>("sad.png");
+
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem("prepamigo_sidebar_open");
@@ -66,30 +77,29 @@ export function AppLayout() {
     }
   }, [isSidebarOpen]);
 
-  // Authentication guard controlled via featureFlags (VITE_ENABLE_AUTH)
-  if (featureFlags.enableAuth) {
-    if (loading) {
-      return (
-        <div className="flex h-screen w-screen items-center justify-center bg-carbon-900 text-white">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-chrome-accent border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-carbon-400">Loading session…</p>
-          </div>
-        </div>
-      );
-    }
+  // Auth guard (controlled by VITE_ENABLE_AUTH).
+  // While the session is loading we keep the shell visible and only show the
+  // loader in the content area. Once we know there is no user, redirect.
+  const sessionLoading = featureFlags.enableAuth && loading;
 
-    if (!user) {
-      return <Navigate to="/login" state={{ from: location }} replace />;
-    }
+  if (featureFlags.enableAuth && !loading && !user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     const success = await logout();
-
+    setLoggingOut(false);
     if (success) {
+      setConfirmLogout(false);
       navigate("/login");
     }
+  };
+
+  const openLogoutConfirm = () => {
+    setLogoutMascot(pickLogoutMascot());
+    setConfirmLogout(true);
   };
 
   const navItems = [
@@ -180,16 +190,17 @@ export function AppLayout() {
               end={item.exact}
               title={!isSidebarOpen ? item.label : undefined}
               className={({ isActive }) =>
-                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${isActive
-                  ? "text-on-chrome font-medium"
-                  : "text-on-chrome-muted hover:text-on-chrome"
+                `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${isActive ? "text-on-chrome font-medium" : "text-on-chrome-muted hover:text-on-chrome"
                 } ${isSidebarOpen ? "px-3" : "justify-center"}`
               }
             >
               {({ isActive }) => (
                 <>
                   <div
-                    className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? "bg-chrome-accent text-cocoa shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]" : "bg-white/5 group-hover:bg-white/10"}`}
+                    className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive
+                      ? "bg-chrome-accent text-cocoa shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]"
+                      : "bg-white/5 group-hover:bg-white/10"
+                      }`}
                   >
                     <Icon
                       name={item.icon}
@@ -220,16 +231,17 @@ export function AppLayout() {
             to="/dashboard/settings"
             title={!isSidebarOpen ? "Settings" : undefined}
             className={({ isActive }) =>
-              `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${isActive
-                ? "text-on-chrome font-medium"
-                : "text-on-chrome-muted hover:text-on-chrome"
+              `group flex items-center gap-3 py-2 rounded-xl transition-colors relative focus-visible:outline-chrome-accent ${isActive ? "text-on-chrome font-medium" : "text-on-chrome-muted hover:text-on-chrome"
               } ${isSidebarOpen ? "px-3" : "justify-center"}`
             }
           >
             {({ isActive }) => (
               <>
                 <div
-                  className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive ? "bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]" : "bg-white/5 group-hover:bg-white/10"}`}
+                  className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-xl transition-colors ${isActive
+                    ? "bg-chrome-accent text-white shadow-[0_0_15px_rgba(var(--chrome-accent),0.5)]"
+                    : "bg-white/5 group-hover:bg-white/10"
+                    }`}
                 >
                   <Icon
                     name="settings-outline"
@@ -254,9 +266,10 @@ export function AppLayout() {
           </NavLink>
 
           <button
-            onClick={handleLogout}
+            onClick={openLogoutConfirm}
             title={!isSidebarOpen ? "Logout" : undefined}
-            className={`group w-full flex items-center gap-3 py-2 rounded-xl text-on-chrome-muted hover:text-on-chrome transition-colors focus-visible:outline-chrome-accent ${isSidebarOpen ? "px-3" : "justify-center"}`}
+            className={`group w-full flex items-center gap-3 py-2 rounded-xl text-on-chrome-muted hover:text-on-chrome transition-colors focus-visible:outline-chrome-accent ${isSidebarOpen ? "px-3" : "justify-center"
+              }`}
           >
             <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
               <Icon name="log-out-outline" className="text-xl" tone="inverse" />
@@ -293,11 +306,7 @@ export function AppLayout() {
                 to="/dashboard/notifications"
                 className="focus-visible:outline-chrome-accent rounded-control"
               >
-                <IconButton
-                  icon="notifications-outline"
-                  variant="ghost"
-                  tone="inverse"
-                />
+                <IconButton icon="notifications-outline" variant="ghost" tone="inverse" />
               </NavLink>
 
               {/* Mobile Logout */}
@@ -305,7 +314,7 @@ export function AppLayout() {
                 <IconButton
                   icon="log-out-outline"
                   variant="ghost"
-                  onClick={handleLogout}
+                  onClick={openLogoutConfirm}
                   tone="inverse"
                 />
               </div>
@@ -323,7 +332,11 @@ export function AppLayout() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  {outlet}
+                  {sessionLoading ? (
+                    <PageStatus kind="loading" />
+                  ) : (
+                    <Suspense fallback={<PageStatus kind="loading" />}>{outlet}</Suspense>
+                  )}
                 </motion.div>
               </AnimatePresence>
             </ErrorBoundary>
@@ -352,17 +365,38 @@ export function AppLayout() {
           >
             {({ isActive }) => (
               <>
-                <Icon
-                  name={item.icon}
-                  className="text-xl"
-                  tone={isActive ? "inverse" : "default"}
-                />
+                <Icon name={item.icon} className="text-xl" tone={isActive ? "inverse" : "default"} />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </>
             )}
           </NavLink>
         ))}
       </nav>
+
+      <Modal
+        open={confirmLogout}
+        onClose={() => !loggingOut && setConfirmLogout(false)}
+        mascot={logoutMascot}
+        title="Leaving so soon?"
+        description="Are you sure you want to log out? Your progress is saved, and I'll be here when you're back."
+      >
+        <Button
+          variant="ghost"
+          onClick={() => setConfirmLogout(false)}
+          disabled={loggingOut}
+          className="px-6 font-bold text-chrome"
+        >
+          Stay
+        </Button>
+        <Button
+          variant="accent"
+          onClick={() => void handleLogout()}
+          loading={loggingOut}
+          className="px-6 font-bold"
+        >
+          Yes, log out
+        </Button>
+      </Modal>
     </div>
   );
 }
