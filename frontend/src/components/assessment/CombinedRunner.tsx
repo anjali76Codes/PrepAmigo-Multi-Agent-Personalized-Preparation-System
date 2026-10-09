@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     submitAssessmentAttempt,
@@ -11,6 +11,7 @@ import { RunnerHeader } from "./RunnerHead";
 import { QuestionCard, type Question } from "./QuestionCard";
 import { FlipCard, RatingButtons, type Card } from "./FlipCard";
 import { Result } from "./Result";
+import { buildFeedback, type Feedback } from "./FeedbackPanel";
 
 type Item =
     | { kind: "quiz"; question: Question; idx: number }
@@ -30,10 +31,12 @@ interface Props {
     deck: FlashcardDeck | null;
     onExit: () => void;
     onLevelComplete: () => void;
+    onFeedback: (f: Feedback) => void;
+    onCardFlip?: (flipped: boolean) => void;
 }
 
 /** Level flow: quiz questions and flashcards mixed into one session. */
-export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
+export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback, onCardFlip }: Props) {
     const items = useMemo<Item[]>(() => {
         const quizItems = quiz.questions.map((question, idx): Item => ({ kind: "quiz", question, idx }));
         const cardItems = (deck?.cards ?? []).map((card, idx): Item => ({ kind: "card", card, idx }));
@@ -48,6 +51,8 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
     const [deckRatings, setDeckRatings] = useState<Record<number, number>>({});
     const [submitting, setSubmitting] = useState(false);
     const [finished, setFinished] = useState(false);
+
+    const nextRef = useRef<() => void>(() => { });
 
     const item = items[pos];
 
@@ -87,14 +92,24 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
 
     // ratings are passed in so the very last card's rating is not lost to stale state
     const advance = (ratings = deckRatings) => {
+        onFeedback(null);
+        onCardFlip?.(false);
         if (isLast) return void finish(ratings);
         setPos(pos + 1);
         setFlipped(false);
     };
 
+    nextRef.current = () => advance();
+
     const pickAnswer = (letter: string) => {
         if (item.kind !== "quiz" || picked) return;
         setQuizAnswers((prev) => { const n = [...prev]; n[item.idx] = letter; return n; });
+        onFeedback(buildFeedback(
+            item.question,
+            letter,
+            isLast ? "Finish level" : "Next question",
+            () => nextRef.current()
+        ));
     };
 
     const rateCard = (value: number) => {
@@ -104,8 +119,14 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
         advance(next);
     };
 
+    const toggleFlip = () => {
+        const next = !flipped;
+        setFlipped(next);
+        onCardFlip?.(next);
+    };
+
     return (
-        <div className="w-full max-w-2xl space-y-6 py-2">
+        <div className="w-full max-w-3xl space-y-6 py-2">
             <RunnerHeader
                 backLabel="All assessments"
                 onBack={onExit}
@@ -115,7 +136,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
             />
 
             <AnimatePresence mode="wait">
-                <Panel key={pos}>
+                <Panel key={pos} tone={item.kind === "quiz" ? "emerald" : "plain"}>
                     {item.kind === "quiz" ? (
                         <QuestionCard
                             question={item.question}
@@ -124,6 +145,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
                             onNext={() => advance()}
                             nextLabel={isLast ? "Finish level" : "Next question"}
                             tag="Quiz challenge"
+                            showInlineFeedback={false}
                         />
                     ) : (
                         <div className="space-y-5">
@@ -131,12 +153,13 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete }: Props) {
                                 badge={item.card.category}
                                 tag="Flashcard review"
                                 hint="Flip to reveal"
+                                tone="plain"
                             />
 
                             <FlipCard
                                 card={item.card}
                                 flipped={flipped}
-                                onFlip={() => setFlipped((f) => !f)}
+                                onFlip={toggleFlip}
                                 size="md"
                             />
 

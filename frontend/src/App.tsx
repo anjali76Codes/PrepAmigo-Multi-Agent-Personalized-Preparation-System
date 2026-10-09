@@ -1,4 +1,6 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { AppLayout } from "./components/layout/AppLayout";
@@ -11,25 +13,26 @@ import { AppProvider } from "./context/AppContext";
 import { AuthProvider } from "./hooks/useAuth";
 import { StyleProvider } from "./components/ui/StyleProvider";
 import { StyleGuide } from "./pages/StyleGuide";
-import { AppHome } from "./pages/AppHome";
 import { Chat } from "./pages/Chat";
-import { Calendar } from "./pages/Calendar";
-import { Roadmap } from "./pages/Roadmap";
-import { Assessment } from "./pages/Assessment";
-import { Progress } from "./pages/Progress";
-import { Notifications } from "./pages/Notifications";
-import { Settings } from "./pages/Settings";
-import { Profile } from "./pages/Profile";
-import { InterviewPrep } from "./pages/InterviewPrep";
-import { ResourcePackHome } from "./pages/ResourcePackHome";
-import { NotesDirectory } from "./pages/NotesDirectory";
-import { ResourceChat } from "./pages/ResourceChat";
-import { ResourceChatHistory } from "./pages/ResourceChatHistory";
-import { ResourceNoteEditor } from "./pages/ResourceNoteEditor";
-import { LevelDetail } from "./pages/LevelDetail";
 import { NotFound } from "./pages/NotFound";
-import { AnimatePresence, motion } from "framer-motion";
+import { PlatformLoader } from "./components/ui/PlatformLoader";
 
+const AppHome = lazy(() => import("./pages/AppHome").then((m) => ({ default: m.AppHome })));
+const Calendar = lazy(() => import("./pages/Calendar").then((m) => ({ default: m.Calendar })));
+const Roadmap = lazy(() => import("./pages/Roadmap").then((m) => ({ default: m.Roadmap })));
+const Assessment = lazy(() => import("./pages/Assessment").then((m) => ({ default: m.Assessment })));
+const Progress = lazy(() => import("./pages/Progress").then((m) => ({ default: m.Progress })));
+const Notifications = lazy(() => import("./pages/Notifications").then((m) => ({ default: m.Notifications })));
+const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })));
+const Profile = lazy(() => import("./pages/Profile").then((m) => ({ default: m.Profile })));
+const InterviewPrep = lazy(() => import("./pages/InterviewPrep").then((m) => ({ default: m.InterviewPrep })));
+const ResourcePackHome = lazy(() => import("./pages/ResourcePackHome").then((m) => ({ default: m.ResourcePackHome })));
+const NotesDirectory = lazy(() => import("./pages/NotesDirectory").then((m) => ({ default: m.NotesDirectory })));
+const ResourceChat = lazy(() => import("./pages/ResourceChat").then((m) => ({ default: m.ResourceChat })));
+const ResourceChatHistory = lazy(() => import("./pages/ResourceChatHistory").then((m) => ({ default: m.ResourceChatHistory })));
+const ResourceNoteEditor = lazy(() => import("./pages/ResourceNoteEditor").then((m) => ({ default: m.ResourceNoteEditor })));
+const LevelDetail = lazy(() => import("./pages/LevelDetail").then((m) => ({ default: m.LevelDetail })));
+const StatusPreview = lazy(() => import("./pages/StatusPreview").then((m) => ({ default: m.StatusPreview })));
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
@@ -45,7 +48,17 @@ function PageTransition({ children }: { children: React.ReactNode }) {
   );
 }
 
-const APP_LAYOUT_ROOTS = ["dashboard", "resource-pack", "roadmap", "calendar", "assessment", "notes", "profile"];
+const APP_LAYOUT_ROOTS = [
+  "dashboard",
+  "resource-pack",
+  "roadmap",
+  "calendar",
+  "assessment",
+  "progress",
+  "notes",
+  "profile",
+  "status-preview", // TEMP
+];
 
 function getRouteKey(pathname: string) {
   const first = pathname.split("/")[1] || "root";
@@ -76,6 +89,9 @@ function AnimatedRoutes() {
         </Route>
 
         <Route element={<AppLayout />}>
+          {/* TEMP: remove when done testing */}
+          <Route path="/status-preview" element={<StatusPreview />} />
+
           <Route path="/dashboard">
             <Route index element={<AppHome />} />
             <Route path="interview-prep" element={<InterviewPrep />} />
@@ -119,7 +135,9 @@ function App() {
       <AuthProvider>
         <AppProvider>
           <BrowserRouter>
-            <AnimatedRoutes />
+            <Suspense fallback={<PlatformLoader />}>
+              <AnimatedRoutes />
+            </Suspense>
           </BrowserRouter>
         </AppProvider>
       </AuthProvider>
