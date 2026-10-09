@@ -121,7 +121,7 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
               </span>
 
               <motion.img
-                src="/assets/Mascot/star.png"
+                src="/assets/icons/star.png"
                 alt=""
                 className="w-20 h-20 absolute right-1"
                 animate={{
@@ -160,7 +160,7 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
               </span>
 
               <motion.img
-                src="/assets/Mascot/creds.png"
+                src="/assets/icons/creds.png"
                 alt=""
                 className="w-20 h-20 absolute right-1"
                 animate={{
@@ -266,27 +266,20 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
                 Badges
               </span>
 
-              <motion.div
-                className="
-                  flex items-center justify-center
-                  w-9 h-9
-                  rounded-full
-                  bg-chrome-accent
-                  text-deep-emerald
-                  font-extrabold
-                "
+              <motion.img
+                src="/assets/icons/badge1.png"
+                alt="badge"
+                className="w-20 h-20 absolute right-1 top-5"
                 animate={{
-                  y: [0, -4, 0],
-                  rotate: [0, 5, 0],
+                  y: [0, -5, 0],
+                  rotate: [3, -3, 3],
                 }}
                 transition={{
-                  duration: 3,
+                  duration: 4,
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}
-              >
-                {badgeCount}
-              </motion.div>
+              />
             </div>
 
             <div className="mt-2 text-2xl font-extrabold">

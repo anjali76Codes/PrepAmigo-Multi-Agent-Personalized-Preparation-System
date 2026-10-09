@@ -16,7 +16,7 @@ export function SkillLevelBars({
       className="
         relative overflow-hidden
         rounded-3xl
-        bg-surface
+        bg-chrome-accent
         border-border
         p-6 md:p-7
       "

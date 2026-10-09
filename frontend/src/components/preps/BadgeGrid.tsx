@@ -16,19 +16,23 @@ export function BadgeGrid({ badges }: { badges: BadgeItem[] }) {
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
+            <img
+              src={`/assets/icons/badge1.png`}
+              alt="badge"
+              className={cn(
+                'w-14 object-contain p-1',
+                // !badge.unlocked && 'grayscale opacity-30'
+              )}
+            />
             <h3 className="text-xl md:text-2xl font-extrabold text-white">
               Badges & Achievements
             </h3>
 
-            <Icon
-              name="medal-outline"
-              className="text-xl text-chrome-accent"
-            />
           </div>
 
-          <p className="text-sm text-on-chrome-muted mt-1">
+          {/* <p className="text-sm text-on-chrome-muted mt-1">
             Small wins that mark your progress.
-          </p>
+          </p> */}
         </div>
 
         <div className="shrink-0 text-sm font-bold text-on-chrome-muted">
@@ -66,7 +70,7 @@ export function BadgeGrid({ badges }: { badges: BadgeItem[] }) {
                   : 'bg-white/5 border border-white/10 opacity-55'
               )}
             >
-              {/* Badge icon */}
+              {/* Badge image */}
               <div className="relative mb-3">
                 {badge.unlocked && (
                   <div className="absolute inset-0 rounded-full bg-chrome-accent/30 blur-xl" />
@@ -74,11 +78,9 @@ export function BadgeGrid({ badges }: { badges: BadgeItem[] }) {
 
                 <motion.div
                   className={cn(
-                    'relative z-10 w-16 h-16 rounded-2xl',
-                    'flex items-center justify-center text-2xl',
-                    badge.unlocked
-                      ? 'bg-lavender-100 text-deep-emerald'
-                      : 'bg-white/10 text-white/30'
+                    'relative z-10 w-25 h-25 rounded-2xl',
+                    'flex items-center justify-center overflow-hidden',
+                    // badge.unlocked ? 'bg-lavender-100' : 'bg-white/10'
                   )}
                   animate={
                     badge.unlocked
@@ -94,13 +96,20 @@ export function BadgeGrid({ badges }: { badges: BadgeItem[] }) {
                     ease: 'easeInOut',
                   }}
                 >
-                  <Icon
-                    name={
-                      badge.unlocked
-                        ? badge.icon
-                        : 'lock-closed-outline'
-                    }
+                  <img
+                    src={`/assets/icons/badge${(index % 6) + 1}.png`}
+                    alt={badge.name}
+                    className={cn(
+                      'w-full h-full object-contain p-1',
+                      !badge.unlocked && 'grayscale opacity-30'
+                    )}
                   />
+
+                  {!badge.unlocked && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <Icon name="lock-closed-outline" className="text-white text-lg" />
+                    </div>
+                  )}
                 </motion.div>
               </div>
 
@@ -127,30 +136,6 @@ export function BadgeGrid({ badges }: { badges: BadgeItem[] }) {
                 >
                   {badge.description}
                 </p>
-              </div>
-
-              {/* Bottom state */}
-              <div className="mt-auto pt-3 w-full">
-                <div
-                  className={cn(
-                    'h-1 rounded-full overflow-hidden',
-                    badge.unlocked
-                      ? 'bg-lavender-100'
-                      : 'bg-white/10'
-                  )}
-                >
-                  {badge.unlocked && (
-                    <motion.div
-                      className="h-full rounded-full bg-chrome"
-                      initial={{ width: 0 }}
-                      animate={{ width: '100%' }}
-                      transition={{
-                        duration: 0.6,
-                        delay: index * 0.05,
-                      }}
-                    />
-                  )}
-                </div>
               </div>
             </div>
           </motion.div>

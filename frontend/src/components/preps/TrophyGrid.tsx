@@ -65,6 +65,14 @@ export function TrophyGrid({ trophies }: { trophies: TrophyItem[] }) {
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
+            <img
+              src={`/assets/icons/trophy.png`}
+              alt="trophy"
+              className={cn(
+                'w-14 object-contain p-1',
+                // !badge.unlocked && 'grayscale opacity-30'
+              )}
+            />
             <h3 className="text-xl md:text-2xl font-extrabold text-deep-emerald">
               Sprint Trophies
             </h3>
@@ -75,9 +83,9 @@ export function TrophyGrid({ trophies }: { trophies: TrophyItem[] }) {
             /> */}
           </div>
 
-          <p className="text-sm text-cocoa mt-1">
+          {/* <p className="text-sm text-cocoa mt-1">
             Milestones earned across your preparation journey.
-          </p>
+          </p> */}
         </div>
 
         <div className="shrink-0 text-sm font-bold text-cocoa">

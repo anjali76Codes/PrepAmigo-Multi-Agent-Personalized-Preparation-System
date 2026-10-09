@@ -332,7 +332,7 @@ export function AppHome() {
                           />
 
                           <img
-                            src="/assets/Mascot/star.png"
+                            src="/assets/icons/star.png"
                             alt=""
                             className="
                               relative z-10
@@ -353,7 +353,7 @@ export function AppHome() {
                     icon={
                       <div className="flex items-center justify-center w-8 h-8">
                         <img
-                          src="/assets/Mascot/creds.png"
+                          src="/assets/icons/creds.png"
                           alt=""
                           className="w-7 h-7 object-contain"
                         />
