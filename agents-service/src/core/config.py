@@ -10,7 +10,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from tools.duration import MAX_PLAN_DAYS
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]  # agents-service/
 REPO_ROOT = Path(__file__).resolve().parents[3]     # repository root/
@@ -513,8 +512,8 @@ class Settings:
             raise ValueError("JOB_INTELLIGENCE_LLM_TIMEOUT_SECONDS must be a positive number")
         if self.company_research_max_tool_rounds < 1:
             raise ValueError("COMPANY_RESEARCH_MAX_TOOL_ROUNDS must be at least 1")
-        if not 1 <= self.plan_total_days <= MAX_PLAN_DAYS:
-            raise ValueError(f"PLAN_TOTAL_DAYS must be between 1 and {MAX_PLAN_DAYS}")
+        if not 1 <= self.plan_total_days <= 366:
+            raise ValueError("PLAN_TOTAL_DAYS must be between 1 and 366")
         if self.plan_max_topics < 0 or self.plan_min_days_per_topic < 1:
             raise ValueError("PLAN_MAX_TOPICS must not be negative and PLAN_MIN_DAYS_PER_TOPIC must be at least 1")
         if self.plan_sprint_max_days < 1 or self.planner_days_per_call < 1:

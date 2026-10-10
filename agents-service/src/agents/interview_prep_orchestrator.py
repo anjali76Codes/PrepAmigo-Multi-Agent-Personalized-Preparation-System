@@ -353,39 +353,12 @@ class InterviewPrepOrchestrator:
                 "messages": [AIMessage(content=message)],
             }
         # Resolve requested plan duration in days (e.g. 90 days, 30 days, 60 days)
-        resume_duration_text = resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None)
-        duration_candidates = [resume_duration_text, state.get("workflow_text_input")]
-        requested_days = next(
-            (extract_duration_days(text) or resolve_requested_plan_total_days({}, [text])
-             for text in duration_candidates if text),
-            None,
-        )
-        if requested_days is None:
-            requested_days = resolve_requested_plan_total_days(state, duration_candidates)
-        if requested_days is not None and requested_days > MAX_PLAN_DAYS:
-            message = (
-                f"PrepAmigo currently supports preparation plans of up to {MAX_PLAN_DAYS} days. "
-                f"You requested {requested_days} days. Please choose a duration between "
-                f"{MIN_PLAN_DAYS} and {MAX_PLAN_DAYS} days."
-            )
-            return {
-                "interview_prep_input": normalized,
-                "workflow_status": "awaiting_input",
-                "workflow_clarification_rounds": int(state.get("workflow_clarification_rounds") or 0),
-                "workflow_question": {
-                    "question": message,
-                    "missing_fields": ["plan_days"],
-                    "field_labels": ["Plan duration"],
-                    "reason": "plan_duration_limit",
-                },
-                "workflow_resume_input": {},
-                "messages": [AIMessage(content=message)],
-            }
-
-        extracted_days = (
-            extract_duration_days(resume_duration_text)
-            if resume_duration_text
-            else resolve_plan_total_days(state, duration_candidates)
+        extracted_days = resolve_plan_total_days(
+            state,
+            [
+                state.get("workflow_text_input"),
+                resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None),
+            ],
         )
 
         if missing:
