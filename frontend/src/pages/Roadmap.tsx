@@ -12,6 +12,9 @@ import { DayTaskCard } from '../components/ui/DayTaskCard';
 import type { ResourceItem } from '../components/ui/DayTaskCard';
 import { cn } from '../utils/utils';
 import { buildSprintLevelNodes } from '../lib/sprintLevels';
+import { useAuth } from '../hooks/useAuth';
+import { AgentStreamClient } from '../lib/agentStream/agentStreamClient';
+import { clearActiveAgentRun, getActiveAgentRun } from '../lib/agentRunState';
 
 type StatusFilter = 'All' | 'Pending' | 'Done';
 
@@ -89,7 +92,34 @@ function TreeItem({ last, top, delay = 0, done = false, children }: {
 
 export function Roadmap() {
   const navigate = useNavigate();
-  const { preps, activePrep, setActivePrepId, loadingPreps } = useAppContext();
+  const { user } = useAuth();
+  const { preps, activePrep, setActivePrepId, loadingPreps, refreshPreps } = useAppContext();
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedRun = getActiveAgentRun(user?.id || user?.sub);
+    if (!storedRun) return;
+
+    setActiveRunId(storedRun.runId);
+    const stream = new AgentStreamClient();
+    stream.connectStream(storedRun.runId, {
+      onCompleted: () => {
+        clearActiveAgentRun(user?.id || user?.sub);
+        setActiveRunId(null);
+        void refreshPreps();
+      },
+      onWaiting: () => {
+        clearActiveAgentRun(user?.id || user?.sub);
+        setActiveRunId(null);
+      },
+      onError: () => {
+        clearActiveAgentRun(user?.id || user?.sub);
+        setActiveRunId(null);
+      },
+    });
+
+    return () => stream.close();
+  }, [user, refreshPreps]);
 
   const mappedData = useMemo(() => {
     if (!activePrep) return { sprints: [], sprintDays: [] };
@@ -287,16 +317,32 @@ export function Roadmap() {
   if (!activePrep || sprints.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg text-center">
-        <Mascot variant="dissapointed.png" size="xl" style={{ width: 160, height: 160 }} />
-        <h2 className="text-2xl font-bold text-carbon-900 mt-4 mb-2">No Active Roadmap</h2>
-        <p className="text-sm text-carbon-500 max-w-md mb-6">
-          You don't have an active roadmap yet. Create your personalized preparation plan by chatting with our agent.
-        </p>
-        <Link to="/dashboard/chat">
-          <Button className="gap-2">
-            Start Prep in Chat <Icon name="arrow-forward-outline" />
-          </Button>
-        </Link>
+        {activeRunId ? (
+          <Card variant="default" className="max-w-lg p-7 text-left rounded-3xl border-chrome/20 bg-lavender-100">
+            <div className="flex items-start gap-4">
+              <div className="mt-0.5 rounded-full bg-chrome/10 p-3 text-chrome"><Icon name="time" /></div>
+              <div>
+                <h2 className="text-xl font-bold text-carbon-900">Your preparation plan is still being prepared</h2>
+                <p className="text-sm text-carbon-600 mt-2 leading-relaxed">
+                  The chat connection was interrupted, but PrepAmigo is still working in the background. Please wait a few minutes—your roadmap will appear here automatically. You don’t need to restart the chat or run the pipeline again.
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <>
+            <Mascot variant="dissapointed.png" size="xl" style={{ width: 160, height: 160 }} />
+            <h2 className="text-2xl font-bold text-carbon-900 mt-4 mb-2">No Active Roadmap</h2>
+            <p className="text-sm text-carbon-500 max-w-md mb-6">
+              You don't have an active roadmap yet. Create your personalized preparation plan by chatting with our agent.
+            </p>
+            <Link to="/dashboard/chat">
+              <Button className="gap-2">
+                Start Prep in Chat <Icon name="arrow-forward-outline" />
+              </Button>
+            </Link>
+          </>
+        )}
       </div>
     );
   }
@@ -356,6 +402,15 @@ export function Roadmap() {
               <Mascot variant="Motivated.png" size="lg" />
             </div>
           </Card>
+
+          {activeRunId && (
+            <Card variant="default" className="rounded-2xl border-chrome/20 bg-lavender-100 p-4">
+              <div className="flex items-start gap-3 text-sm text-carbon-700">
+                <Icon name="time" className="mt-0.5 shrink-0 text-chrome" />
+                <p><span className="font-bold text-carbon-900">PrepAmigo is still preparing your plan.</span> The chat connection was interrupted, but the work continues in the background. Please wait a few minutes; this message will disappear when your roadmap is ready.</p>
+              </div>
+            </Card>
+          )}
 
           <div className='max-w-7xl mx-auto space-y-4'>
             {/* Multi-prep switcher */}

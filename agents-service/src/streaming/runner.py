@@ -184,6 +184,8 @@ async def execute_agent_stream(
         run_id, tid, user_id or "anonymous", workflow_mode or "chat",
     )
     config = {"configurable": {"thread_id": tid}}
+    wf_input = workflow_input or {}
+    resume_text = wf_input.get("resume_text") or wf_input.get("candidate_resume_text")
 
     if resume_input is not None:
         inputs: Any = Command(resume=resume_input)
@@ -195,10 +197,11 @@ async def execute_agent_stream(
             except Exception:
                 snapshot = None
         if snapshot is not None and "interview_prep_pause" in (snapshot.next or ()):
-            inputs = Command(resume={"answer": query})
+            resume_payload: dict[str, Any] = {"answer": query}
+            if isinstance(resume_text, str) and resume_text.strip():
+                resume_payload["resume_text"] = resume_text.strip()
+            inputs = Command(resume=resume_payload)
         else:
-            wf_input = workflow_input or {}
-            resume_text = wf_input.get("resume_text") or wf_input.get("candidate_resume_text")
             inputs = {
                 "messages": [HumanMessage(content=query)],
                 "workflow_mode": workflow_mode,

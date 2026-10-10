@@ -180,6 +180,21 @@ def _clarification_question(missing: list[Any], values: dict[str, str]) -> str:
     return "What " + " and ".join(labels) + " should I use?"
 
 
+def _resume_text_from_state(state: dict[str, Any]) -> str:
+    """Return user-provided resume text from any supported workflow input."""
+    task_context = state.get("task_context") or {}
+    workflow_input = state.get("workflow_input") or {}
+    resume_input = state.get("workflow_resume_input") or {}
+    candidates = (
+        task_context.get("candidate_resume_text"),
+        workflow_input.get("resume_text"),
+        workflow_input.get("candidate_resume_text"),
+        resume_input.get("resume_text") if isinstance(resume_input, dict) else None,
+        resume_input.get("candidate_resume_text") if isinstance(resume_input, dict) else None,
+    )
+    return next((str(value).strip() for value in candidates if isinstance(value, str) and value.strip()), "")
+
+
 class InterviewPrepOrchestrator:
     name = "interview_prep"
 
@@ -243,9 +258,18 @@ class InterviewPrepOrchestrator:
         current = state.get("interview_prep_input") or state.get("workflow_input") or {}
         normalized = workflow_fields.normalize_workflow_fields(current)
         extracted_from_text = False
+        candidate_resume_text = _resume_text_from_state(state)
 
         resume = state.get("workflow_resume_input")
         pending_question = state.get("workflow_question") or {}
+        if pending_question.get("reason") == "resume_required" and not _resume_text_from_state(state):
+            return {
+                "workflow_status": "awaiting_input",
+                "workflow_question": pending_question,
+                "workflow_clarification_rounds": int(state.get("workflow_clarification_rounds") or 0),
+                "workflow_resume_input": {},
+                "messages": [AIMessage(content=pending_question.get("question") or "Please upload your resume to continue.")],
+            }
         if pending_question.get("reason") == "result_clarification":
             answer = resume if isinstance(resume, str) else (
                 resume.get("answer") if isinstance(resume, dict) else None
@@ -291,6 +315,7 @@ class InterviewPrepOrchestrator:
                 extracted_from_text = True
             else:
                 normalized = _merge_input(normalized, resume)
+            candidate_resume_text = _resume_text_from_state({**state, "workflow_resume_input": resume})
         elif isinstance(state.get("workflow_text_input"), str) and state["workflow_text_input"].strip():
             extracted = await self._extract_fields(state, state["workflow_text_input"])
             normalized = _merge_input(normalized, extracted)
@@ -338,6 +363,25 @@ class InterviewPrepOrchestrator:
                 res["plan_total_days"] = extracted_days
             return res
 
+        if not _resume_text_from_state(state):
+            question = (
+                "Please upload your resume so I can understand your experience and personalize your skill-gap analysis. "
+                "You can attach it in this chat or save it in your Profile settings."
+            )
+            return {
+                "interview_prep_input": normalized,
+                "workflow_status": "awaiting_input",
+                "workflow_clarification_rounds": int(state.get("workflow_clarification_rounds") or 0),
+                "workflow_question": {
+                    "question": question,
+                    "missing_fields": [],
+                    "field_labels": ["Resume"],
+                    "reason": "resume_required",
+                },
+                "workflow_resume_input": {},
+                "messages": [AIMessage(content=question)],
+            }
+
         res = {
             "interview_prep_input": normalized,
             "workflow_status": "running",
@@ -345,6 +389,10 @@ class InterviewPrepOrchestrator:
             "workflow_question": None,
             "workflow_resume_input": {},
         }
+        if candidate_resume_text:
+            task_context = dict(state.get("task_context") or {})
+            task_context["candidate_resume_text"] = candidate_resume_text
+            res["task_context"] = task_context
         if extracted_days:
             res["plan_total_days"] = extracted_days
         return res
@@ -580,27 +628,9 @@ class InterviewPrepOrchestrator:
         has_user_resume = bool(resume_text.strip())
 
         if not has_user_resume:
-            await dispatch_event(
-                make_event("interview_prep", "skill_gap_analysis", "running", {
-                    "message": (
-                        "No resume found in your profile or attached in chat. "
-                        "Building your preparation roadmap using a general software engineering baseline. "
-                        "Upload your resume in Profile settings for personalized skill gap analysis."
-                    ),
-                    "has_resume": False,
-                    "no_resume_warning": True,
-                }),
-                None,
-            )
-            # Baseline resume so skill-gap analysis and planner can build a comprehensive study plan
-            resume_text = (
-                f"Candidate Software Engineer\n"
-                f"Target Role: {role}\n"
-                f"Skills: Core Programming, Software Engineering Fundamentals, Git, Basic System Design\n"
-                f"Experience: Software Engineer with 2 years of general development experience.\n"
-                f"Education: Bachelor's Degree in Computer Science\n"
-            )
-            task_context["candidate_resume_text"] = resume_text
+            # prepare() should pause before reaching this stage. Keep this guard so
+            # direct callers cannot accidentally run personalized analysis without a resume.
+            raise ValueError("A resume is required before skill-gap analysis can run.")
 
         # Merge upstream results into task_context so downstream nodes can read them
         if company_profile:
