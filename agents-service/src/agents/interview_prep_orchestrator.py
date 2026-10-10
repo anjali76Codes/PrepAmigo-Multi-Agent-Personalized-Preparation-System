@@ -29,7 +29,7 @@ from observability.timing import log_failure
 from storage.llm_cache import forget_response
 from storage.json_store import save_json
 from tools.company_research_tools import COMPANY_RESEARCH_TOOLS
-from tools.duration import MIN_PLAN_DAYS, MAX_PLAN_DAYS, extract_duration_days, resolve_plan_total_days, resolve_requested_plan_total_days
+from tools.duration import extract_duration_days, extract_requested_duration_days, resolve_plan_total_days
 from tools.plan_db_sync import sync_generated_plan_to_db
 from graph.knowledge_graph import best_effort, get_knowledge_graph, record_in_background
 from tools.plan_builder import key_concepts, plan_topics, schedule
@@ -325,21 +325,19 @@ class InterviewPrepOrchestrator:
         if missing and state.get("messages") and can_extract_conversation and not extracted_from_text:
             normalized = _merge_input(normalized, await self._extract_fields(state))
             missing = workflow_fields.missing_required_fields(normalized)
-        # Resolve requested plan duration in days (e.g. 90 days, 30 days, 60 days)
-        resume_duration_text = resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None)
-        duration_candidates = [resume_duration_text, state.get("workflow_text_input")]
+        duration_candidates = [
+            state.get("workflow_text_input"),
+            resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None),
+            *[_message_text(message) for message in state.get("messages", [])[-5:]],
+        ]
         requested_days = next(
-            (extract_duration_days(text) or resolve_requested_plan_total_days({}, [text])
-             for text in duration_candidates if text),
+            (extract_requested_duration_days(text) for text in duration_candidates if text),
             None,
         )
-        if requested_days is None:
-            requested_days = resolve_requested_plan_total_days(state, duration_candidates)
-        if requested_days is not None and requested_days > MAX_PLAN_DAYS:
+        if requested_days is not None and requested_days > 60:
             message = (
-                f"PrepAmigo currently supports preparation plans of up to {MAX_PLAN_DAYS} days. "
-                f"You requested {requested_days} days. Please choose a duration between "
-                f"{MIN_PLAN_DAYS} and {MAX_PLAN_DAYS} days."
+                "PrepAmigo currently supports preparation plans of up to 60 days. "
+                f"You requested {requested_days} days. Please choose a duration between 1 and 60 days."
             )
             return {
                 "interview_prep_input": normalized,
@@ -354,11 +352,13 @@ class InterviewPrepOrchestrator:
                 "workflow_resume_input": {},
                 "messages": [AIMessage(content=message)],
             }
-
-        extracted_days = (
-            extract_duration_days(resume_duration_text)
-            if resume_duration_text
-            else resolve_plan_total_days(state, duration_candidates)
+        # Resolve requested plan duration in days (e.g. 90 days, 30 days, 60 days)
+        extracted_days = resolve_plan_total_days(
+            state,
+            [
+                state.get("workflow_text_input"),
+                resume if isinstance(resume, str) else (resume.get("answer") if isinstance(resume, dict) else None),
+            ],
         )
 
         if missing:
