@@ -10,8 +10,7 @@ import { Input } from '../components/ui/Input';
 import { Logo } from '../components/ui/Logo';
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../hooks/useAuth";
-
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { apiUrl } from "../lib/api/url";
 
 async function handleGoogleAuth(
   credentialResponse: any,
@@ -24,7 +23,7 @@ async function handleGoogleAuth(
   setError(null);
   setLoading(true);
   try {
-    const res = await fetch(`${API_URL}/api/auth/google`, {
+    const res = await fetch(apiUrl("/api/auth/google"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -129,7 +128,7 @@ export function Auth() {
         ? { email, password }
         : { name, email, password };
 
-      const res = await fetch(`${API_URL}${endpoint}`, {
+      const res = await fetch(apiUrl(endpoint), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

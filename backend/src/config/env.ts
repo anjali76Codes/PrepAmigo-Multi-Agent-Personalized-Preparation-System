@@ -17,7 +17,11 @@ const envSchema = z.object({
   JWT_SECRET: z.string(),
   FRONTEND_URL: z.string().optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
-  AGENTS_SERVICE_URL: z.string().default("http://localhost:8000"),
+  AGENTS_SERVICE_URL: z
+    .string()
+    .url()
+    .transform((value) => value.replace(/\/+$/, ""))
+    .default("http://localhost:8000"),
   SERPAPI_API_KEY: z.string().optional().default(""),
   GEMINI_API_KEY: z.string().optional().default(""),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
@@ -56,6 +60,14 @@ if (!_env.success) {
 
 if ((_env.data.ENABLE_AUTH || _env.data.NODE_ENV === "production") && !_env.data.JWT_SECRET.trim()) {
   console.error("JWT_SECRET must be set when authentication is enabled or NODE_ENV=production.");
+  process.exit(1);
+}
+
+if (
+  _env.data.NODE_ENV === "production" &&
+  ["localhost", "127.0.0.1", "::1", "[::1]"].includes(new URL(_env.data.AGENTS_SERVICE_URL).hostname)
+) {
+  console.error("AGENTS_SERVICE_URL must point to the deployed agent service when NODE_ENV=production.");
   process.exit(1);
 }
 

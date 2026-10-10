@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { featureFlags } from "../config/featureFlags";
+import { apiUrl } from "../lib/api/url";
 
 export type ExperienceLevel = "student" | "fresher" | "experienced";
 
@@ -47,8 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/auth/me`, {
+      const res = await fetch(apiUrl("/api/auth/me"), {
         credentials: "include",
       });
       if (res.ok) {
@@ -75,8 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback(async (profileData: Partial<UserProfile>): Promise<boolean> => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/auth/profile`, {
+      const res = await fetch(apiUrl("/api/auth/profile"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -99,8 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = useCallback(async (confirmation: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/auth/account`, {
+      const res = await fetch(apiUrl("/api/auth/account"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -128,8 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async (): Promise<boolean> => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/auth/logout`, {
+      const res = await fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
         credentials: "include",
       });

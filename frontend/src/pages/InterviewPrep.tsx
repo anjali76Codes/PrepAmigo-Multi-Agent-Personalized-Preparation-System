@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../components/ui/Icon";
 import { toolCallText } from "../lib/agentStream/toolCall";
+import { apiUrl } from "../lib/api/url";
 
 type WorkflowStatus =
   | "idle"
@@ -32,10 +33,6 @@ type WorkflowResult = {
 };
 type ChatTurn = { speaker: "user" | "assistant"; text: string };
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
-).replace(/\/$/, "");
-
 export function InterviewPrep() {
   const [answer, setAnswer] = useState("");
   const [chatInput, setChatInput] = useState("");
@@ -53,7 +50,7 @@ export function InterviewPrep() {
 
   const listenToRun = (runId: string) => {
     sourceRef.current?.close();
-    const source = new EventSource(`${API_URL}/api/agent/stream/${runId}`, {
+    const source = new EventSource(apiUrl(`/api/agent/stream/${runId}`), {
       withCredentials: true,
     });
     sourceRef.current = source;
@@ -157,7 +154,7 @@ export function InterviewPrep() {
       const endpoint = resume
         ? "/api/agent/interview-prep/resume"
         : "/api/agent/interview-prep";
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(apiUrl(endpoint), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

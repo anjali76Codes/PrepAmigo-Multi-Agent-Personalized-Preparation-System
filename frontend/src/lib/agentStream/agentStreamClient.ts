@@ -1,4 +1,5 @@
 import type { AgentStreamEvent, EventType, StreamCallbacks } from "./types";
+import { API_BASE_URL, apiUrl } from "../api/url";
 
 export class AgentStreamClient {
   private baseUrl: string;
@@ -10,7 +11,7 @@ export class AgentStreamClient {
   private isTerminated = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_URL || "http://localhost:3000") {
+  constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
@@ -35,7 +36,7 @@ export class AgentStreamClient {
 
     let response: Response;
     if (isDirectAgentService) {
-      response = await fetch(`${this.baseUrl}/internal/agent/execute`, {
+      response = await fetch(this.endpoint("/internal/agent/execute"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +49,7 @@ export class AgentStreamClient {
       });
     } else {
       try {
-        response = await fetch(`${this.baseUrl}/api/agent/run`, {
+        response = await fetch(this.endpoint("/api/agent/run"), {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -56,7 +57,7 @@ export class AgentStreamClient {
         });
       } catch {
         // Fallback directly to Python agents-service if Node gateway is not running
-        response = await fetch(`${this.baseUrl}/internal/agent/execute`, {
+        response = await fetch(this.endpoint("/internal/agent/execute"), {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -70,7 +71,7 @@ export class AgentStreamClient {
       }
 
       if (!response.ok && response.status === 404) {
-        response = await fetch(`${this.baseUrl}/internal/agent/execute`, {
+        response = await fetch(this.endpoint("/internal/agent/execute"), {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -112,7 +113,7 @@ export class AgentStreamClient {
     this.activeRunId = runId;
     this.close();
 
-    const streamUrl = new URL(`${this.baseUrl}/api/agent/stream/${runId}`);
+    const streamUrl = new URL(this.endpoint(`/api/agent/stream/${runId}`), window.location.origin);
     if (this.lastEventId) {
       streamUrl.searchParams.set("lastEventId", this.lastEventId);
     }
@@ -221,5 +222,9 @@ export class AgentStreamClient {
 
   public getRunId(): string | null {
     return this.activeRunId;
+  }
+
+  private endpoint(path: string): string {
+    return this.baseUrl ? `${this.baseUrl}${path}` : apiUrl(path);
   }
 }

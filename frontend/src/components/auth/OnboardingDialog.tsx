@@ -4,6 +4,7 @@ import { Icon } from "../ui/Icon";
 import { Button } from "../ui/Button";
 import { Mascot } from "../ui/Mascot";
 import { useAuth, type ExperienceLevel, type UserProfile } from "../../hooks/useAuth";
+import { apiUrl } from "../../lib/api/url";
 
 interface OnboardingDialogProps {
   isOpen: boolean;
@@ -87,6 +88,10 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
       setResumeError("Please upload a PDF, DOCX, TXT, or MD file.");
       return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setResumeError("Please upload a resume smaller than 5MB.");
+      return;
+    }
 
     setResumeError(null);
     setIsUploadingResume(true);
@@ -109,22 +114,29 @@ export function OnboardingDialog({ isOpen, onClose }: OnboardingDialogProps) {
         });
 
         const base64 = await base64Promise;
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const response = await fetch(`${apiUrl}/api/agent/parse-resume`, {
+        const response = await fetch(apiUrl("/api/agent/parse-resume"), {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filename: name, base64Data: base64 }),
         });
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({ error: "Failed to extract text" }));
-          throw new Error(errData.error || `Server returned ${response.status}`);
+        if (!response.headers.get("content-type")?.includes("application/json")) {
+          if (response.status >= 500) {
+            throw new Error(`Resume parsing service is unavailable (${response.status}). Please try again shortly.`);
+          }
+          throw new Error("The API returned a non-JSON response. Check that VITE_API_URL points to the backend API.");
         }
 
         const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.detail || `Server returned ${response.status}`);
+        }
+        if (typeof data.text !== "string" || !data.text.trim()) {
+          throw new Error("No text could be extracted from this resume.");
+        }
         setResumeFilename(name);
-        setResumeText(data.text || "");
+        setResumeText(data.text);
       }
     } catch (err: any) {
       console.error("Resume upload failed:", err);

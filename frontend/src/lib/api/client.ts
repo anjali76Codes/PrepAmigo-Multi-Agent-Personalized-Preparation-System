@@ -1,8 +1,7 @@
-const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+import { apiUrl } from "./url";
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = path.startsWith("http") ? path : `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
-  const response = await fetch(url, {
+  const response = await fetch(apiUrl(path), {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",

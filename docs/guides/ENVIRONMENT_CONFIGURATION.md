@@ -9,6 +9,27 @@ This guide explains the environment files and switches that affect service start
 - The variable names in `agents-service/.env` and `agents-service/.env.example` should stay in sync. Values may differ: the local file can contain developer credentials and local overrides, while the example contains only safe defaults/placeholders.
 - Do not paste or commit `.env` contents into tickets, chat, logs, or example files.
 
+## Frontend API URL
+
+The Vite frontend uses `VITE_API_URL` as the Node.js API gateway origin. For local
+development, `http://localhost:3000` is the default. For a separately hosted
+production frontend (for example, Vercel) and backend (for example, Render), set
+`VITE_API_URL` in the frontend host's **build-time** environment to the backend's
+public base URL, with no trailing slash, then redeploy the frontend. Vite embeds
+`VITE_*` values into the built assets; changing a runtime-only variable will not
+update an already-built frontend.
+
+When the frontend and backend share an origin and that host routes `/api` to
+the backend, the production default can use relative `/api` routes. For separate
+hosts, set the backend URL explicitly. Do not set the production value to
+`localhost`.
+
+The backend also requires `AGENTS_SERVICE_URL` to point to the deployed Python
+agent service in production. The local default (`http://localhost:8000`) is
+development-only; the backend now refuses to start in production if this still
+resolves to localhost. The resume parser is one of the backend routes that
+depends on this service.
+
 ## Python Agent Service
 
 The template is `agents-service/.env.example`. Important variables:

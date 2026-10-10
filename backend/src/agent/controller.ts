@@ -544,21 +544,56 @@ export async function runAgentHandler(
 export async function parseResumeHandler(req: Request, res: Response): Promise<void> {
   try {
     const { filename, base64Data } = req.body;
-    if (!base64Data || !filename) {
+    if (typeof filename !== "string" || typeof base64Data !== "string" || !filename || !base64Data) {
       res.status(400).json({ success: false, error: "Missing filename or base64Data" });
       return;
     }
-    const response = await fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/extract-resume`, {
-      method: "POST",
-      headers: pythonAuthHeaders(req as unknown as AuthenticatedRequest),
-      body: JSON.stringify({ filename, base64_data: base64Data }),
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      res.status(response.status).json({ success: false, error: errText });
+    if (base64Data.length > 7_000_000) {
+      res.status(413).json({ success: false, error: "Resume file must be 5MB or smaller." });
       return;
     }
-    const data = await response.json();
+
+    let parserResponse: Awaited<ReturnType<typeof fetch>>;
+    try {
+      parserResponse = await fetch(`${config.AGENTS_SERVICE_URL}/internal/agent/extract-resume`, {
+        method: "POST",
+        headers: pythonAuthHeaders(req as unknown as AuthenticatedRequest),
+        body: JSON.stringify({ filename, base64_data: base64Data }),
+      });
+    } catch (error: any) {
+      logger.error("[Agent Gateway] Resume parser service request failed:", error);
+      res.status(502).json({ success: false, error: "Resume parsing service is unavailable. Please try again shortly." });
+      return;
+    }
+
+    if (!parserResponse.headers.get("content-type")?.includes("application/json")) {
+      logger.error("[Agent Gateway] Resume parser returned a non-JSON response", {
+        status: parserResponse.status,
+        contentType: parserResponse.headers.get("content-type"),
+      });
+      res.status(502).json({ success: false, error: "Resume parser returned an invalid response. Check the configured agents service URL." });
+      return;
+    }
+
+    const data: unknown = await parserResponse.json().catch((error: unknown) => {
+      logger.error("[Agent Gateway] Resume parser returned invalid JSON:", error);
+      return null;
+    });
+    if (!parserResponse.ok) {
+      const detail =
+        data && typeof data === "object" && "detail" in data && typeof data.detail === "string"
+          ? data.detail
+          : data && typeof data === "object" && "error" in data && typeof data.error === "string"
+            ? data.error
+            : "Resume parsing failed.";
+      res.status(parserResponse.status >= 500 ? 502 : parserResponse.status).json({ success: false, error: detail });
+      return;
+    }
+    if (!data || typeof data !== "object" || !("text" in data) || typeof data.text !== "string") {
+      logger.error("[Agent Gateway] Resume parser response is missing extracted text");
+      res.status(502).json({ success: false, error: "Resume parser returned an invalid response. Please try again shortly." });
+      return;
+    }
     res.json(data);
   } catch (error: any) {
     logger.error("[Agent Gateway] Failed to parse resume:", error);
