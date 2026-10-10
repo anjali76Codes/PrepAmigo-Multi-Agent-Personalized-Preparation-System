@@ -14,6 +14,7 @@ import { AgentStreamClient } from '../lib/agentStream/agentStreamClient';
 import type { AgentStreamEvent } from '../lib/agentStream/types';
 import { toolCallText } from '../lib/agentStream/toolCall';
 import { Mascot } from '../components/ui/Mascot';
+import { clearActiveAgentRun, getActiveAgentRun, rememberActiveAgentRun } from '../lib/agentRunState';
 
 const PIPELINE_STEPS: JourneyStep[] = [
   { agent: 'Supervisor', text: 'Analyzing your goal and routing…' },
@@ -36,9 +37,11 @@ export function Chat() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [threadId, setThreadId] = useState<string>(() => `chat-${crypto.randomUUID()}`);
 
   const clientRef = useRef<AgentStreamClient | null>(null);
+  const reconnectJourneyIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     clientRef.current = new AgentStreamClient();
@@ -46,6 +49,73 @@ export function Chat() {
       clientRef.current?.close();
     };
   }, []);
+
+  // A refresh loses the in-memory conversation, but the backend run may still be active.
+  // Reattach to it so the composer stays locked and a completed replay can unlock the page.
+  useEffect(() => {
+    const storedRun = getActiveAgentRun(user?.id || user?.sub);
+    if (!storedRun || !clientRef.current) return;
+
+    setActiveRunId(storedRun.runId);
+    setIsProcessing(true);
+    if (storedRun.threadId) setThreadId(storedRun.threadId);
+    const reconnectJourneyId = uid();
+    reconnectJourneyIdRef.current = reconnectJourneyId;
+    setMessages([
+      ...(storedRun.query ? [{ id: uid(), sender: 'user' as const, content: storedRun.query }] : []),
+      {
+        id: reconnectJourneyId,
+        sender: 'agent' as const,
+        content: 'Reconnecting to your preparation plan…',
+        scenario: 'agent-journey' as const,
+        data: { steps: PIPELINE_STEPS, activeIndex: 0 },
+      },
+    ]);
+    clientRef.current.connectStream(storedRun.runId, {
+      onEvent: (event) => {
+        if (event.type === 'ping') return;
+        const journeyId = reconnectJourneyIdRef.current;
+        if (!journeyId) return;
+        const stepIndex = mapEventToStepIndex(event);
+        setMessages((prev) => prev.map((message) => {
+          if (message.id !== journeyId || message.scenario !== 'agent-journey') return message;
+          const currentIndex = Number(message.data?.activeIndex) || 0;
+          return {
+            ...message,
+            data: {
+              ...message.data,
+              // SSE replay/live events can arrive out of order. Never move the
+              // visible journey back to an earlier pipeline stage.
+              activeIndex: Math.max(
+                currentIndex,
+                Math.min(stepIndex, PIPELINE_STEPS.length - 1),
+              ),
+            },
+          };
+        }));
+      },
+      onCompleted: () => {
+        clearActiveAgentRun(user?.id || user?.sub);
+        // A refreshed chat may reconnect after the backend has already finished.
+        // Treat that exactly like the completed-plan flow and return the user to the dashboard.
+        navigate('/dashboard', { replace: true });
+      },
+      onWaiting: () => {
+        clearActiveAgentRun(user?.id || user?.sub);
+        setActiveRunId(null);
+        setIsProcessing(false);
+        reconnectJourneyIdRef.current = null;
+      },
+      onError: () => {
+        clearActiveAgentRun(user?.id || user?.sub);
+        setActiveRunId(null);
+        setIsProcessing(false);
+        reconnectJourneyIdRef.current = null;
+      },
+    });
+
+    return () => clientRef.current?.close();
+  }, [user]);
 
   const { refreshPreps } = useAppContext();
 
@@ -91,7 +161,7 @@ export function Chat() {
 
   const handleSend = async (text: string, attachedFile?: AttachedFile | null) => {
     const trimmed = text.trim();
-    if (!trimmed || processingRef.current) return;
+    if (!trimmed || processingRef.current || activeRunId || getActiveAgentRun(user?.id || user?.sub)) return;
 
     // ── AUTH CHECK ────────────────────────────────────────────────────────
     // If auth is enabled AND user is unauthenticated, DO NOT CALL API!
@@ -128,7 +198,11 @@ export function Chat() {
       setMessages((prev) =>
         prev.map((m) => {
           if (m.id !== journeyId) return m;
-          const index = Math.min(requested ?? (Number(m.data?.activeIndex) || 0), PIPELINE_STEPS.length - 1);
+          const currentIndex = Number(m.data?.activeIndex) || 0;
+          const index = Math.max(
+            currentIndex,
+            Math.min(requested ?? currentIndex, PIPELINE_STEPS.length - 1),
+          );
           return {
             ...m,
             data: {
@@ -150,7 +224,7 @@ export function Chat() {
         clientRef.current = new AgentStreamClient();
       }
 
-      await clientRef.current.startAgentRun(
+      const runId = await clientRef.current.startAgentRun(
         trimmed,
         {
           onEvent: (event) => {
@@ -188,6 +262,8 @@ export function Chat() {
           },
           onWaiting: (payload) => {
             // ReAct evaluator paused for clarification
+            clearActiveAgentRun(user?.id || user?.sub);
+            setActiveRunId(null);
             setMessages((prev) => prev.filter((m) => m.id !== journeyId));
             const questionText =
               (typeof payload?.question === 'string'
@@ -202,6 +278,7 @@ export function Chat() {
             processingRef.current = false;
           },
           onCompleted: (payload) => {
+            clearActiveAgentRun(user?.id || user?.sub);
             setMessages((prev) => prev.filter((m) => m.id !== journeyId));
             const messageText =
               payload?.message ||
@@ -234,6 +311,8 @@ export function Chat() {
             processingRef.current = false;
           },
           onError: (err) => {
+            clearActiveAgentRun(user?.id || user?.sub);
+            setActiveRunId(null);
             setMessages((prev) => prev.filter((m) => m.id !== journeyId));
             const errorMsg =
               err instanceof Error
@@ -252,6 +331,9 @@ export function Chat() {
         // Chat uploaded file text supersedes stored profile resume
         attachedFile?.text || user?.profile?.resume_text
       );
+      // Keep the run recoverable if the chat page is refreshed while the pipeline is running.
+      rememberActiveAgentRun(runId, user?.id || user?.sub, { query: trimmed, threadId });
+      setActiveRunId(runId);
     } catch (err: any) {
       setMessages((prev) => prev.filter((m) => m.id !== journeyId));
       addAgentMessage({
@@ -322,6 +404,14 @@ export function Chat() {
               : 'flex-1 justify-center items-center px-4 sm:px-8 overflow-y-auto'
           )}
         >
+          {activeRunId && !hasStarted && (
+            <div className="w-full max-w-2xl mb-6 rounded-2xl border border-chrome/20 bg-lavender-100 p-4 text-sm text-carbon-700">
+              <div className="flex items-start gap-3">
+                <Icon name="time" className="mt-0.5 shrink-0 text-chrome" />
+                <p><span className="font-bold text-carbon-900">Your preparation plan is still being prepared.</span> The chat connection was interrupted, but PrepAmigo is still working. Please wait a few minutes; you don’t need to start another chat.</p>
+              </div>
+            </div>
+          )}
           {hasStarted && (
             <div className="absolute top-0 left-0 w-full h-12 -translate-y-full bg-gradient-to-t from-bg to-transparent pointer-events-none" />
           )}
