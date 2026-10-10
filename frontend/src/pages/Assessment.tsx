@@ -106,13 +106,13 @@ function AssessmentHeader({
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
                                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="overflow-hidden"
+                            // className="overflow-hidden"
                             >
                                 <Link to="/dashboard" className="inline-flex">
                                     <Butt
                                         variant="outline"
                                         size="sm"
-                                        className="-ml-3 mb-3 gap-1.5 border-none font-bold text-chrome hover:bg-surface/50"
+                                        className="-ml-3 mb-3 gap-1.5 border-none font-bold text-chrome"
                                     >
                                         <Icon name="arrow-back" />
                                         Dashboard

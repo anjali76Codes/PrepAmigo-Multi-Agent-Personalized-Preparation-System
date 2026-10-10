@@ -66,7 +66,18 @@ export function ResourcePackHome() {
           {/* Header (unchanged UI) */}
           <motion.div variants={rise}>
             <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center gap-6">
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 space-y-4">
+                {/* Back to Dashboard */}
+                <Link to="/dashboard">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 -ml-3 font-bold border-none text-chrome mb-4"
+                  >
+                    <Icon name="arrow-back" />
+                    Dashboard
+                  </Button>
+                </Link>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-carbon-900 mb-2">Resource Pack</h1>
                 <p className="text-base md:text-lg text-carbon-700 font-medium max-w-xl">
                   All your sprint notes, links and references in one place.
