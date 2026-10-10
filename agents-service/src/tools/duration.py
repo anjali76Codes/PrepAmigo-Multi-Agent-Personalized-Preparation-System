@@ -3,12 +3,29 @@ import re
 from typing import Any
 
 MIN_PLAN_DAYS = 1
-MAX_PLAN_DAYS = 365
+MAX_PLAN_DAYS = 60
+
+
+def extract_requested_duration_days(text: Any) -> int | None:
+    """Extract a requested duration without applying the plan limit."""
+    if not text or not isinstance(text, str):
+        return None
+    patterns = (
+        (r"\b(\d{1,3})\s*(?:-| )?days?\b", 1),
+        (r"\b(\d{1,2})\s*(?:-| )?months?\b", 30),
+        (r"\b(\d{1,2})\s*(?:-| )?weeks?\b", 7),
+    )
+    for pattern, multiplier in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            value = int(match.group(1)) * multiplier
+            return value if value >= MIN_PLAN_DAYS else None
+    return None
 
 
 def extract_duration_days(text: Any) -> int | None:
     """Extracts requested preparation duration in days from free-form text.
-    Handles days, weeks, months with boundaries [1, 365].
+    Handles days, weeks, months with boundaries [1, 60].
     Examples:
       - "make a 90 day plan" -> 90
       - "90 days" -> 90

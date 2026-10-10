@@ -432,19 +432,19 @@ function extractPlanDays(text: string | undefined): number | undefined {
   const dayMatch = text.match(/\b(\d{1,3})\s*(?:-| )?days?\b/i);
   if (dayMatch && dayMatch[1]) {
     const val = parseInt(dayMatch[1], 10);
-    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+    if (!isNaN(val) && val >= 1 && val <= 60) return val;
   }
   // Match "3 months", "2 months", "1 month"
   const monthMatch = text.match(/\b(\d{1,2})\s*(?:-| )?months?\b/i);
   if (monthMatch && monthMatch[1]) {
     const val = parseInt(monthMatch[1], 10) * 30;
-    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+    if (!isNaN(val) && val >= 1 && val <= 60) return val;
   }
   // Match "6 weeks", "4 weeks", "1 week"
   const weekMatch = text.match(/\b(\d{1,2})\s*(?:-| )?weeks?\b/i);
   if (weekMatch && weekMatch[1]) {
     const val = parseInt(weekMatch[1], 10) * 7;
-    if (!isNaN(val) && val >= 1 && val <= 365) return val;
+    if (!isNaN(val) && val >= 1 && val <= 60) return val;
   }
   return undefined;
 }
