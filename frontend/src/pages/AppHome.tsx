@@ -58,14 +58,22 @@ function SprintsLoader() {
   );
 }
 
+function Skeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`rounded-md bg-carbon-500/15 animate-pulse ${className}`} />
+  );
+}
+
 function Stat({
   label,
   value,
   icon,
+  loading,
 }: {
   label: string;
   value: string | number;
   icon?: React.ReactNode;
+  loading?: boolean;
 }) {
   return (
     <div className="bg-surface border border-border rounded-2xl px-4 py-3 min-w-[110px] h-full">
@@ -77,9 +85,13 @@ function Stat({
         </div>
       </div>
 
-      <div className="text-xl font-extrabold text-carbon-900 mt-0.5">
-        {value}
-      </div>
+      {loading ? (
+        <Skeleton className="mt-1.5 h-6 w-14" />
+      ) : (
+        <div className="text-xl font-extrabold text-carbon-900 mt-0.5">
+          {value}
+        </div>
+      )}
     </div>
   );
 }
@@ -93,6 +105,10 @@ export function AppHome() {
 
   const [gemReward, setGemReward] = useState<GemRewardData | null>(null);
 
+  // dataLoaded: the requests have finished (drives the header skeletons)
+  // sprintsReady: requests finished AND the minimum loader time has passed
+  // sprintsShown: the sprint cards have finished their entrance animation
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [sprintsReady, setSprintsReady] = useState(false);
   const [sprintsShown, setSprintsShown] = useState(false);
   const [queuedReward, setQueuedReward] = useState<GemRewardData | null>(null);
@@ -123,7 +139,6 @@ export function AppHome() {
         setCollapsedSprints((prev) => ({ ...prev, [sprintId]: false }));
       }
 
-      // Start the header at the old XP total while the reward animation plays.
       // Start the header at the old totals while the reward animation plays.
       setPendingXp(reward.xp);
       setPendingCredits(reward.credits ?? 0);
@@ -141,7 +156,6 @@ export function AppHome() {
     }
   }, [sprintsShown, queuedReward]);
 
-
   useEffect(() => {
     let cancelled = false;
 
@@ -158,6 +172,12 @@ export function AppHome() {
       refreshPreps().catch(console.error),
     ]);
 
+    // Header skeletons go away as soon as the data is in (no minimum delay)
+    load.then(() => {
+      if (!cancelled) setDataLoaded(true);
+    });
+
+    // Sprints wait for the data AND the minimum loader time
     Promise.all([load, minDelay]).then(() => {
       if (!cancelled) setSprintsReady(true);
     });
@@ -271,6 +291,9 @@ export function AppHome() {
   const daysLeft = Math.max(0, totalDays - completedCount);
   const missedTasks = 0;
 
+  // Only show skeletons when there is nothing cached to show yet.
+  const headerLoading = !dataLoaded && !activePrep;
+
   const sprints = (activePrep?.roadmap?.sprints || []).map(
     (s: any, idx: number) => {
       const days = s.days || [];
@@ -360,15 +383,22 @@ export function AppHome() {
                   Welcome home!
                 </h1>
 
-                <p className="text-base md:text-lg text-carbon-700 font-medium max-w-xl">
-                  {activePrep
-                    ? `You're preparing for ${activePrep.learningContext?.targetRole ||
-                    'your target role'
-                    } at ${activePrep.learningContext?.companyInfo?.name ||
-                    'your target company'
-                    }.`
-                    : 'Ready to kick off your preparation? PrepAmigo is ready to build your custom roadmap.'}
-                </p>
+                {headerLoading ? (
+                  <div className="space-y-2 max-w-xl">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                ) : (
+                  <p className="text-base md:text-lg text-carbon-700 font-medium max-w-xl">
+                    {activePrep
+                      ? `You're preparing for ${activePrep.learningContext?.targetRole ||
+                      'your target role'
+                      } at ${activePrep.learningContext?.companyInfo?.name ||
+                      'your target company'
+                      }.`
+                      : 'Ready to kick off your preparation? PrepAmigo is ready to build your custom roadmap.'}
+                  </p>
+                )}
               </div>
 
               <div className="shrink-0 flex flex-col gap-3">
@@ -378,6 +408,7 @@ export function AppHome() {
                   <Stat
                     label="Progress"
                     value={`${progressPct}%`}
+                    loading={headerLoading}
                   />
 
                   {/* Total XP */}
@@ -385,6 +416,7 @@ export function AppHome() {
                     <Stat
                       label="Total XP"
                       value={displayedXp.toLocaleString()}
+                      loading={headerLoading}
                       icon={
                         <div
                           data-xp-icon
@@ -422,6 +454,7 @@ export function AppHome() {
                     <Stat
                       label="AI Credits"
                       value={displayedCredits.toLocaleString()}
+                      loading={headerLoading}
                       icon={
                         <div
                           data-credits-icon
@@ -444,12 +477,18 @@ export function AppHome() {
 
                 <div className="bg-surface border border-border rounded-2xl px-4 py-3 flex items-center gap-2">
                   <Icon name="calendar" className="text-chrome" />
-                  <span className="font-bold text-carbon-900">
-                    {daysLeft} days left
-                  </span>
-                  <span className="text-sm text-carbon-500">
-                    in your roadmap
-                  </span>
+                  {headerLoading ? (
+                    <Skeleton className="h-5 w-32" />
+                  ) : (
+                    <>
+                      <span className="font-bold text-carbon-900">
+                        {daysLeft} days left
+                      </span>
+                      <span className="text-sm text-carbon-500">
+                        in your roadmap
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -576,7 +615,6 @@ export function AppHome() {
                                   <h3 className="font-bold text-lg text-carbon-900">
                                     {sprint.title}
                                   </h3>
-
                                 </div>
 
                                 <p className="text-sm text-carbon-500">
@@ -715,7 +753,7 @@ export function AppHome() {
                 </Link>
               ))}
 
-              {!activePrep && (
+              {!headerLoading && !activePrep && (
                 <Card
                   variant="default"
                   className="bg-lavender-100 rounded-3xl p-6 mt-4 flex flex-col"
