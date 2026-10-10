@@ -9,33 +9,34 @@
   <p>Company-aware interview preparation, shaped around your role, skills, and available time.</p>
 
   <p>
-    <a href="https://prep-amigo.vercel.app" target="_blank"><img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
-    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/LINKEDIN-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
-    <a href="YOUR_YOUTUBE_URL_HERE" target="_blank"><img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
+    <a href="https://prep-amigo.vercel.app"><img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
+    <a href="https://youtu.be/0_rjFpytu-I"><img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
   </p>
 
-  <p>
-    <a href="#quick-start"><strong>🚀 Quick start</strong></a>
-    &nbsp;·&nbsp;
-    <a href="#why-prepamigo">Why PrepAmigo?</a>
-    &nbsp;·&nbsp;
-    <a href="#the-agents-behind-your-prep">Agents</a>
-    &nbsp;·&nbsp;
-    <a href="#how-we-use-serpapi-efficiently">SerpApi</a>
-    &nbsp;·&nbsp;
-    <a href="#architecture">Architecture</a>
-    &nbsp;·&nbsp;
-    <a href="#documentation">Documentation</a>
-  </p>
+  <details>
+    <summary><strong>Table of contents</strong></summary>
+    <ul align="left">
+      <li><a href="#the-problem">The problem</a></li>
+      <li><a href="#the-solution">The solution</a></li>
+      <li><a href="#why-prepamigo">Why PrepAmigo</a></li>
+      <li><a href="#the-agents-behind-your-prep">The agents behind your prep</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#how-we-use-serpapi-efficiently">How we use SerpApi efficiently</a></li>
+      <li><a href="#your-prep-journey">Your prep journey</a></li>
+      <li><a href="#tech-stack">Tech stack</a></li>
+      <li><a href="#quick-start">Quick start</a></li>
+      <li><a href="#documentation">Documentation</a></li>
+    </ul>
+  </details>
 
 </div>
+
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript 6" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/Agents-LangGraph-6B46C1" alt="LangGraph agents" />
-  <img src="https://img.shields.io/badge/Powered%20by-SerpApi-1F6FEB" alt="Powered by SerpApi" />
-  <img src="https://img.shields.io/badge/Project-In%20development-F08C46" alt="Project in development" />
+  <img src="https://img.shields.io/badge/Live%20intelligence-SerpApi-1F6FEB" alt="SerpApi live intelligence" />
 </p>
 
 <p align="center">
@@ -46,86 +47,64 @@
   <img src="frontend/public/assets/Mascot/Celebration.png" alt="PrepAmigo celebrating progress" width="100" />
 </p>
 
-> [!TIP]
-> **The idea:** less time figuring out what to study, more time getting interview-ready. Start with your [local quick start](#quick-start) or jump to the [product overview](docs/PrepAmigo.md).
 
 ## The problem
 
-Preparing for a company-specific interview is not a shortage of resources. It is a shortage of **direction**.
+Interview preparation is rarely blocked by a lack of resources. It is blocked by a lack of direction.
 
-- **Fragmented research.** Interview patterns, job requirements, candidate experiences, and learning material live in dozens of places.
-- **No link to your starting point.** Generic checklists ignore your resume, your strengths, and the days you actually have.
-- **Time lost deciding.** Candidates often spend more time working out *what* to prepare than preparing.
+Candidates have to research a company, decode job requirements, identify their own gaps, find trustworthy material, and fit everything into a limited number of days. Generic checklists do not understand a candidate's resume, strengths, target role, or schedule.
 
 ## The solution
 
-PrepAmigo is an **agentic learning orchestration system**. You give it a company, a role, a timeframe, and your resume. A network of specialist agents researches the opportunity, finds your skill gaps, curates learning material, and turns it into a day-by-day plan that adapts as you progress.
+PrepAmigo is an **agentic learning orchestration system**. A candidate provides a target company, role, resume, current skills, and preparation window. A coordinated network of specialist agents then researches the opportunity, compares requirements with the candidate's starting point, prioritizes skill gaps, curates learning material, and produces a plan that can adapt as progress is recorded.
+
+The shared Learning Context connects the whole workflow:
 
 ```text
 What the company expects → What you already know → Which gaps matter most
         → What to learn → What to practise → What to revise before the interview
 ```
 
-### At a glance
+For example, a candidate with 45 days to prepare for a software-engineering role might be strong in React and Node.js but weak in DSA and system design. PrepAmigo uses current company and role signals to spend those 45 days on the gaps that matter most, then turns the result into sprints, daily tasks, resources, quizzes, flashcards, and measurable progress.
 
-| | |
-| --- | --- |
-| **Live app** | [prep-amigo.vercel.app](https://prep-amigo.vercel.app) |
-| **Core idea** | One interface, a shared Learning Context, and specialist agents coordinated by a LangGraph orchestrator |
-| **Agents** | Company Research, Job Intelligence, Skill Gap, Content Research, Planner, Interview Intelligence, Assessment & Flashcards, Supervisor |
-| **Live data** | SerpApi: Google Search, News, Jobs, AI Overview, YouTube, and Scholar (optional) |
-| **Output** | Roadmap of sprints and daily tasks, curated resource pack, quizzes, flashcards, and a progress dashboard |
-| **Services** | React web app, Node.js/Express API, Python FastAPI agent service |
-| **Quality** | 39 pytest modules in the agent service; streaming, caching, and pipeline-robustness tests included |
-
-## Features & capabilities
-
-<table>
-  <tr>
-    <td width="33%" align="center"><h3>🎯 Prepare with context</h3><p>Bring your target company, role, resume, and timeline into one preparation journey.</p></td>
-    <td width="33%" align="center"><h3>🔎 Research the opportunity</h3><p>Gather company context, role requirements, job-market signals, and reported interview patterns.</p></td>
-    <td width="33%" align="center"><h3>🧭 Find your focus</h3><p>Compare role needs with your background to identify and prioritize skill gaps.</p></td>
-  </tr>
-  <tr>
-    <td width="33%" align="center"><h3>🗓️ Get a roadmap</h3><p>Organize priorities into sprints and day-by-day learning tasks around your timeframe.</p></td>
-    <td width="33%" align="center"><h3>📚 Learn and practice</h3><p>Find relevant docs, books, papers, and videos; generate plan-aligned quizzes and flashcards.</p></td>
-    <td width="33%" align="center"><h3>✨ Track what you know</h3><p>Stream agent progress and record learning topics, skill gaps, and assessment evidence.</p></td>
-  </tr>
-</table>
-
-> [!NOTE]
-> **Built for the SerpApi Hackathon.** Every live research step in PrepAmigo (company context, job requirements, interview patterns, learning resources) runs on [SerpApi](https://serpapi.com), with caching and credit-aware design so one preparation plan costs a handful of searches, not hundreds. See [How we use SerpApi efficiently](#how-we-use-serpapi-efficiently).
+The system also maintains a living skills model. A global skill graph is refreshed from market signals, while each learner's graph records proficiency, learning state, and assessment evidence. As the candidate completes tasks and assessments, mastered topics consume less time and missed work can be rescheduled.
 
 ## Why PrepAmigo
 
-| Generic prep | PrepAmigo |
-| --- | --- |
-| One-size-fits-all checklists | Preparation informed by your role, background, and timeline |
-| Search results without a next step | Research organized into focused priorities and tasks |
-| Scattered notes and progress | A connected roadmap, learning resources, and progress view |
+<table>
+  <thead><tr><th>Generic preparation</th><th>PrepAmigo</th></tr></thead>
+  <tbody>
+    <tr><td>One-size-fits-all checklists</td><td><strong>Context-aware direction</strong><br />The role, company, background, and timeline shape the preparation.</td></tr>
+    <tr><td>Search results without a next step</td><td><strong>Actionable priorities</strong><br />Research becomes learning modules, tasks, and milestones.</td></tr>
+    <tr><td>Separate notes and progress</td><td><strong>One connected journey</strong><br />Research, planning, practice, and progress stay connected.</td></tr>
+  </tbody>
+</table>
 
 <p align="center">
   <img src="frontend/public/assets/Mascot/working.png" alt="" width="68" />
-  <strong>Not another link dump—a clearer answer to “what should I do next?”</strong>
+  <strong>Not another link dump - a clearer answer to “what should I do next?”</strong>
 </p>
 
 ## The agents behind your prep
 
-PrepAmigo uses a LangGraph workflow and focused agents rather than asking one general chatbot to do every job.
+PrepAmigo uses a LangGraph workflow and focused agents rather than asking one general chatbot to perform every job.
 
-| Agent / workflow | What it does |
-| --- | --- |
-| **Interview Prep Orchestrator** | Runs company research and job intelligence in parallel, coordinates the next stages, handles missing details, and assembles the preparation workflow. |
-| **Company Research** | Collects company facts, products, technology context, and recent news. |
-| **Job Intelligence** | Searches job listings and extracts recurring skills, seniority, responsibilities, and qualifications; broadens the search if company-specific listings are sparse. |
-| **Skill Gap** | Compares the candidate's resume and current knowledge with role requirements and ranks focus areas. |
-| **Content Research** | Finds relevant documentation, books, papers, videos, and transcripts, then synthesizes a learning module from selected sources. |
-| **Planner** | Turns priority gaps and available days into a structured plan with sprints and daily tasks. |
-| **Interview Intelligence** | Researches reported interview rounds, candidate experiences, questions, and process updates. |
-| **Chat / Supervisor** | Routes general questions to the right specialist and keeps conversation context. |
-| **Assessment & Flashcards** | Generates plan-aligned quizzes and revision cards from sprint topics. |
+<table>
+  <thead><tr><th>Agent / workflow</th><th>Responsibility</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Interview Prep Orchestrator</strong></td><td>Coordinates research, handles missing details, and assembles the preparation workflow.</td></tr>
+    <tr><td><strong>Company Research</strong></td><td>Collects company facts, products, technology context, and recent news.</td></tr>
+    <tr><td><strong>Job Intelligence</strong></td><td>Analyses live listings for skills, seniority, responsibilities, and qualifications.</td></tr>
+    <tr><td><strong>Skill Gap</strong></td><td>Compares the resume and current knowledge with role requirements.</td></tr>
+    <tr><td><strong>Content Research</strong></td><td>Finds and synthesizes documentation, books, papers, videos, and transcripts.</td></tr>
+    <tr><td><strong>Planner</strong></td><td>Turns priority gaps and available days into sprints, tasks, and milestones.</td></tr>
+    <tr><td><strong>Interview Intelligence</strong></td><td>Researches reported interview rounds, questions, candidate experiences, and process changes.</td></tr>
+    <tr><td><strong>Chat / Supervisor</strong></td><td>Routes questions to the right specialist while retaining conversation context.</td></tr>
+    <tr><td><strong>Assessment &amp; Flashcards</strong></td><td>Generates plan-aligned practice and feeds evidence back into the learner model.</td></tr>
+  </tbody>
+</table>
 
-The workflow can request clarification when company, role, or location details are missing, and can resume on the same checkpoint thread when the candidate answers.
+When company, role, or location details are missing, the workflow can pause with a clarification request and resume from the same LangGraph checkpoint after the candidate responds.
 
 ## Architecture
 
@@ -139,8 +118,9 @@ flowchart LR
     RD -->|"stream"| BE
     AG --> SP["SerpApi<br/>Search · News · Jobs · YouTube · Scholar"]
     AG --> LLM["LLM<br/>Ollama / OpenAI-compatible"]
-    AG -.-> KG[("Neo4j<br/>knowledge graph")]
-    AG -.-> MM["Mem0<br/>long-term memory"]
+    AG --> KG[("Neo4j<br/>knowledge graph")]
+    AG --> MM["Mem0<br/>long-term memory"]
+    AG --> PC["Pinecone<br/>resource retrieval"]
 ```
 
 ### The preparation pipeline
@@ -155,34 +135,32 @@ flowchart LR
 
 ### Engineering highlights
 
-- **Live progress, not a spinner.** Agent steps and tool calls stream to the browser over Server-Sent Events, relayed through Redis pub/sub with history replay, 15s heartbeats, and a 35s worker-silence watchdog.
-- **Pause, ask, resume.** Missing inputs pause the LangGraph run with a clarifying question; the answer resumes the same checkpoint thread. Requests carry idempotency keys, so a retry never starts duplicate work.
-- **Grounded outputs.** Curated links come only from tool results, never from the model's imagination. Job requirements are built from postings by the target employer, with a flagged fallback when none exist.
-- **Reliability by design.** Partial results are returned when one branch fails, step budgets are enforced per stage, and every step and tool call is timed in structured logs.
-- **Pluggable agents.** New specialists register in one place; routing, supervisor prompts, and SSE event mapping pick them up without bridge changes.
-- **Tested.** 39 pytest modules cover caching, rate budgets, relevance filtering, streaming, memory adapters, plan schema, and end-to-end pipeline robustness.
+- **Live progress, not a spinner.** Agent steps and tool calls stream to the browser over Server-Sent Events, relayed through Redis pub/sub with history replay, 15-second heartbeats, and a worker-silence watchdog.
+- **Pause, ask, resume.** Missing inputs pause the LangGraph run with a clarification question; the answer resumes the same checkpoint thread. Idempotency keys prevent duplicate work on retries.
+- **Grounded outputs.** Curated links come from tool results. Job requirements are built from target-employer postings, with a flagged broader role search when postings are sparse.
+- **Current learner context.** Neo4j stores the user knowledge graph—skills, concepts, proficiency, learning state, and assessment evidence—so future plans can account for what the learner has already mastered.
+- **Reliable under partial failure.** Partial results are returned when a branch fails, budgets are enforced per stage, and every step and tool call is timed in structured logs.
+- **Tested.** The agent service includes coverage for caching, rate budgets, relevance filtering, streaming, memory adapters, plan validation, and end-to-end pipeline robustness.
 
 ## How we use SerpApi efficiently
 
-SerpApi powers live web, news, jobs, and video discovery. Each agent uses the search source suited to its task:
+SerpApi is a **core dependency**: it grounds PrepAmigo's company, role, interview, and learning recommendations in current information. Each agent uses the source suited to its task:
 
 | Research task | Sources |
 | --- | --- |
 | Company context | Google Search and Google News |
-| Role requirements | Google Jobs; falls back to a broader role search when company-specific listings are sparse |
-| Interview patterns | Web results, related questions, videos, news, and optional Google AI Overview |
-| Learning resources | Web results for technical material and YouTube videos; Google Scholar is an optional paper source |
+| Role requirements | Google Jobs; broader role search when company-specific listings are sparse |
+| Interview patterns | Web results, related questions, videos, news, and Google AI Overview |
+| Learning resources | Web results, YouTube, and Google Scholar for papers |
 
-For books and papers, the default integrations use Open Library and arXiv instead of spending SerpApi credits. YouTube transcripts are fetched separately with `youtube-transcript-api`. The Python research agents share one SerpApi client and response cache; the Node.js job-intelligence service also caches analyzed job profiles and enforces a per-user external-search rate limit.
+Books and papers can also use Open Library and arXiv to reduce SerpApi usage, while video transcripts are fetched separately with `youtube-transcript-api`. The Python research agents share one SerpApi client and response cache; the Node.js job-intelligence service caches analysed job profiles and enforces a per-user external-search rate limit.
 
-- **Cache before calling:** exact-parameter search responses are cached for 7 days by default; fast-changing job and news results use a 1-day cache. Analyzed job profiles have their own MongoDB cache. Cache hits avoid another live request and don't count against the job-search rate limit.
-- **Research only what fits:** skill-gap research is limited to the highest-priority gaps that can fit the planned schedule, with a configurable cap. Lower-priority gaps do not automatically trigger more paid searches.
-- **Avoid paying twice for slow requests:** searches use SerpApi's asynchronous mode by default and retrieve completed results from its Search Archive; archive reads don't consume another search credit.
-- **Bound concurrency and retries:** live-search concurrency is capped (4 by default); timeouts and retries are configurable. Account-level quota/key errors pause further live web searches temporarily.
-- **Keep results focused:** routine Google web lookups suppress the slower AI Overview unless a workflow specifically needs it. Learning searches filter unsuitable sources, cap result counts, and run in parallel.
-- **Develop without live-search spend:** disable SerpApi to use JSON fixtures or built-in mock results. Book catalog and paper searches can use Open Library and arXiv, and YouTube transcripts are fetched without SerpApi credits.
-
-Live searches need `SERPAPI_API_KEY`. See the [agent service guide](agents-service/README.md) and [environment configuration](docs/guides/ENVIRONMENT_CONFIGURATION.md) for settings and offline fixture options.
+- **Cache before calling:** exact-parameter responses are cached for seven days; fast-changing job and news results use a one-day cache. Analysed job profiles have a separate MongoDB cache.
+- **Research only what fits:** only the highest-priority gaps that fit the schedule trigger further searches.
+- **Avoid paying twice:** searches use asynchronous mode by default and retrieve completed results from SerpApi's Search Archive.
+- **Bound concurrency and retries:** live-search concurrency is capped, timeouts and retries are configurable, and quota errors temporarily pause further live searches.
+- **Keep results focused:** routine web lookups suppress the slower AI Overview unless a workflow explicitly needs it; learning searches filter unsuitable sources and cap result counts.
+Live searches require `SERPAPI_API_KEY`. See the [agent service guide](agents-service/README.md) and [environment configuration](docs/guides/ENVIRONMENT_CONFIGURATION.md) for configuration details.
 
 ## Your prep journey
 
@@ -195,36 +173,43 @@ Live searches need `SERPAPI_API_KEY`. See the [agent service guide](agents-servi
   </tr>
 </table>
 
-Preparation is gamified around real activity, not time-on-page: streaks, XP, badges, titles, sprint completion, skill levels, and milestones are credited from completed tasks and assessment performance.
+Preparation is gamified around real activity: streaks, XP, badges, titles, sprint completion, skill levels, and milestones are credited from completed tasks and assessment performance.
 
-## Built with
+## Tech stack
 
-| Tool / service | How PrepAmigo uses it |
-| --- | --- |
-| **React 19 · TypeScript · Vite · Tailwind CSS · Framer Motion** | Interactive web application and animated interface. |
-| **Node.js · Express · MongoDB · Mongoose** | Application API, persistent application data, and job-intelligence profiles. |
-| **Python · FastAPI · LangGraph · LangChain** | Agent APIs, specialist routing, and coordinated interview-prep workflows. |
-| **SerpApi** | Live Google Search, News, Jobs, AI Overview, YouTube, and Scholar data for every research agent. |
-| **Redis** | Relays agent progress between services and stores short-lived event history for server-sent-event (SSE) replay. |
-| **Neo4j (optional)** | Persists the user knowledge graph: skills, topics, proficiency, learning state, and assessment evidence. In-memory/local storage is available without Neo4j. |
-| **Ollama · OpenAI-compatible models (optional)** | Ollama is the default LLM provider; an optional fast-model endpoint can route smaller calls to another compatible provider. |
-| **Mem0 (optional) · YouTube Transcript API** | Optional cross-session user memory; retrieve video transcripts without SerpApi search credits. |
+<p>
+  <a href="https://react.dev/"><img src="https://cdn.simpleicons.org/react/61DAFB" alt="React" height="50" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://cdn.simpleicons.org/typescript/3178C6" alt="TypeScript" height="50" /></a>
+  <a href="https://vite.dev/"><img src="https://cdn.simpleicons.org/vite/646CFF" alt="Vite" height="50" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://cdn.simpleicons.org/tailwindcss/06B6D4" alt="Tailwind CSS" height="50" /></a>
+  <a href="https://www.framer.com/motion/"><img src="https://cdn.simpleicons.org/framer/0055FF" alt="Framer Motion" height="50" /></a>
+  <a href="https://nodejs.org/"><img src="https://cdn.simpleicons.org/nodedotjs/339933" alt="Node.js" height="50" /></a>
+  <a href="https://expressjs.com/"><img src="https://cdn.simpleicons.org/express/000000" alt="Express" height="50" /></a>
+  <a href="https://www.mongodb.com/"><img src="https://cdn.simpleicons.org/mongodb/47A248" alt="MongoDB" height="50" /></a>
+  <a href="https://www.python.org/"><img src="https://cdn.simpleicons.org/python/3776AB" alt="Python" height="50" /></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://cdn.simpleicons.org/fastapi/009688" alt="FastAPI" height="50" /></a>
+  <a href="https://langchain-ai.github.io/langgraph/"><img src="https://cdn.simpleicons.org/langchain/1C3C3C" alt="LangGraph" height="50" /></a>
+  <a href="https://serpapi.com/"><img src="https://cdn.simpleicons.org/google/4285F4" alt="SerpApi" height="50" /></a>
+  <a href="https://redis.io/"><img src="https://cdn.simpleicons.org/redis/DC382D" alt="Redis" height="50" /></a>
+  <a href="https://neo4j.com/"><img src="https://cdn.simpleicons.org/neo4j/4581C3" alt="Neo4j" height="50" /></a>
+  <a href="https://www.pinecone.io/"><img src="https://www.pinecone.io/favicon.ico" alt="Pinecone" height="50" /></a>
+</p>
 
-> **Data note:** MongoDB stores app/API data; Redis is used for run coordination and streaming, not as the learning-plan database. Neo4j is an optional knowledge-graph backend and gracefully falls back when it is unavailable.
+| Area | Technologies | Role in PrepAmigo |
+| --- | --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Framer Motion | Interactive preparation workspace and progress experience |
+| API | Node.js, Express, MongoDB | Authentication, application APIs, plan persistence, and job-intelligence profiles |
+| Agent service | Python 3.11+, FastAPI, LangGraph, LangChain | Specialist agents, orchestration, synthesis, and streaming telemetry |
+| Live intelligence | SerpApi, YouTube Transcript API, Open Library, arXiv | Current company, job, interview, and learning evidence |
+| AI and memory | Ollama, OpenAI-compatible models, Mem0 | Model inference and cross-session conversational memory |
+| Knowledge and retrieval | Neo4j, Pinecone | Learner knowledge graph and resource retrieval |
+| Infrastructure | Redis, Server-Sent Events, Vercel, Render, GitHub Actions | Event streaming, deployment, and service keep-alive jobs |
 
-### Deployment
-
-The web app is deployed on **Vercel** at [prep-amigo.vercel.app](https://prep-amigo.vercel.app), with the API and agent service hosted on **Render**. Scheduled GitHub Actions workflows keep the agent service, MongoDB Atlas, and Neo4j AuraDB free tiers warm (see [keep-alive jobs](docs/guides/KEEPALIVE_JOBS.md)).
-
-## Roadmap
-
-- Connect the user knowledge graph to the skill-gap and assessment agents.
-- Add coding tasks and mock-interview simulations to the Assessment agent.
-- Move conversation checkpoints to a shared LangGraph checkpointer for multi-worker deployments.
+SerpApi and Neo4j are core architectural components. MongoDB remains the system of record for application data, while Redis coordinates runs and replays streaming events.
 
 ## Quick start
 
-**Prerequisites:** Node.js/npm, Python 3.11+ with `uv`, MongoDB, Redis, Ollama, and an Ollama model such as `llama3.1`.
+**Prerequisites:** Node.js/npm, Python 3.11+ with `uv`, MongoDB, Redis, Ollama, and an Ollama model such as `llama3.1`. For the full live experience, also configure SerpApi and Neo4j credentials in the agent-service environment.
 
 Run each service in its **own terminal**. Configure the `.env` files using each service's `.env.example` first.
 
@@ -253,7 +238,7 @@ uv sync --dev
 uv run uvicorn --app-dir src main:app --reload
 ```
 
-Agent API: <http://localhost:8000>. Live search is optional and requires a SerpApi key.
+Agent API: <http://localhost:8000>. Configure `SERPAPI_API_KEY`, `SERPAPI_ENABLED=true`, and the Neo4j connection variables for live research and persistent learner-graph storage.
 </details>
 
 <details>
