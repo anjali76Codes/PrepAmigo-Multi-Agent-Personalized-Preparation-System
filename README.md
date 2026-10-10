@@ -7,13 +7,37 @@
 
   <p><strong>Make every day count before interview day.</strong></p>
   <p>Company-aware interview preparation, shaped around your role, skills, and available time.</p>
+</div>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white" alt="LangChain" />
+  <img src="https://img.shields.io/badge/LangGraph-6B46C1?logo=langchain&logoColor=white" alt="LangGraph" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Redis-FF4438?logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Neo4j-4581C3?logo=neo4j&logoColor=white" alt="Neo4j" />
+  <img src="https://img.shields.io/badge/Pinecone-000000?logo=pinecone&logoColor=white" alt="Pinecone" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/React-149ECA?logo=react&logoColor=white" alt="React" />
+</p>
+
+<div align="center">
   <p>
     <a href="https://prep-amigo.vercel.app"><img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
     <a href="https://youtu.be/0_rjFpytu-I"><img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
   </p>
+</div>
 
-  <details>
+<p align="center">
+  <img src="frontend/public/assets/Mascot/thinking.gif" alt="PrepAmigo thinking through your interview preparation" width="150" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/assets/Mascot/working.gif" alt="PrepAmigo working on your preparation plan" width="150" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/assets/Mascot/Celebration.png" alt="PrepAmigo celebrating progress" width="100" />
+</p>
+
+ <details>
     <summary><strong>Table of contents</strong></summary>
     <ul align="left">
       <li><a href="#the-problem">The problem</a></li>
@@ -28,24 +52,6 @@
       <li><a href="#documentation">Documentation</a></li>
     </ul>
   </details>
-
-</div>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript 6" />
-  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
-  <img src="https://img.shields.io/badge/Agents-LangGraph-6B46C1" alt="LangGraph agents" />
-  <img src="https://img.shields.io/badge/Live%20intelligence-SerpApi-1F6FEB" alt="SerpApi live intelligence" />
-</p>
-
-<p align="center">
-  <img src="frontend/public/assets/Mascot/thinking.gif" alt="PrepAmigo thinking through your interview preparation" width="150" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/assets/Mascot/working.gif" alt="PrepAmigo working on your preparation plan" width="150" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/assets/Mascot/Celebration.png" alt="PrepAmigo celebrating progress" width="100" />
-</p>
 
 
 ## The problem
@@ -80,7 +86,7 @@ The system also maintains a living skills model. A global skill graph is refresh
   </tbody>
 </table>
 
-<p align="center">
+<p align="left">
   <img src="frontend/public/assets/Mascot/working.png" alt="" width="68" />
   <strong>Not another link dump - a clearer answer to “what should I do next?”</strong>
 </p>
