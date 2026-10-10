@@ -129,8 +129,9 @@ export function apiPlanToPrep(plan: ApiPlan): Prep {
       completedTopics: allDays.filter((d) => d.status === "done").map((d) => d.topic),
       resources: [],
       progress: {
-        xp: Math.round((plan.completion_percent || 0) * 10),
-        streak: 1,
+        xp: 0,
+        ai_credits: 0,
+        streak: 0,
         level: 1,
         badges: [],
         titles: [{ id: "t-1", name: "Candidate" }],

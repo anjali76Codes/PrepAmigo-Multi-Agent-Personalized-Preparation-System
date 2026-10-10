@@ -81,21 +81,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const globalProgress = progressRes?.data || null;
         const mapped = res.data.map((plan) => {
           const prep = apiPlanToPrep(plan);
-          if (globalProgress) {
-            prep.learningContext.progress = {
-              xp: globalProgress.xp_points || 0,
-              ai_credits: globalProgress.ai_credits ?? 30,
-              streak: globalProgress.current_streak || globalProgress.streak_count || 0,
-              level: Math.floor((globalProgress.xp_points || 0) / 1000) + 1,
-              badges: (globalProgress.trophies || []).map((t: any) => ({
-                id: t.key, name: t.key.replace(/_/g, ' '), description: 'Earned trophy', date: t.awarded_at
-              })),
-              titles: [{ id: "t-1", name: "Candidate" }],
-              milestones: [],
-              skillLevels: [],
-              learningVelocity: "1.0x",
-            };
-          }
+          const xpPoints = Number(globalProgress?.xp_points ?? globalProgress?.xp ?? 0);
+          const nextProgress = globalProgress ? {
+            xp: xpPoints,
+            xp_points: xpPoints,
+            ai_credits: Number(globalProgress.ai_credits ?? globalProgress.aiCredits ?? 0),
+            streak: Number(globalProgress.current_streak ?? globalProgress.streak_count ?? globalProgress.streak ?? 0),
+            current_streak: Number(globalProgress.current_streak ?? globalProgress.streak_count ?? globalProgress.streak ?? 0),
+            level: Math.floor(xpPoints / 1000) + 1,
+            badges: (globalProgress.trophies || []).map((t: any) => ({
+              id: t.key, name: t.key.replace(/_/g, ' '), description: 'Earned trophy', date: t.awarded_at
+            })),
+            titles: [{ id: "t-1", name: "Candidate" }],
+            milestones: [],
+            skillLevels: [],
+            learningVelocity: "1.0x",
+          } : {
+            xp: 0,
+            xp_points: 0,
+            ai_credits: 0,
+            streak: 0,
+            current_streak: 0,
+            level: 1,
+            badges: [],
+            titles: [{ id: "t-1", name: "Candidate" }],
+            milestones: [],
+            skillLevels: [],
+            learningVelocity: "1.0x",
+          };
+
+          prep.learningContext.progress = nextProgress;
           return prep;
         });
         setPreps(mapped);
