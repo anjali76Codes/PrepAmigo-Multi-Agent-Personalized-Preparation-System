@@ -430,7 +430,7 @@ export function Roadmap() {
                       onClick={() => setOpenSprints((p) => ({ ...p, [sprint._id]: !isOpen }))}
                       className={cn(
                         "w-full flex items-center gap-4 p-4 md:p-5 text-left transition-colors",
-                        "sticky top-0 z-10 bg-surface/95 backdrop-blur-md",
+                        "sticky top-0 z-10 bg-soft-rose backdrop-blur-md",
                         isOpen ? "rounded-t-3xl border-b border-border shadow-2xs hover:bg-lavender-50/80" : "rounded-3xl hover:bg-lavender-50"
                       )}
                     >
@@ -446,7 +446,7 @@ export function Roadmap() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-base md:text-lg text-carbon-900 truncate">{sprint.sprint_name}</h3>
                         <div className="flex items-center gap-3 mt-1">
-                          <div className="w-24 md:w-40 h-1.5 rounded-full bg-lavender-100 overflow-hidden">
+                          <div className="w-24 md:w-40 h-1.5 rounded-full bg-chrome-accent overflow-hidden">
                             <div className="h-full bg-chrome rounded-full transition-all" style={{ width: `${pct}%` }} />
                           </div>
                           <span className="text-xs font-semibold text-carbon-500">{sprint.done} / {sprint.total}</span>

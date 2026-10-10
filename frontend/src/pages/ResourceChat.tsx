@@ -37,11 +37,13 @@ const STEPS = [
 ];
 const STEP_MS = 1000;
 const CHAT_EXAMPLES = [
-  "Summarize my notes",
-  "What resources did I save?",
-  "Get the notes summary in my current sprint",
-  "Make a quick revision checklist from my notes",
+  { label: "Summarize my notes", icon: "journal" },
+  { label: "What resources did I save?", icon: "link" },
+  { label: "Get the notes summary in my current sprint", icon: "time-outline" },
+  { label: "Make a quick revision checklist from my notes", icon: "checkmark" },
 ];
+
+const SPRING = { type: "spring", stiffness: 260, damping: 30, mass: 0.9 } as const;
 
 function UserAvatar() {
   return (
@@ -84,13 +86,12 @@ function Processing() {
           return (
             <li
               key={label}
-              className={`flex items-center gap-2 text-base transition-colors duration-300 ${
-                done
+              className={`flex items-center gap-2 text-base transition-colors duration-300 ${done
                   ? "text-rosewood"
                   : active
                     ? "text-carbon-900 font-semibold"
                     : "text-rosewood/50"
-              }`}
+                }`}
             >
               <span className="w-4 h-4 flex items-center justify-center shrink-0">
                 {done ? (
@@ -158,6 +159,7 @@ export function ResourceChat() {
 
   const currentCredits = user?.ai_credits ?? 30;
   const hasSufficientCredits = currentCredits >= 2;
+  const hasMessages = messages.length > 0;
 
   // Load existing session if chatId is in URL
   useEffect(() => {
@@ -382,157 +384,244 @@ export function ResourceChat() {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-6">
-          {messages.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: reduce ? 0 : 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 240, damping: 26 }}
-              className="flex flex-col items-center text-center pt-12 gap-5"
-            >
-              <motion.div
-                animate={reduce ? undefined : { y: [0, -6, 0] }}
-                transition={{
-                  duration: 3.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="rounded-full bg-cocoa border border-border overflow-hidden"
-              >
-                <Mascot variant="nosy.png" size="xl" />
-              </motion.div>
-              <div>
-                <h2 className="text-2xl font-extrabold text-carbon-900">
-                  What do you want to know?
-                </h2>
-                <p className="text-sm text-carbon-500 mt-1">
-                  Ask about your sprints, notes, and references.
-                </p>
-              </div>
-              <div className="w-full max-w-3xl">
-                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-carbon-500">
-                  Try an example
-                </p>
-                <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-                  {CHAT_EXAMPLES.map((example) => (
-                    <button
-                      key={example}
-                      type="button"
-                      onClick={() => void handleSend(example)}
-                      disabled={busy || !hasSufficientCredits}
-                      className="rounded-2xl border border-border bg-surface px-4 py-3 text-left text-sm font-medium text-carbon-800 shadow-xs transition-colors hover:border-chrome-accent hover:bg-lavender-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {example}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Messages: only present once the conversation starts */}
+        {hasMessages && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.35, delay: 0.1 }}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
+            <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-6">
+              {messages.map((m) => (
+                <motion.div
+                  key={m.id}
+                  initial={{
+                    opacity: 0,
+                    y: reduce ? 0 : 12,
+                    scale: reduce ? 1 : 0.98,
+                  }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 28 }}
+                  className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
+                >
+                  {m.role === "user" ? <UserAvatar /> : <AiAvatar />}
 
-          {messages.map((m) => (
-            <motion.div
-              key={m.id}
-              initial={{
-                opacity: 0,
-                y: reduce ? 0 : 12,
-                scale: reduce ? 1 : 0.98,
-              }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 320, damping: 28 }}
-              className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
-            >
-              {m.role === "user" ? <UserAvatar /> : <AiAvatar />}
-
-              <div
-                className={m.role === "user" ? "max-w-[80%]" : "flex-1 min-w-0"}
-              >
-                {m.role === "user" ? (
-                  <div className="rounded-3xl rounded-tr-md px-5 py-3 bg-chrome text-on-chrome leading-relaxed whitespace-pre-wrap shadow-card">
-                    {m.content}
-                  </div>
-                ) : m.thinking ? (
-                  <Processing />
-                ) : (
-                  <div className="rounded-3xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-card w-fit max-w-full">
-                    <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">
-                      {m.content}
-                    </p>
-                    {!!m.sources?.length && (
-                      <details className="mt-4 border-t border-border pt-3 group">
-                        <summary className="text-xs font-bold text-carbon-500 cursor-pointer list-none flex items-center gap-2 select-none hover:text-chrome transition-colors">
-                          <Icon
-                            name="chevron-forward"
-                            className="text-base transition-transform group-open:rotate-90"
-                          />
-                          Sources ({m.sources.length})
-                        </summary>
-                        <ul className="flex flex-col gap-2 mt-3">
-                          {m.sources.map((source, i) => (
-                            <motion.li
-                              key={source.source_id}
-                              initial={{ opacity: 0, x: reduce ? 0 : -6 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: i * 0.04 }}
-                              className="flex items-center gap-2.5 rounded-xl bg-lavender-50 border border-border px-3 py-2 text-xs min-w-0"
-                            >
+                  <div
+                    className={
+                      m.role === "user" ? "max-w-[80%]" : "flex-1 min-w-0"
+                    }
+                  >
+                    {m.role === "user" ? (
+                      <div className="rounded-3xl rounded-tr-md px-5 py-3 bg-chrome text-on-chrome leading-relaxed whitespace-pre-wrap shadow-card">
+                        {m.content}
+                      </div>
+                    ) : m.thinking ? (
+                      <Processing />
+                    ) : (
+                      <div className="rounded-3xl rounded-tl-md px-5 py-4 bg-surface border border-border shadow-card w-fit max-w-full">
+                        <p className="leading-relaxed text-carbon-900 whitespace-pre-wrap">
+                          {m.content}
+                        </p>
+                        {!!m.sources?.length && (
+                          <details className="mt-4 border-t border-border pt-3 group">
+                            <summary className="text-xs font-bold text-carbon-500 cursor-pointer list-none flex items-center gap-2 select-none hover:text-chrome transition-colors">
                               <Icon
-                                name={source.url ? "link" : "journal"}
-                                className="text-base text-cocoa shrink-0"
+                                name="chevron-forward"
+                                className="text-base transition-transform group-open:rotate-90"
                               />
-                              <div className="min-w-0 flex-1">
-                                {source.url ? (
-                                  <a
-                                    href={source.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block truncate font-semibold text-chrome hover:underline"
-                                  >
-                                    {source.title}
-                                  </a>
-                                ) : (
-                                  <span className="block truncate font-semibold text-carbon-900">
-                                    {source.title}
-                                  </span>
-                                )}
-                                <span className="block truncate text-carbon-500">
-                                  {source.folder_path || source.source_type}
-                                </span>
-                              </div>
-                            </motion.li>
-                          ))}
-                        </ul>
-                      </details>
+                              Sources ({m.sources.length})
+                            </summary>
+                            <ul className="flex flex-col gap-2 mt-3">
+                              {m.sources.map((source, i) => (
+                                <motion.li
+                                  key={source.source_id}
+                                  initial={{ opacity: 0, x: reduce ? 0 : -6 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: i * 0.04 }}
+                                  className="flex items-center gap-2.5 rounded-xl bg-lavender-50 border border-border px-3 py-2 text-xs min-w-0"
+                                >
+                                  <Icon
+                                    name={source.url ? "link" : "journal"}
+                                    className="text-base text-cocoa shrink-0"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    {source.url ? (
+                                      <a
+                                        href={source.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block truncate font-semibold text-chrome hover:underline"
+                                      >
+                                        {source.title}
+                                      </a>
+                                    ) : (
+                                      <span className="block truncate font-semibold text-carbon-900">
+                                        {source.title}
+                                      </span>
+                                    )}
+                                    <span className="block truncate text-carbon-500">
+                                      {source.folder_path || source.source_type}
+                                    </span>
+                                  </div>
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            </motion.div>
-          ))}
-          <div ref={endRef} />
-        </div>
-      </div>
+                </motion.div>
+              ))}
+              <div ref={endRef} />
+            </div>
+          </motion.div>
+        )}
 
-      {/* Floating Chat Input at the bottom */}
-      <div className="bg-gradient-to-t from-bg via-bg/95 to-transparent px-4 pb-5 pt-3 shrink-0">
-        <div className="max-w-4xl mx-auto">
-          <div className="rounded-3xl shadow-pop transition-shadow focus-within:ring-2 focus-within:ring-chrome-border">
-            <ChatInput
-              onSend={handleSend}
-              disabled={busy || !hasSufficientCredits}
-              placeholder={
-                hasSufficientCredits
-                  ? "Ask about your resources... (2 AI credits)"
-                  : "You need AI credits to send a message"
-              }
-              hideTemplates={true}
-            />
+        {/*
+          Composer block. The same ChatInput element lives here in both modes
+          (never remounted): centered with the hero + suggestions when the chat
+          is empty, docked to the bottom once messages exist. `layout="position"`
+          makes it glide between the two spots.
+        */}
+        <div
+          className={
+            hasMessages
+              ? "shrink-0 px-4 pb-5 pt-3 bg-gradient-to-t from-bg via-bg/95 to-transparent"
+              : "flex-1 min-h-0 overflow-y-auto px-4 flex flex-col justify-center pb-10"
+          }
+        >
+          <div
+            className={`relative w-full mx-auto flex flex-col items-center ${hasMessages ? "max-w-4xl" : "max-w-3xl"
+              }`}
+          >
+            {/* Hero (mascot + heading) */}
+            <AnimatePresence mode="popLayout">
+              {!hasMessages && (
+                <motion.div
+                  key="hero"
+                  initial={{ opacity: 0, y: reduce ? 0 : 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{
+                    opacity: 0,
+                    y: reduce ? 0 : -16,
+                    scale: reduce ? 1 : 0.96,
+                    transition: { duration: 0.18 },
+                  }}
+                  transition={SPRING}
+                  className="flex flex-col items-center text-center gap-4 mb-7 w-full"
+                >
+                  <motion.div
+                    animate={reduce ? undefined : { y: [0, -6, 0] }}
+                    transition={{
+                      duration: 3.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="rounded-full bg-cocoa border border-border overflow-hidden"
+                  >
+                    <Mascot variant="nosy.png" size="xl" />
+                  </motion.div>
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-carbon-900">
+                      What do you want to know?
+                    </h2>
+                    <p className="text-sm text-carbon-500 mt-1">
+                      Ask about your sprints, notes, and references.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* The composer: glides from center to bottom */}
+            <motion.div
+              layout={reduce ? false : "position"}
+              transition={SPRING}
+              className="w-full rounded-3xl shadow-pop transition-shadow focus-within:ring-2 focus-within:ring-chrome-border"
+            >
+              <ChatInput
+                onSend={handleSend}
+                disabled={busy || !hasSufficientCredits}
+                placeholder={
+                  hasSufficientCredits
+                    ? "Ask about your resources... (2 AI credits)"
+                    : "You need AI credits to send a message"
+                }
+                hideTemplates={true}
+              />
+            </motion.div>
+
+            {/* Suggestions right below the input */}
+            <AnimatePresence>
+              {!hasMessages && (
+                <motion.div
+                  key="suggestions"
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                  variants={{
+                    hidden: {},
+                    show: {
+                      transition: {
+                        staggerChildren: 0.07,
+                        delayChildren: 0.15,
+                      },
+                    },
+                    exit: { transition: { staggerChildren: 0.03 } },
+                  }}
+                  className="mt-5 flex flex-wrap justify-center gap-2.5 w-full"
+                >
+                  {CHAT_EXAMPLES.map((example) => (
+                    <motion.button
+                      key={example.label}
+                      type="button"
+                      variants={{
+                        hidden: { opacity: 0, y: reduce ? 0 : 14, scale: 0.95 },
+                        show: {
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          transition: SPRING,
+                        },
+                        exit: {
+                          opacity: 0,
+                          y: reduce ? 0 : 8,
+                          transition: { duration: 0.14 },
+                        },
+                      }}
+                      whileHover={
+                        reduce || busy || !hasSufficientCredits
+                          ? undefined
+                          : { y: -2, transition: { duration: 0.15 } }
+                      }
+                      whileTap={reduce ? undefined : { scale: 0.97 }}
+                      onClick={() => void handleSend(example.label)}
+                      disabled={busy || !hasSufficientCredits}
+                      className="group flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-carbon-800 shadow-xs transition-colors hover:border-chrome-accent hover:bg-lavender-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Icon
+                        name={example.icon}
+                        className="text-base text-chrome transition-transform group-hover:scale-110"
+                      />
+                      {example.label}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.p
+              layout={reduce ? false : "position"}
+              transition={SPRING}
+              className="text-center text-xs text-carbon-500 mt-3 font-medium"
+            >
+              This assistant is specifically for querying and summarizing your
+              saved notes, not for general AI conversations.
+            </motion.p>
           </div>
-          <p className="text-center text-xs text-carbon-500 mt-3 font-medium">
-            This assistant is specifically for querying and summarizing your
-            saved notes, not for general AI conversations.
-          </p>
         </div>
       </div>
     </div>

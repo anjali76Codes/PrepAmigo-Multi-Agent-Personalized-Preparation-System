@@ -15,6 +15,7 @@ import { computeGamification } from '../lib/gamification';
 import GemRewardAnimation, {
   type GemRewardData,
 } from '../components/gamification/GemRewardAnimation';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 const QUICK_LINKS = [
   {
@@ -47,13 +48,9 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-surface border border-border rounded-2xl px-4 py-3 min-w-[110px]">
-      <div className="flex items-center gap-2">
-        {icon && (
-          <div className="shrink-0">
-            {icon}
-          </div>
-        )}
+    <div className="bg-surface border border-border rounded-2xl px-4 py-3 min-w-[110px] h-full">
+      <div className="flex items-center gap-2 min-h-8">
+        {icon && <div className="shrink-0">{icon}</div>}
 
         <div className="text-xs font-semibold text-carbon-500 uppercase tracking-wide">
           {label}
@@ -83,6 +80,8 @@ export function AppHome() {
 
   // Completed sprints can be collapsed.
   const [collapsedSprints, setCollapsedSprints] = useState<Record<string, boolean>>({});
+
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     const rawReward = sessionStorage.getItem('prep-amigo:xp-reward');
@@ -321,7 +320,7 @@ export function AppHome() {
               </div>
 
               <div className="shrink-0 flex flex-col gap-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-stretch gap-3">
 
                   {/* Progress */}
                   <Stat
@@ -474,7 +473,7 @@ export function AppHome() {
                       <Card
                         key={sprint.id}
                         variant="default"
-                        className="p-5 flex flex-col gap-4"
+                        className="p-5 flex flex-col"
                       >
                         {/* Sprint Header */}
                         <button
@@ -499,11 +498,6 @@ export function AppHome() {
                                 {sprint.title}
                               </h3>
 
-                              {isSprintComplete && (
-                                <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                  Complete
-                                </span>
-                              )}
                             </div>
 
                             <p className="text-sm text-carbon-500">
@@ -512,50 +506,68 @@ export function AppHome() {
                           </div>
 
                           <div className="flex items-center gap-3 shrink-0">
+                            {isSprintComplete && (
+                              <span className="text-xs font-bold bg-cocoa text-on-chrome px-2 py-1 rounded-full">
+                                Complete
+                              </span>
+                            )}
                             <span className="text-xs font-bold bg-lavender-100 border border-border text-chrome px-3 py-1 rounded-full">
                               {sprint.levels.length} Levels
                             </span>
 
                             {isSprintComplete && (
-                              <Icon
-                                name={
-                                  isCollapsed
-                                    ? 'chevron-down'
-                                    : 'chevron-up'
-                                }
-                                className="text-carbon-500 text-xl"
-                              />
+                              <motion.span
+                                animate={{ rotate: isCollapsed ? 0 : 180 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                                className="flex"
+                              >
+                                <Icon name="chevron-down" className="text-carbon-500 text-xl" />
+                              </motion.span>
                             )}
                           </div>
                         </button>
 
                         {/* Sprint Map */}
-                        {!isCollapsed && (
-                          <div className="relative w-full bg-lavender-50 rounded-2xl overflow-hidden flex items-center">
-                            <SprintMap
-                              sprintId={sprint.id}
-                              nodeStates={nodeStates}
-                              levelIds={sprint.levels.map(
-                                (l: any) => l.id
-                              )}
-                              levelTitles={sprint.levels.map(
-                                (l: any) => l.title
-                              )}
-                              onNodeClick={(
-                                _levelId,
-                                index
-                              ) =>
-                                void handleNodeClick(
-                                  sprint,
-                                  sprint.levels[index],
-                                  index,
-                                  nodeStates
-                                )
+                        <AnimatePresence initial={false}>
+                          {!isCollapsed && (
+                            <motion.div
+                              key="sprint-map"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={
+                                reduce
+                                  ? { duration: 0 }
+                                  : {
+                                    height: { type: 'spring', stiffness: 260, damping: 32 },
+                                    opacity: { duration: 0.2 },
+                                  }
                               }
-                              className="border-none shadow-none bg-transparent"
-                            />
-                          </div>
-                        )}
+                              className="overflow-hidden"
+                            >
+                              {/* padding lives inside, replacing the Card's gap-4 */}
+                              <div className="pt-4">
+                                <div className="relative w-full bg-lavender-50 rounded-2xl overflow-hidden flex items-center">
+                                  <SprintMap
+                                    sprintId={sprint.id}
+                                    nodeStates={nodeStates}
+                                    levelIds={sprint.levels.map((l: any) => l.id)}
+                                    levelTitles={sprint.levels.map((l: any) => l.title)}
+                                    onNodeClick={(_levelId, index) =>
+                                      void handleNodeClick(
+                                        sprint,
+                                        sprint.levels[index],
+                                        index,
+                                        nodeStates
+                                      )
+                                    }
+                                    className="border-none shadow-none bg-transparent"
+                                  />
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </Card>
                     );
                   })}
