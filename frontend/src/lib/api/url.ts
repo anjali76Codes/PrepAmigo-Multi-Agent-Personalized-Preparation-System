@@ -1,7 +1,7 @@
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
 
 export const API_BASE_URL = (
-  configuredApiUrl || (import.meta.env.DEV ? "http://localhost:3000" : "")
+  import.meta.env.DEV ? configuredApiUrl || "http://localhost:3000" : ""
 ).replace(/\/+$/, "");
 
 export function apiUrl(path: string): string {
