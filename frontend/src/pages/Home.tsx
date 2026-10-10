@@ -2,7 +2,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { RevealStagger, RevealStaggerItem } from "../components/ui/Reveal";
 import { PageBackground } from "../components/ui/PageBackground";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { ChatInput } from "../components/chat/ChatInput";
 import { ScrollSteps } from "../components/home/ScrollSteps";
 import { WhatYouGet } from "../components/home/WhatYouGet";
@@ -19,6 +19,7 @@ import { PlatformLoader } from "../components/ui/PlatformLoader";
 export function Home() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const reduce = useReducedMotion();
 
   const { scrollY } = useScroll();
   const scale = useTransform(scrollY, [0, 500], [1, 0.9]);
@@ -59,8 +60,13 @@ export function Home() {
           <RevealStaggerItem>
             {/* <Mascot variant="nosy.png" size="lg" className="bg-cocoa rounded-full overflow-hidden my-5" /> */}
 
-            <p className="text-sm sm:text-base md:text-lg text-carbon-300 max-w-xl mx-auto leading-relaxed">
-              PrepAmigo builds your preparation roadmap in seconds.
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-3">
+              Tell Migo your goal.{" "}
+              <span className="text-chrome-accent">Level up to it.</span>
+            </h1>
+
+            <p className="text-sm md:text-base text-carbon-300 max-w-lg mx-auto leading-relaxed">
+              Migo reads the internet. So you don't have to.
             </p>
           </RevealStaggerItem>
 
@@ -71,9 +77,18 @@ export function Home() {
               className="text-left"
             />
           </RevealStaggerItem>
-
-
-          <Mascot variant="hi.png" className="absolute left-10 bottom-0 mx-auto" style={{ height: "50vh", width: "auto" }} />
+          <motion.div
+            className="absolute left-10 bottom-0 pointer-events-none md:pointer-events-auto"
+            animate={reduce ? undefined : { y: -12 }}
+            transition={{
+              duration: 2.8,
+              repeat: Infinity,
+              repeatType: "mirror",
+              ease: "easeInOut",
+            }}
+          >
+            <Mascot variant="hi.png" style={{ height: "50vh", width: "auto" }} />
+          </motion.div>
         </RevealStagger>
       </motion.section>
 
