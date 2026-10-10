@@ -75,6 +75,9 @@ For example, a candidate with 45 days to prepare for a software-engineering role
 
 The system also maintains a living skills model. A global skill graph is refreshed from market signals, while each learner's graph records proficiency, learning state, and assessment evidence. As the candidate completes tasks and assessments, mastered topics consume less time and missed work can be rescheduled.
 
+<img width="1223" height="356" alt="Screenshot 2026-10-10 144815" src="https://github.com/user-attachments/assets/bc6e3c8b-7378-445b-8ee3-f0fb3e27eddf" />
+
+
 ## Why PrepAmigo
 
 <table>
@@ -182,6 +185,7 @@ Live searches require `SERPAPI_API_KEY`. See the [agent service guide](agents-se
 Preparation is gamified around real activity: streaks, XP, badges, titles, sprint completion, skill levels, and milestones are credited from completed tasks and assessment performance.
 
 ## Tech stack
+<img width="602" height="359" alt="Screenshot 2026-10-10 120017" src="https://github.com/user-attachments/assets/280c98a0-8e5e-4a2c-b299-3982b38e56ba" />
 
 <p>
   <a href="https://react.dev/"><img src="https://cdn.simpleicons.org/react/61DAFB" alt="React" height="50" /></a>
