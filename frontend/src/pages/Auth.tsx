@@ -226,6 +226,7 @@ export function Auth() {
                   <GoogleLogin
                     onSuccess={(res) => handleGoogleAuth(res, navigate, setFormError, setLoading, setUser, initialQuery)}
                     onError={() => setFormError("Google Sign In was cancelled or failed")}
+                    use_fedcm_for_button={true}
                     shape="pill"
                     text={isLogin ? "signin_with" : "signup_with"}
                   />
