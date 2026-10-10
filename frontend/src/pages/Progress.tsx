@@ -86,7 +86,7 @@ export function Progress() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 -ml-3 font-bold border-none text-chrome hover:bg-surface/50 mb-4"
+                    className="gap-1.5 -ml-3 font-bold border-none text-chrome mb-4"
                   >
                     <Icon name="arrow-back" />
                     Dashboard
