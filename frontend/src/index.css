@@ -217,3 +217,29 @@
     outline-offset: 2px;
   }
 }
+
+@keyframes prep-dot-ripple {
+  0%,
+  60%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(0) scale(0.8);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1);
+  }
+}
+
+.prep-loading-dot {
+  animation: prep-dot-ripple 900ms cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prep-loading-dot {
+    animation: none;
+    opacity: 0.75;
+    transform: none;
+  }
+}

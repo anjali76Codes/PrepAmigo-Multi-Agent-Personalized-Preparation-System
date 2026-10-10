@@ -50,7 +50,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading ? <span className="mr-2 animate-spin">...</span> : null}
+        {loading ? (
+          <span className="mr-2 inline-flex items-center gap-1" aria-hidden="true">
+            {[0, 1, 2].map((dot) => (
+              <span
+                key={dot}
+                className="prep-loading-dot h-1.5 w-1.5 rounded-full bg-current"
+                style={{ animationDelay: `${dot * 90}ms` }}
+              />
+            ))}
+          </span>
+        ) : null}
         {children}
       </button>
     );
