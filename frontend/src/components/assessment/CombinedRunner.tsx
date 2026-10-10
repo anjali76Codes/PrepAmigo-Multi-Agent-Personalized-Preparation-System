@@ -147,15 +147,34 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
             <AnimatePresence mode="wait">
                 <Panel key={pos} tone={item.kind === "quiz" ? "emerald" : "plain"}>
                     {item.kind === "quiz" ? (
-                        <QuestionCard
-                            question={item.question}
-                            picked={picked}
-                            onPick={pickAnswer}
-                            onNext={() => advance()}
-                            nextLabel={isLast ? "Finish level" : "Next question"}
-                            tag="Quiz challenge"
-                            showInlineFeedback={false}
-                        />
+                        <div className="space-y-4">
+                            <QuestionCard
+                                question={item.question}
+                                picked={picked}
+                                onPick={pickAnswer}
+                                onNext={() => advance()}
+                                nextLabel={isLast ? "Finish level" : "Next question"}
+                                tag="Quiz challenge"
+                                showInlineFeedback={false}
+                            />
+
+                            {/* Skip is only available until an answer is picked */}
+                            <div className="flex justify-center min-h-9">
+                                <AnimatePresence initial={false}>
+                                    {picked === null && (
+                                        <motion.div key="skip" {...fade}>
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => advance()}
+                                                className="px-5 py-2 text-xs font-semibold rounded-full"
+                                            >
+                                                {isLast ? "Skip & finish" : "Skip question"}
+                                            </Button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
                     ) : (
                         <div className="space-y-5">
                             <CardHeader
@@ -181,7 +200,7 @@ export function CombinedRunner({ quiz, deck, onExit, onLevelComplete, onFeedback
                                     <Button
                                         variant="ghost"
                                         onClick={() => advance()}
-                                        className="px-5 py-2 text-xs font-semibold"
+                                        className="px-5 py-2 text-xs font-semibold rounded-full"
                                     >
                                         Skip for now
                                     </Button>
