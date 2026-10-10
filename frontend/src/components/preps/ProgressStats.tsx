@@ -109,36 +109,41 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
             transition={{ duration: 0.2 }}
             className="
               relative overflow-hidden
+              min-h-[132px]
+              flex flex-col justify-between
               bg-coral-100
               rounded-2xl
               p-4
               border border-chrome-accent/40
             "
           >
-            <div className="flex items-start justify-between">
-              <span className="text-lg font-bold text-cocoa">
-                XP
+            <motion.img
+              src="/assets/icons/star.png"
+              alt=""
+              aria-hidden
+              className="absolute top-5 right-3 w-20 h-20 object-contain pointer-events-none select-none"
+              animate={{
+                y: [0, -5, 0],
+                rotate: [-4, 4, -4],
+              }}
+              transition={{
+                duration: 3.5,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            />
+
+            <span className="relative z-10 text-xs font-bold uppercase tracking-wider text-cocoa">
+              XP
+            </span>
+
+            <div className="relative z-10 mt-6 flex flex-col items-start gap-1.5">
+              <span className="text-3xl font-extrabold leading-none tabular-nums text-deep-emerald">
+                {stats.xp.toLocaleString()}
               </span>
-
-              <motion.img
-                src="/assets/icons/star.png"
-                alt=""
-                className="w-20 h-20 absolute right-1"
-                animate={{
-                  y: [0, -5, 0],
-                  rotate: [-4, 4, -4],
-                }}
-                transition={{
-                  duration: 3.5,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-              />
-            </div>
-
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-deep-emerald">{stats.xp.toLocaleString()}</span>
-              <span className="text-[10px] font-bold text-carbon-500 uppercase">20/level, 30/quiz</span>
+              <span className="rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-carbon-500">
+                20/level · 30/quiz
+              </span>
             </div>
           </motion.div>
 
@@ -148,6 +153,8 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
             transition={{ duration: 0.2 }}
             className="
               relative overflow-hidden
+              min-h-[132px]
+              flex flex-col justify-between
               bg-cocoa
               text-white
               rounded-2xl
@@ -155,30 +162,33 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
               border border-chrome
             "
           >
-            <div className="flex items-start justify-between">
-              <span className="text-lg font-bold text-white/75">
-                AI Credits
+            <motion.img
+              src="/assets/icons/creds.png"
+              alt=""
+              aria-hidden
+              className="absolute top-5 right-3 w-20 h-20 object-contain pointer-events-none select-none"
+              animate={{
+                y: [0, -5, 0],
+                rotate: [3, -3, 3],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            />
+
+            <span className="relative z-10 text-xs font-bold uppercase tracking-wider text-white/70">
+              AI Credits
+            </span>
+
+            <div className="relative z-10 mt-6 flex flex-col items-start gap-1.5">
+              <span className="text-3xl font-extrabold leading-none tabular-nums text-white">
+                {aiCredits.toLocaleString()}
               </span>
-
-              <motion.img
-                src="/assets/icons/creds.png"
-                alt=""
-                className="w-20 h-20 absolute right-1"
-                animate={{
-                  y: [0, -5, 0],
-                  rotate: [3, -3, 3],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-              />
-            </div>
-
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-white">{aiCredits.toLocaleString()}</span>
-              <span className="text-[10px] font-bold text-white/50 uppercase">2/lvl, 3/quiz</span>
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/70">
+                2/lvl · 3/quiz
+              </span>
             </div>
           </motion.div>
 
@@ -188,7 +198,7 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
             transition={{ duration: 0.2 }}
             className="
               relative overflow-hidden
-              bg-beige-100
+              bg-chrome-accent
               rounded-2xl
               p-4
               border border-beige-600/20
@@ -202,11 +212,11 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
               <motion.div
                 className="
                   flex items-center justify-center
-                  w-9 h-9
+                  w-10 h-10
                   rounded-full
                   bg-surface
                   text-beige-600
-                  font-extrabold
+                  font-extrabold absolute top-7 right-5
                 "
                 animate={{
                   scale: [1, 1.08, 1],
@@ -330,4 +340,4 @@ export function ProgressStats({ stats }: ProgressStatsProps) {
       </div>
     </Card>
   );
-}
+}
