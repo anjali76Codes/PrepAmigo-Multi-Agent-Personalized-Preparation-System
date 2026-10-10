@@ -188,22 +188,10 @@ Preparation is gamified around real activity: streaks, XP, badges, titles, sprin
 <img width="602" height="359" alt="Screenshot 2026-10-10 120017" src="https://github.com/user-attachments/assets/280c98a0-8e5e-4a2c-b299-3982b38e56ba" />
 
 <p>
-  <a href="https://react.dev/"><img src="https://cdn.simpleicons.org/react/61DAFB" alt="React" height="50" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://cdn.simpleicons.org/typescript/3178C6" alt="TypeScript" height="50" /></a>
-  <a href="https://vite.dev/"><img src="https://cdn.simpleicons.org/vite/646CFF" alt="Vite" height="50" /></a>
-  <a href="https://tailwindcss.com/"><img src="https://cdn.simpleicons.org/tailwindcss/06B6D4" alt="Tailwind CSS" height="50" /></a>
-  <a href="https://www.framer.com/motion/"><img src="https://cdn.simpleicons.org/framer/0055FF" alt="Framer Motion" height="50" /></a>
-  <a href="https://nodejs.org/"><img src="https://cdn.simpleicons.org/nodedotjs/339933" alt="Node.js" height="50" /></a>
-  <a href="https://expressjs.com/"><img src="https://cdn.simpleicons.org/express/000000" alt="Express" height="50" /></a>
-  <a href="https://www.mongodb.com/"><img src="https://cdn.simpleicons.org/mongodb/47A248" alt="MongoDB" height="50" /></a>
-  <a href="https://www.python.org/"><img src="https://cdn.simpleicons.org/python/3776AB" alt="Python" height="50" /></a>
-  <a href="https://fastapi.tiangolo.com/"><img src="https://cdn.simpleicons.org/fastapi/009688" alt="FastAPI" height="50" /></a>
-  <a href="https://langchain-ai.github.io/langgraph/"><img src="https://cdn.simpleicons.org/langchain/1C3C3C" alt="LangGraph" height="50" /></a>
-  <a href="https://serpapi.com/"><img src="https://cdn.simpleicons.org/google/4285F4" alt="SerpApi" height="50" /></a>
-  <a href="https://redis.io/"><img src="https://cdn.simpleicons.org/redis/DC382D" alt="Redis" height="50" /></a>
-  <a href="https://neo4j.com/"><img src="https://cdn.simpleicons.org/neo4j/4581C3" alt="Neo4j" height="50" /></a>
-  <a href="https://www.pinecone.io/"><img src="https://www.pinecone.io/favicon.ico" alt="Pinecone" height="50" /></a>
-</p>
+  
+</p> 
+
+
 
 | Area | Technologies | Role in PrepAmigo |
 | --- | --- | --- |
