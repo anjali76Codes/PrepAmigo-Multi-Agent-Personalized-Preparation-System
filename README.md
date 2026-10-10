@@ -7,13 +7,37 @@
 
   <p><strong>Make every day count before interview day.</strong></p>
   <p>Company-aware interview preparation, shaped around your role, skills, and available time.</p>
+</div>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white" alt="LangChain" />
+  <img src="https://img.shields.io/badge/LangGraph-6B46C1?logo=langchain&logoColor=white" alt="LangGraph" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Redis-FF4438?logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Neo4j-4581C3?logo=neo4j&logoColor=white" alt="Neo4j" />
+  <img src="https://img.shields.io/badge/Pinecone-000000?logo=pinecone&logoColor=white" alt="Pinecone" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/React-149ECA?logo=react&logoColor=white" alt="React" />
+</p>
+
+<div align="center">
   <p>
     <a href="https://prep-amigo.vercel.app"><img src="https://img.shields.io/badge/LIVE%20DEMO-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
     <a href="https://youtu.be/0_rjFpytu-I"><img src="https://img.shields.io/badge/YOUTUBE-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
   </p>
+</div>
 
-  <details>
+<p align="center">
+  <img src="frontend/public/assets/Mascot/thinking.gif" alt="PrepAmigo thinking through your interview preparation" width="150" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/assets/Mascot/working.gif" alt="PrepAmigo working on your preparation plan" width="150" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/assets/Mascot/Celebration.png" alt="PrepAmigo celebrating progress" width="100" />
+</p>
+
+ <details>
     <summary><strong>Table of contents</strong></summary>
     <ul align="left">
       <li><a href="#the-problem">The problem</a></li>
@@ -28,24 +52,6 @@
       <li><a href="#documentation">Documentation</a></li>
     </ul>
   </details>
-
-</div>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript 6" />
-  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
-  <img src="https://img.shields.io/badge/Agents-LangGraph-6B46C1" alt="LangGraph agents" />
-  <img src="https://img.shields.io/badge/Live%20intelligence-SerpApi-1F6FEB" alt="SerpApi live intelligence" />
-</p>
-
-<p align="center">
-  <img src="frontend/public/assets/Mascot/thinking.gif" alt="PrepAmigo thinking through your interview preparation" width="150" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/assets/Mascot/working.gif" alt="PrepAmigo working on your preparation plan" width="150" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/assets/Mascot/Celebration.png" alt="PrepAmigo celebrating progress" width="100" />
-</p>
 
 
 ## The problem
@@ -69,6 +75,9 @@ For example, a candidate with 45 days to prepare for a software-engineering role
 
 The system also maintains a living skills model. A global skill graph is refreshed from market signals, while each learner's graph records proficiency, learning state, and assessment evidence. As the candidate completes tasks and assessments, mastered topics consume less time and missed work can be rescheduled.
 
+<img width="1223" height="356" alt="Screenshot 2026-10-10 144815" src="https://github.com/user-attachments/assets/bc6e3c8b-7378-445b-8ee3-f0fb3e27eddf" />
+
+
 ## Why PrepAmigo
 
 <table>
@@ -80,7 +89,7 @@ The system also maintains a living skills model. A global skill graph is refresh
   </tbody>
 </table>
 
-<p align="center">
+<p align="left">
   <img src="frontend/public/assets/Mascot/working.png" alt="" width="68" />
   <strong>Not another link dump - a clearer answer to “what should I do next?”</strong>
 </p>
@@ -176,24 +185,13 @@ Live searches require `SERPAPI_API_KEY`. See the [agent service guide](agents-se
 Preparation is gamified around real activity: streaks, XP, badges, titles, sprint completion, skill levels, and milestones are credited from completed tasks and assessment performance.
 
 ## Tech stack
+<img width="602" height="359" alt="Screenshot 2026-10-10 120017" src="https://github.com/user-attachments/assets/280c98a0-8e5e-4a2c-b299-3982b38e56ba" />
 
 <p>
-  <a href="https://react.dev/"><img src="https://cdn.simpleicons.org/react/61DAFB" alt="React" height="50" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://cdn.simpleicons.org/typescript/3178C6" alt="TypeScript" height="50" /></a>
-  <a href="https://vite.dev/"><img src="https://cdn.simpleicons.org/vite/646CFF" alt="Vite" height="50" /></a>
-  <a href="https://tailwindcss.com/"><img src="https://cdn.simpleicons.org/tailwindcss/06B6D4" alt="Tailwind CSS" height="50" /></a>
-  <a href="https://www.framer.com/motion/"><img src="https://cdn.simpleicons.org/framer/0055FF" alt="Framer Motion" height="50" /></a>
-  <a href="https://nodejs.org/"><img src="https://cdn.simpleicons.org/nodedotjs/339933" alt="Node.js" height="50" /></a>
-  <a href="https://expressjs.com/"><img src="https://cdn.simpleicons.org/express/000000" alt="Express" height="50" /></a>
-  <a href="https://www.mongodb.com/"><img src="https://cdn.simpleicons.org/mongodb/47A248" alt="MongoDB" height="50" /></a>
-  <a href="https://www.python.org/"><img src="https://cdn.simpleicons.org/python/3776AB" alt="Python" height="50" /></a>
-  <a href="https://fastapi.tiangolo.com/"><img src="https://cdn.simpleicons.org/fastapi/009688" alt="FastAPI" height="50" /></a>
-  <a href="https://langchain-ai.github.io/langgraph/"><img src="https://cdn.simpleicons.org/langchain/1C3C3C" alt="LangGraph" height="50" /></a>
-  <a href="https://serpapi.com/"><img src="https://cdn.simpleicons.org/google/4285F4" alt="SerpApi" height="50" /></a>
-  <a href="https://redis.io/"><img src="https://cdn.simpleicons.org/redis/DC382D" alt="Redis" height="50" /></a>
-  <a href="https://neo4j.com/"><img src="https://cdn.simpleicons.org/neo4j/4581C3" alt="Neo4j" height="50" /></a>
-  <a href="https://www.pinecone.io/"><img src="https://www.pinecone.io/favicon.ico" alt="Pinecone" height="50" /></a>
-</p>
+  
+</p> 
+
+
 
 | Area | Technologies | Role in PrepAmigo |
 | --- | --- | --- |

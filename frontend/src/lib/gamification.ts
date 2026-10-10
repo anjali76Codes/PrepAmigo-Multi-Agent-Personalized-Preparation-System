@@ -70,14 +70,17 @@ export function computeGamification(
 
   // Base XP from progress or computed: 20 XP per day topic + 30 XP per assessment
   const calculatedXp = (completedDays * 20) + (completedAssessments * 30);
-  const xp = Math.max(globalProgress?.xp_points || 0, calculatedXp);
+  const backendXp = Number(globalProgress?.xp_points ?? globalProgress?.xp ?? 0);
+  const xp = Math.max(Number.isFinite(backendXp) ? backendXp : 0, calculatedXp);
   // Use real ai_credits from backend if available, otherwise fallback to formula
-  const aiCredits = globalProgress?.ai_credits ?? Math.floor(xp / 10);
+  const backendCredits = Number(globalProgress?.ai_credits ?? globalProgress?.aiCredits ?? 0);
+  const aiCredits = Number.isFinite(backendCredits) ? backendCredits : Math.floor(xp / 10);
   const level = Math.floor(xp / 1000) + 1;
   const nextLevelXp = 1000 - (xp % 1000);
 
-  const streak = globalProgress?.current_streak || globalProgress?.streak_count || (completedDays > 0 ? 1 : 0);
-  const longestStreak = Math.max(globalProgress?.longest_streak || 0, streak);
+  const backendStreak = Number(globalProgress?.current_streak ?? globalProgress?.streak_count ?? globalProgress?.streak ?? 0);
+  const streak = Number.isFinite(backendStreak) ? backendStreak : (completedDays > 0 ? 1 : 0);
+  const longestStreak = Math.max(Number(globalProgress?.longest_streak ?? 0) || 0, streak);
 
   // Trophies configuration
   const awardedTrophyKeys = new Set(

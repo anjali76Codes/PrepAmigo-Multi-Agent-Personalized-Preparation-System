@@ -38,14 +38,42 @@ const QUICK_LINKS = [
   },
 ];
 
+const SPRINTS_MIN_LOADING_MS = 500;
+
+function SprintsLoader() {
+  return (
+    <Card
+      variant="default"
+      className="p-8 flex flex-col items-center gap-3 text-center"
+    >
+      <Mascot
+        size="md"
+        variant="Running.png"
+        style={{ width: 110, height: 110 }}
+      />
+      <p className="text-sm font-semibold text-carbon-500">
+        Loading your sprints…
+      </p>
+    </Card>
+  );
+}
+
+function Skeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`rounded-md bg-carbon-500/15 animate-pulse ${className}`} />
+  );
+}
+
 function Stat({
   label,
   value,
   icon,
+  loading,
 }: {
   label: string;
   value: string | number;
   icon?: React.ReactNode;
+  loading?: boolean;
 }) {
   return (
     <div className="bg-surface border border-border rounded-2xl px-4 py-3 min-w-[110px] h-full">
@@ -57,9 +85,13 @@ function Stat({
         </div>
       </div>
 
-      <div className="text-xl font-extrabold text-carbon-900 mt-0.5">
-        {value}
-      </div>
+      {loading ? (
+        <Skeleton className="mt-1.5 h-6 w-14" />
+      ) : (
+        <div className="text-xl font-extrabold text-carbon-900 mt-0.5">
+          {value}
+        </div>
+      )}
     </div>
   );
 }
@@ -72,6 +104,14 @@ export function AppHome() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
 
   const [gemReward, setGemReward] = useState<GemRewardData | null>(null);
+
+  // dataLoaded: the requests have finished (drives the header skeletons)
+  // sprintsReady: requests finished AND the minimum loader time has passed
+  // sprintsShown: the sprint cards have finished their entrance animation
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [sprintsReady, setSprintsReady] = useState(false);
+  const [sprintsShown, setSprintsShown] = useState(false);
+  const [queuedReward, setQueuedReward] = useState<GemRewardData | null>(null);
 
   // XP that has been earned but whose gems haven't landed yet.
   // It is subtracted from the displayed total, then drained as each gem arrives.
@@ -99,20 +139,52 @@ export function AppHome() {
         setCollapsedSprints((prev) => ({ ...prev, [sprintId]: false }));
       }
 
-      // Start the header at the old XP total while the reward animation plays.
       // Start the header at the old totals while the reward animation plays.
       setPendingXp(reward.xp);
       setPendingCredits(reward.credits ?? 0);
-      setGemReward(reward);
+      setQueuedReward(reward);
     } catch {
       sessionStorage.removeItem('prep-amigo:xp-reward');
     }
   }, []);
 
+  // Start the gem animation only once the sprint maps are actually in the DOM.
+  useEffect(() => {
+    if (sprintsShown && queuedReward) {
+      setGemReward(queuedReward);
+      setQueuedReward(null);
+    }
+  }, [sprintsShown, queuedReward]);
 
   useEffect(() => {
-    getAssessments().then(setAssessments);
-    refreshPreps().catch(console.error);
+    let cancelled = false;
+
+    const minDelay = new Promise<void>((resolve) =>
+      setTimeout(resolve, SPRINTS_MIN_LOADING_MS)
+    );
+
+    const load = Promise.allSettled([
+      getAssessments()
+        .then((data) => {
+          if (!cancelled) setAssessments(data);
+        })
+        .catch(console.error),
+      refreshPreps().catch(console.error),
+    ]);
+
+    // Header skeletons go away as soon as the data is in (no minimum delay)
+    load.then(() => {
+      if (!cancelled) setDataLoaded(true);
+    });
+
+    // Sprints wait for the data AND the minimum loader time
+    Promise.all([load, minDelay]).then(() => {
+      if (!cancelled) setSprintsReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [refreshPreps]);
 
   // Stable callback passed to the reward animation.
@@ -219,6 +291,9 @@ export function AppHome() {
   const daysLeft = Math.max(0, totalDays - completedCount);
   const missedTasks = 0;
 
+  // Only show skeletons when there is nothing cached to show yet.
+  const headerLoading = !dataLoaded && !activePrep;
+
   const sprints = (activePrep?.roadmap?.sprints || []).map(
     (s: any, idx: number) => {
       const days = s.days || [];
@@ -308,15 +383,22 @@ export function AppHome() {
                   Welcome home!
                 </h1>
 
-                <p className="text-base md:text-lg text-carbon-700 font-medium max-w-xl">
-                  {activePrep
-                    ? `You're preparing for ${activePrep.learningContext?.targetRole ||
-                    'your target role'
-                    } at ${activePrep.learningContext?.companyInfo?.name ||
-                    'your target company'
-                    }.`
-                    : 'Ready to kick off your preparation? PrepAmigo is ready to build your custom roadmap.'}
-                </p>
+                {headerLoading ? (
+                  <div className="space-y-2 max-w-xl">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                ) : (
+                  <p className="text-base md:text-lg text-carbon-700 font-medium max-w-xl">
+                    {activePrep
+                      ? `You're preparing for ${activePrep.learningContext?.targetRole ||
+                      'your target role'
+                      } at ${activePrep.learningContext?.companyInfo?.name ||
+                      'your target company'
+                      }.`
+                      : 'Ready to kick off your preparation? PrepAmigo is ready to build your custom roadmap.'}
+                  </p>
+                )}
               </div>
 
               <div className="shrink-0 flex flex-col gap-3">
@@ -326,6 +408,7 @@ export function AppHome() {
                   <Stat
                     label="Progress"
                     value={`${progressPct}%`}
+                    loading={headerLoading}
                   />
 
                   {/* Total XP */}
@@ -333,6 +416,7 @@ export function AppHome() {
                     <Stat
                       label="Total XP"
                       value={displayedXp.toLocaleString()}
+                      loading={headerLoading}
                       icon={
                         <div
                           data-xp-icon
@@ -370,6 +454,7 @@ export function AppHome() {
                     <Stat
                       label="AI Credits"
                       value={displayedCredits.toLocaleString()}
+                      loading={headerLoading}
                       icon={
                         <div
                           data-credits-icon
@@ -392,12 +477,18 @@ export function AppHome() {
 
                 <div className="bg-surface border border-border rounded-2xl px-4 py-3 flex items-center gap-2">
                   <Icon name="calendar" className="text-chrome" />
-                  <span className="font-bold text-carbon-900">
-                    {daysLeft} days left
-                  </span>
-                  <span className="text-sm text-carbon-500">
-                    in your roadmap
-                  </span>
+                  {headerLoading ? (
+                    <Skeleton className="h-5 w-32" />
+                  ) : (
+                    <>
+                      <span className="font-bold text-carbon-900">
+                        {daysLeft} days left
+                      </span>
+                      <span className="text-sm text-carbon-500">
+                        in your roadmap
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -429,150 +520,178 @@ export function AppHome() {
                 </Link>
               </div>
 
-              {sprints.length === 0 ? (
-                <Card
-                  variant="default"
-                  className="p-8 text-center flex flex-col items-center gap-3"
-                >
-                  <Mascot size="lg" variant="working.png" />
+              <AnimatePresence mode="wait">
+                {!sprintsReady ? (
+                  <motion.div
+                    key="loader"
+                    exit={{ opacity: 0, y: reduce ? 0 : -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <SprintsLoader />
+                  </motion.div>
+                ) : sprints.length === 0 ? (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0, y: reduce ? 0 : 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                    onAnimationComplete={() => setSprintsShown(true)}
+                  >
+                    <Card
+                      variant="default"
+                      className="p-8 text-center flex flex-col items-center gap-3"
+                    >
+                      <Mascot size="lg" variant="working.png" />
 
-                  <h3 className="text-lg font-bold text-carbon-900">
-                    No active sprints
-                  </h3>
+                      <h3 className="text-lg font-bold text-carbon-900">
+                        No active sprints
+                      </h3>
 
-                  <p className="text-sm text-carbon-500">
-                    Start your preparation in chat to generate your study plan.
-                  </p>
+                      <p className="text-sm text-carbon-500">
+                        Start your preparation in chat to generate your study plan.
+                      </p>
 
-                  <Link to="/dashboard/chat">
-                    <Button>Create Plan in Chat</Button>
-                  </Link>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {sprints.map((sprint: any) => {
-                    const nodeStates = globalNodeStates.slice(
-                      globalNodeIndex,
-                      globalNodeIndex + sprint.levels.length
-                    );
-
-                    globalNodeIndex += sprint.levels.length;
-
-                    const isSprintComplete =
-                      sprint.levels.length > 0 &&
-                      sprint.levels.every(
-                        (level: any) =>
-                          level.status === 'completed'
+                      <Link to="/dashboard/chat">
+                        <Button>Create Plan in Chat</Button>
+                      </Link>
+                    </Card>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="list"
+                    className="grid grid-cols-1 gap-4"
+                    exit={{ opacity: 0 }}
+                  >
+                    {sprints.map((sprint: any, i: number) => {
+                      const nodeStates = globalNodeStates.slice(
+                        globalNodeIndex,
+                        globalNodeIndex + sprint.levels.length
                       );
 
-                    const isCollapsed =
-                      isSprintComplete &&
-                      (collapsedSprints[sprint.id] ?? true);
+                      globalNodeIndex += sprint.levels.length;
 
-                    return (
-                      <Card
-                        key={sprint.id}
-                        variant="default"
-                        className="p-5 flex flex-col"
-                      >
-                        {/* Sprint Header */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isSprintComplete) {
-                              toggleSprint(sprint.id, isCollapsed);
-                            }
+                      const isSprintComplete =
+                        sprint.levels.length > 0 &&
+                        sprint.levels.every((level: any) => level.status === 'completed');
+
+                      const isCollapsed =
+                        isSprintComplete && (collapsedSprints[sprint.id] ?? true);
+
+                      return (
+                        <motion.div
+                          key={sprint.id}
+                          initial={{ opacity: 0, y: reduce ? 0 : 32 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 220,
+                            damping: 26,
+                            delay: reduce ? 0 : 0.05 + i * 0.1,
                           }}
-                          className={`
+                          onAnimationComplete={() => {
+                            if (i === sprints.length - 1) setSprintsShown(true);
+                          }}
+                        >
+                          <Card variant="default" className="p-5 flex flex-col">
+                            {/* Sprint Header */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isSprintComplete) {
+                                  toggleSprint(sprint.id, isCollapsed);
+                                }
+                              }}
+                              className={`
                             w-full flex justify-between items-center gap-3
                             text-left
                             ${isSprintComplete
-                              ? 'cursor-pointer hover:bg-surface-muted/40 rounded-xl -m-2 p-2 transition-colors'
-                              : 'cursor-default'
-                            }
+                                  ? 'cursor-pointer hover:bg-surface-muted/40 rounded-xl -m-2 p-2 transition-colors'
+                                  : 'cursor-default'
+                                }
                           `}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-bold text-lg text-carbon-900">
-                                {sprint.title}
-                              </h3>
-
-                            </div>
-
-                            <p className="text-sm text-carbon-500">
-                              {sprint.goal}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-3 shrink-0">
-                            {isSprintComplete && (
-                              <span className="text-xs font-bold bg-cocoa text-on-chrome px-2 py-1 rounded-full">
-                                Complete
-                              </span>
-                            )}
-                            <span className="text-xs font-bold bg-lavender-100 border border-border text-chrome px-3 py-1 rounded-full">
-                              {sprint.levels.length} Levels
-                            </span>
-
-                            {isSprintComplete && (
-                              <motion.span
-                                animate={{ rotate: isCollapsed ? 0 : 180 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                                className="flex"
-                              >
-                                <Icon name="chevron-down" className="text-carbon-500 text-xl" />
-                              </motion.span>
-                            )}
-                          </div>
-                        </button>
-
-                        {/* Sprint Map */}
-                        <AnimatePresence initial={false}>
-                          {!isCollapsed && (
-                            <motion.div
-                              key="sprint-map"
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={
-                                reduce
-                                  ? { duration: 0 }
-                                  : {
-                                    height: { type: 'spring', stiffness: 260, damping: 32 },
-                                    opacity: { duration: 0.2 },
-                                  }
-                              }
-                              className="overflow-hidden"
                             >
-                              {/* padding lives inside, replacing the Card's gap-4 */}
-                              <div className="pt-4">
-                                <div className="relative w-full bg-lavender-50 rounded-2xl overflow-hidden flex items-center">
-                                  <SprintMap
-                                    sprintId={sprint.id}
-                                    nodeStates={nodeStates}
-                                    levelIds={sprint.levels.map((l: any) => l.id)}
-                                    levelTitles={sprint.levels.map((l: any) => l.title)}
-                                    onNodeClick={(_levelId, index) =>
-                                      void handleNodeClick(
-                                        sprint,
-                                        sprint.levels[index],
-                                        index,
-                                        nodeStates
-                                      )
-                                    }
-                                    className="border-none shadow-none bg-transparent"
-                                  />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-bold text-lg text-carbon-900">
+                                    {sprint.title}
+                                  </h3>
                                 </div>
+
+                                <p className="text-sm text-carbon-500">
+                                  {sprint.goal}
+                                </p>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+
+                              <div className="flex items-center gap-3 shrink-0">
+                                {isSprintComplete && (
+                                  <span className="text-xs font-bold bg-cocoa text-on-chrome px-2 py-1 rounded-full">
+                                    Complete
+                                  </span>
+                                )}
+                                <span className="text-xs font-bold bg-lavender-100 border border-border text-chrome px-3 py-1 rounded-full">
+                                  {sprint.levels.length} Levels
+                                </span>
+
+                                {isSprintComplete && (
+                                  <motion.span
+                                    animate={{ rotate: isCollapsed ? 0 : 180 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                                    className="flex"
+                                  >
+                                    <Icon name="chevron-down" className="text-carbon-500 text-xl" />
+                                  </motion.span>
+                                )}
+                              </div>
+                            </button>
+
+                            {/* Sprint Map */}
+                            <AnimatePresence initial={false}>
+                              {!isCollapsed && (
+                                <motion.div
+                                  key="sprint-map"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={
+                                    reduce
+                                      ? { duration: 0 }
+                                      : {
+                                        height: { type: 'spring', stiffness: 260, damping: 32 },
+                                        opacity: { duration: 0.2 },
+                                      }
+                                  }
+                                  className="overflow-hidden"
+                                >
+                                  {/* padding lives inside, replacing the Card's gap-4 */}
+                                  <div className="pt-4">
+                                    <div className="relative w-full bg-lavender-50 rounded-2xl overflow-hidden flex items-center">
+                                      <SprintMap
+                                        sprintId={sprint.id}
+                                        nodeStates={nodeStates}
+                                        levelIds={sprint.levels.map((l: any) => l.id)}
+                                        levelTitles={sprint.levels.map((l: any) => l.title)}
+                                        onNodeClick={(_levelId, index) =>
+                                          void handleNodeClick(
+                                            sprint,
+                                            sprint.levels[index],
+                                            index,
+                                            nodeStates
+                                          )
+                                        }
+                                        className="border-none shadow-none bg-transparent"
+                                      />
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </RevealStaggerItem>
 
             {/* Quick links */}
@@ -634,7 +753,7 @@ export function AppHome() {
                 </Link>
               ))}
 
-              {!activePrep && (
+              {!headerLoading && !activePrep && (
                 <Card
                   variant="default"
                   className="bg-lavender-100 rounded-3xl p-6 mt-4 flex flex-col"

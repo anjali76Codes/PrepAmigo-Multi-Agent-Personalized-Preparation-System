@@ -4,6 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import { Icon } from "../ui/Icon";
 import { SLASH_TEMPLATES, TemplatePicker, MUTED_BTN, type SlashTemplate } from "./TemplatePicker";
 import { extractTextFromFile } from "../../lib/resumeParser";
+import { Logo } from "../ui/Logo";
 
 // ─── Native SVG Icons (reliable, zero flicker, consistent fill/stroke) ────────
 
@@ -205,6 +206,7 @@ export interface ChatInputProps {
   className?: string;
   showOptions?: boolean;
   hideTemplates?: boolean;
+  showLogo?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -215,6 +217,7 @@ export function ChatInput({
   placeholder = "Message PrepAmigo...",
   className,
   hideTemplates = false,
+  showLogo = true,
 }: ChatInputProps) {
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -633,6 +636,8 @@ export function ChatInput({
               <PaperclipIcon className="w-4 h-4 sm:w-5 sm:h-5 text-carbon-700" />
             </button>
 
+
+
             {isRecording ? (
               /* Pause recording button (Square) */
               <button
@@ -665,6 +670,7 @@ export function ChatInput({
                 >
                   <MicIcon className="w-5 h-5 text-carbon-700" />
                 </button>
+
 
                 <button
                   type="button"
@@ -701,7 +707,17 @@ export function ChatInput({
               >
                 <MicIcon className="w-5 h-5 text-carbon-700" />
               </button>
+
             )}
+            {showLogo && (
+              <Logo
+                compact
+                size={45}
+                aria-hidden
+                className="shrink-0 pointer-events-none"
+              />
+            )}
+
           </div>
         </div>
       </div>

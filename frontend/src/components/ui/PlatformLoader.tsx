@@ -10,8 +10,6 @@ interface LoaderProps {
   className?: string;
 }
 
-const RUN = { repeat: Infinity, duration: 1, ease: "easeInOut" as const };
-
 export function PlatformLoader({
   fullScreen = true,
   message = "Loading...",
@@ -31,26 +29,12 @@ export function PlatformLoader({
       )}
     >
       <div className="flex flex-col items-center gap-5">
-        <div className="relative flex flex-col items-center">
-          <motion.div
-            animate={reduce ? undefined : { y: [0, -14, 0], rotate: [-3, 3, -3] }}
-            transition={RUN}
-          >
-            <Mascot
-              variant="Running.png"
-              size="xl"
-              style={{ width: 150, height: 150 }}
-              className="object-contain drop-shadow-md"
-            />
-          </motion.div>
-
-          {/* floor shadow: shrinks and fades as the mascot jumps */}
-          <motion.div
-            className="mt-1 h-2.5 w-20 rounded-full bg-carbon-900/20 blur-[2px]"
-            animate={reduce ? undefined : { scaleX: [1, 0.7, 1], opacity: [0.9, 0.45, 0.9] }}
-            transition={RUN}
-          />
-        </div>
+        <Mascot
+          variant="working.gif"
+          size="xl"
+          style={{ width: 150, height: 150 }}
+          className="object-contain drop-shadow-md"
+        />
 
         <div className="space-y-1 text-center">
           <motion.h3

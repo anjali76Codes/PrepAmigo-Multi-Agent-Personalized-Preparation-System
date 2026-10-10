@@ -364,9 +364,17 @@ export function Calendar() {
             <Card variant="default" className="bg-lavender-100 rounded-3xl p-6 md:p-8 flex items-center gap-6">
               <div className="flex-1 min-w-0 space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="ghost" size="sm" className="gap-1.5 -ml-3 font-bold text-chrome" onClick={() => navigate('/dashboard')}>
-                    <Icon name="arrow-back" /> Dashboard
-                  </Button>
+                  {/* Back to Dashboard */}
+                  <Link to="/dashboard">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 -ml-3 font-bold border-none text-chrome"
+                    >
+                      <Icon name="arrow-back" />
+                      Dashboard
+                    </Button>
+                  </Link>
                   <PrepSwitcher preps={preps} selectedId={selectedPrep?.id} onSelect={setSelectedPrepId} />
                 </div>
 
@@ -474,60 +482,60 @@ export function Calendar() {
               </div>
 
               <div className="space-y-3">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {currentList.map((task, i) => (
-                      <motion.div
-                        key={task._id}
-                        layout="position"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ delay: Math.min(i, 6) * 0.04, duration: 0.2 }}
-                      >
-                        <DayTaskCard
-                          variant="compact"
-                          title={task.day_number === 999 ? task.topic_title : `Day ${task.day_number}: ${task.topic_title}`}
-                          completed={task.status === 'completed'}
-                          resources={buildResources(task)}
-                          onToggleComplete={() => toggleTask(task._id)}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-
-                  {currentList.length === 0 && (
-                    <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
-                      <Mascot variant="Chilling.png" size="lg" style={{ width: 110, height: 110 }} />
-                      <p className="font-bold text-carbon-900">
-                        {activeTab === 'backlog' ? 'Backlog is empty' : activeTab === 'today' ? 'Nothing scheduled today' : 'Nothing coming up'}
-                      </p>
-                      <p className="text-sm text-carbon-500">
-                        {activeTab === 'backlog' ? "You're all caught up." : 'Add something below or adjust your plan in chat.'}
-                      </p>
-                    </Card>
-                  )}
-
-                  {!isAddingTask ? (
-                    <button
-                      onClick={() => setIsAddingTask(true)}
-                      className="w-full flex items-center justify-center gap-2 text-xs font-bold text-carbon-500 hover:text-carbon-900 py-3 rounded-2xl border-2 border-dashed border-border hover:bg-surface transition-colors"
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {currentList.map((task, i) => (
+                    <motion.div
+                      key={task._id}
+                      layout="position"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ delay: Math.min(i, 6) * 0.04, duration: 0.2 }}
                     >
-                      <Icon name="add" className="text-base" /> Add something else to do
-                    </button>
-                  ) : (
-                    <form onSubmit={handleAddTask} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-2">
-                      <input
-                        autoFocus
-                        type="text"
-                        placeholder="What do you want to do?"
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        className="flex-1 h-10 px-3 text-sm bg-transparent outline-none text-carbon-900"
+                      <DayTaskCard
+                        variant="compact"
+                        title={task.day_number === 999 ? task.topic_title : `Day ${task.day_number}: ${task.topic_title}`}
+                        completed={task.status === 'completed'}
+                        resources={buildResources(task)}
+                        onToggleComplete={() => toggleTask(task._id)}
                       />
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingTask(false)}>Cancel</Button>
-                      <Button type="submit" size="sm">Add</Button>
-                    </form>
-                  )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {currentList.length === 0 && (
+                  <Card variant="default" className="p-10 text-center flex flex-col items-center gap-3">
+                    <Mascot variant="Chilling.png" size="lg" style={{ width: 110, height: 110 }} />
+                    <p className="font-bold text-carbon-900">
+                      {activeTab === 'backlog' ? 'Backlog is empty' : activeTab === 'today' ? 'Nothing scheduled today' : 'Nothing coming up'}
+                    </p>
+                    <p className="text-sm text-carbon-500">
+                      {activeTab === 'backlog' ? "You're all caught up." : 'Add something below or adjust your plan in chat.'}
+                    </p>
+                  </Card>
+                )}
+
+                {!isAddingTask ? (
+                  <button
+                    onClick={() => setIsAddingTask(true)}
+                    className="w-full flex items-center justify-center gap-2 text-xs font-bold text-carbon-500 hover:text-carbon-900 py-3 rounded-2xl border-2 border-dashed border-border hover:bg-surface transition-colors"
+                  >
+                    <Icon name="add" className="text-base" /> Add something else to do
+                  </button>
+                ) : (
+                  <form onSubmit={handleAddTask} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-2">
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="What do you want to do?"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      className="flex-1 h-10 px-3 text-sm bg-transparent outline-none text-carbon-900"
+                    />
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingTask(false)}>Cancel</Button>
+                    <Button type="submit" size="sm">Add</Button>
+                  </form>
+                )}
               </div>
             </motion.div>
 

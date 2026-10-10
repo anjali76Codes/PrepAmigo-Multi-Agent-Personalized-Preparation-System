@@ -65,9 +65,6 @@ export function Home() {
               <span className="text-chrome-accent">Level up to it.</span>
             </h1>
 
-            <p className="text-sm md:text-base text-carbon-300 max-w-lg mx-auto leading-relaxed">
-              Migo reads the internet. So you don't have to.
-            </p>
           </RevealStaggerItem>
 
           <RevealStaggerItem className="w-full max-w-2xl mx-auto pt-2">
@@ -75,7 +72,11 @@ export function Home() {
               onSend={handleChatSubmit}
               placeholder="What role, company, or topic are you prepping for?..."
               className="text-left"
+              showLogo={true}
             />
+            <p className="text-sm md:text-base text-chrome-accent max-w-lg mx-auto leading-relaxed mt-5">
+              Migo draws the map for you. You walk it.
+            </p>
           </RevealStaggerItem>
           <motion.div
             className="absolute left-10 bottom-0 pointer-events-none md:pointer-events-auto"
