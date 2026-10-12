@@ -1,0 +1,21 @@
+name: Keep backend service awake
+
+on:
+  schedule:
+    # GitHub Actions supports five-field POSIX cron expressions.
+    - cron: "*/7 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Request health endpoint
+        run: >-
+          curl --fail --silent --show-error --location
+          --connect-timeout 10 --max-time 30
+          --retry 2 --retry-all-errors
+          https://prepamigo-backend.onrender.com/health

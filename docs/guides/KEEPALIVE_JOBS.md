@@ -3,12 +3,13 @@
 The scheduled workflows in `.github/workflows/` are deliberately independent:
 
 - `agents-service-keepalive.yml` requests the deployed FastAPI service's public `/health` endpoint every seven minutes.
+- `backend-keepalive.yml` requests the deployed Express backend's public `/health` endpoint every seven minutes.
 - `mongodb-atlas-keepalive.yml` runs a MongoDB `ping` on the 1st and 15th of each month.
 - `neo4j-keepalive.yml` runs the read-only Cypher query `RETURN 1` daily.
 
 ## Configuration
 
-The service health workflow is ready to run and targets the current Render deployment. Configure the optional database workflows as repository Actions secrets:
+The service health workflows are ready to run and target the current Render deployments. Configure the optional database workflows as repository Actions secrets:
 
 | Workflow | Required secrets | Optional secret |
 | --- | --- | --- |
