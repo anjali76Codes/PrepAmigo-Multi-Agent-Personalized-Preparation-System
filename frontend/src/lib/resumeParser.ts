@@ -2,16 +2,17 @@
  * Browser-side document parser for extracting plain text from resumes.
  * Handles PDF (.pdf), Word (.docx), Markdown (.md), and plain text (.txt)
  * completely inside the browser with zero external services or AI agents needed.
+ * Heavy parser dependencies (pdfjs-dist, mammoth) are lazy-loaded dynamically
+ * on demand to keep initial bundle size lean and page load under 1-2 seconds.
  */
-import * as pdfjsLib from "pdfjs-dist";
-import mammoth from "mammoth";
-
-// Configure pdfjs worker to standard CDN matching pdfjs-dist version
-if (typeof window !== "undefined") {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-}
 
 export async function extractTextFromPDF(file: File): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist");
+
+  if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  }
+
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;
@@ -20,7 +21,7 @@ export async function extractTextFromPDF(file: File): Promise<string> {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items
+    const pageText = (textContent.items as any[])
       .map((item: any) => (item && typeof item.str === "string" ? item.str : ""))
       .join(" ");
     fullText += pageText + "\n";
@@ -30,6 +31,8 @@ export async function extractTextFromPDF(file: File): Promise<string> {
 }
 
 export async function extractTextFromDocx(file: File): Promise<string> {
+  const mammothModule = await import("mammoth");
+  const mammoth = (mammothModule as any).default || mammothModule;
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer });
   return (result.value || "").trim();

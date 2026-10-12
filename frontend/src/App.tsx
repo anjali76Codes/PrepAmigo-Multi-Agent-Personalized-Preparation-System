@@ -5,17 +5,18 @@ import { PublicLayout } from "./components/layout/PublicLayout";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { AppLayout } from "./components/layout/AppLayout";
 import { PlanSetupLayout } from "./components/layout/PlanSetupLayout";
-import { Home } from "./pages/Home";
-import { PrivacyPolicy } from "./pages/PrivacyPolicy";
-import { TermsOfService } from "./pages/TermsOfService";
-import { Auth } from "./pages/Auth";
 import { AppProvider } from "./context/AppContext";
 import { AuthProvider } from "./hooks/useAuth";
 import { StyleProvider } from "./components/ui/StyleProvider";
-import { StyleGuide } from "./pages/StyleGuide";
-import { Chat } from "./pages/Chat";
-import { NotFound } from "./pages/NotFound";
 import { PlatformLoader } from "./components/ui/PlatformLoader";
+
+const Home = lazy(() => import("./pages/Home").then((m) => ({ default: m.Home })));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy").then((m) => ({ default: m.PrivacyPolicy })));
+const TermsOfService = lazy(() => import("./pages/TermsOfService").then((m) => ({ default: m.TermsOfService })));
+const Auth = lazy(() => import("./pages/Auth").then((m) => ({ default: m.Auth })));
+const StyleGuide = lazy(() => import("./pages/StyleGuide").then((m) => ({ default: m.StyleGuide })));
+const Chat = lazy(() => import("./pages/Chat").then((m) => ({ default: m.Chat })));
+const NotFound = lazy(() => import("./pages/NotFound").then((m) => ({ default: m.NotFound })));
 
 const AppHome = lazy(() => import("./pages/AppHome").then((m) => ({ default: m.AppHome })));
 const Calendar = lazy(() => import("./pages/Calendar").then((m) => ({ default: m.Calendar })));

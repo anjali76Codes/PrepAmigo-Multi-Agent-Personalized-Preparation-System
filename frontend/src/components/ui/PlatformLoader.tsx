@@ -29,12 +29,17 @@ export function PlatformLoader({
       )}
     >
       <div className="flex flex-col items-center gap-5">
-        <Mascot
-          variant="working.gif"
-          size="xl"
-          style={{ width: 150, height: 150 }}
-          className="object-contain drop-shadow-md"
-        />
+        <div className="relative flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full border-4 border-carbon-200 border-t-amber-500 animate-spin" />
+          <div className="absolute inset-2 rounded-full overflow-hidden flex items-center justify-center bg-bg p-1">
+            <Mascot
+              variant="nosy.png"
+              size="md"
+              className="w-12 h-12 object-contain drop-shadow-sm"
+              loading="eager"
+            />
+          </div>
+        </div>
 
         <div className="space-y-1 text-center">
           <motion.h3

@@ -55,9 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         const loadedUser = data.user ?? null;
         setUser(loadedUser);
+        if (loadedUser) {
+          localStorage.setItem("prepamigo_has_session", "true");
+        } else {
+          localStorage.removeItem("prepamigo_has_session");
+        }
         return loadedUser;
       } else {
         setUser(null);
+        localStorage.removeItem("prepamigo_has_session");
         return null;
       }
     } catch (err) {
@@ -135,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem(`prepamigo_onboarding_skipped_${user.id || user.sub}`);
       }
       sessionStorage.removeItem("prepamigo_onboarding_skipped");
+      localStorage.removeItem("prepamigo_has_session");
       setUser(null);
       return res.ok;
     } catch (err) {

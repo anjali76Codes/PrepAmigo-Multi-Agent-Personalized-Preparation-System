@@ -44,7 +44,8 @@ export function Home() {
     navigate("/dashboard/chat", { state: { initialQuery: trimmed } });
   };
 
-  if (featureFlags.enableAuth && loading) return <PlatformLoader />;
+  const hasStoredSession = typeof window !== "undefined" && localStorage.getItem("prepamigo_has_session") === "true";
+  if (featureFlags.enableAuth && loading && hasStoredSession) return <PlatformLoader />;
   if (featureFlags.enableAuth && user) return <Navigate to="/dashboard" replace />;
 
   return (
