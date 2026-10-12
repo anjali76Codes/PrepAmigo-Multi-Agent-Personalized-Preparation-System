@@ -1,4 +1,4 @@
-import { forwardRef, type HTMLAttributes } from "react";
+import { forwardRef, type ImgHTMLAttributes } from "react";
 import { cn } from "./Button";
 
 export type MascotVariant =
@@ -18,14 +18,25 @@ export type MascotVariant =
   | "hi.png"
   | "nosy.png";
 
-export interface MascotProps extends HTMLAttributes<HTMLImageElement> {
+export interface MascotProps extends ImgHTMLAttributes<HTMLImageElement> {
   size?: "sm" | "md" | "lg" | "xl";
   variant: MascotVariant;
   alt?: string;
 }
 
 export const Mascot = forwardRef<HTMLImageElement, MascotProps>(
-  ({ className, size = "md", variant, alt, ...props }, ref) => {
+  (
+    {
+      className,
+      size = "md",
+      variant,
+      alt,
+      loading = "lazy",
+      decoding = "async",
+      ...props
+    },
+    ref
+  ) => {
     const sizeMap = {
       sm: "w-8 h-8",
       md: "w-16 h-16",
@@ -38,6 +49,8 @@ export const Mascot = forwardRef<HTMLImageElement, MascotProps>(
         ref={ref}
         src={`/assets/Mascot/${variant}`}
         alt={alt || `Mascot ${variant.split('.')[0]}`}
+        loading={loading}
+        decoding={decoding}
         className={cn(
           "inline-flex items-center justify-center object-contain",
           sizeMap[size],

@@ -88,7 +88,12 @@ export function Home() {
               ease: "easeInOut",
             }}
           >
-            <Mascot variant="hi.png" style={{ height: "50vh", width: "auto" }} />
+            <Mascot
+              variant="hi.png"
+              loading="eager"
+              fetchPriority="high"
+              style={{ height: "50vh", width: "auto" }}
+            />
           </motion.div>
         </RevealStagger>
       </motion.section>

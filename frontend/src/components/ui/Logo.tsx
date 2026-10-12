@@ -18,7 +18,11 @@ export function Logo({ className, compact = false, tone = 'default', size = 60, 
           isInverse ? "bg-chrome text-chrome" : "bg-soft-rose text-white"
         )}
       >
-        <Mascot variant="nosy.png" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        <Mascot
+          variant="nosy.png"
+          loading="eager"
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+        />
       </div>
       {!compact && (
         <span className={cn("font-bold tracking-tight text-xl", isInverse ? "text-on-chrome" : "text-carbon-900")}>
